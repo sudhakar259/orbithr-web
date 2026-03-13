@@ -1,0 +1,5 @@
+- [x] Update backend/config/cors.php to allow the frontend origin 'http://orbithr.test:5173'
+- [x] Add withCredentials: true to axios instance in src/services/api.ts for proper CORS handling
+- [ ] Clear Laravel config cache (php artisan config:clear)
+- [ ] Ensure backend is running (valet start or similar)
+- [ ] Test the login functionality after changes

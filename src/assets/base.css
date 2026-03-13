@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* color palette from <https://github.com/vuejs/theme> */
+:root {
+  --vt-c-white: #ffffff;
+  --vt-c-white-soft: #f8f8f8;
+  --vt-c-white-mute: #f2f2f2;
+
+  --vt-c-black: #181818;
+  --vt-c-black-soft: #222222;
+  --vt-c-black-mute: #282828;
+
+  --vt-c-indigo: #2c3e50;
+
+  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
+  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
+  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
+  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+
+  --vt-c-text-light-1: var(--vt-c-indigo);
+  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
+  --vt-c-text-dark-1: var(--vt-c-white);
+  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+}
+
+/* semantic color variables for this project */
+:root {
+  --color-background: var(--vt-c-white);
+  --color-background-soft: var(--vt-c-white-soft);
+  --color-background-mute: var(--vt-c-white-mute);
+
+  --color-border: var(--vt-c-divider-light-2);
+  --color-border-hover: var(--vt-c-divider-light-1);
+
+  --color-heading: var(--vt-c-text-light-1);
+  --color-text: var(--vt-c-text-light-1);
+
+  --section-gap: 160px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: var(--vt-c-black);
+    --color-background-soft: var(--vt-c-black-soft);
+    --color-background-mute: var(--vt-c-black-mute);
+
+    --color-border: var(--vt-c-divider-dark-2);
+    --color-border-hover: var(--vt-c-divider-dark-1);
+
+    --color-heading: var(--vt-c-text-dark-1);
+    --color-text: var(--vt-c-text-dark-2);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  font-weight: normal;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--color-text);
+  background: var(--color-background);
+  transition:
+    color 0.5s,
+    background-color 0.5s;
+  line-height: 1.6;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-size: 15px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tailwind component overrides and helpers */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-brand-700;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-red-700;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50;
+  }
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white p-6 shadow-soft;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-200;
+  }
+  .stat {
+    @apply rounded-xl border border-slate-200 bg-white p-5 shadow-soft;
+  }
+  .sparkline {
+    height: 40px;
+    width: 100%;
+  }
+}
+
+@layer utilities {
+  .text-xxs {
+    font-size: 11px;
+  }
+}
+
+/* small refinements */
+.container {
+  @apply mx-auto max-w-7xl px-4;
+}
+
+/* ensure images fit */
+img {
+  max-width: 100%;
+}
+
+/* subtle scrollbar */
+*::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+}

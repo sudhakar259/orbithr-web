@@ -92,6 +92,14 @@
               <input v-model.number="form.max_days_per_year" type="number" min="0" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500" />
             </div>
             <div>
+              <label class="block text-sm font-medium text-slate-700">Max Consecutive Days</label>
+              <input v-model.number="form.max_consecutive_days" type="number" min="0" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500" placeholder="No limit" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700">Notice Period (days)</label>
+              <input v-model.number="form.notice_period_days" type="number" min="0" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500" />
+            </div>
+            <div>
               <label class="block text-sm font-medium text-slate-700">Carry Forward</label>
               <div class="mt-1 flex items-center gap-3">
                 <input id="cf" type="checkbox" v-model="form.can_carry_forward" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
@@ -125,9 +133,14 @@
             </div>
           </div>
 
+          <p v-if="formError" class="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{{ formError }}</p>
+          <p v-if="formSuccess" class="mt-4 rounded-md bg-green-50 p-3 text-sm text-green-700">{{ formSuccess }}</p>
+
           <div class="mt-6 flex items-center justify-end gap-3">
-            <button type="button" class="rounded-md border px-4 py-2" @click="close()">Cancel</button>
-            <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">Save</button>
+            <button type="button" class="rounded-md border px-4 py-2" @click="close()" :disabled="saving">Cancel</button>
+            <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700 disabled:opacity-50" :disabled="saving">
+              {{ saving ? 'Saving...' : 'Save' }}
+            </button>
           </div>
         </form>
       </div>
@@ -187,13 +200,21 @@ async function persistOrder(arr: LeaveType[]) {
 }
 
 async function toggleActive(t: LeaveType) {
-  await leaveService.updateLeaveType(t.id, { is_active: !t.is_active })
-  await fetchLeaveTypes(false)
+  try {
+    await leaveService.updateLeaveType(t.id, { is_active: !t.is_active })
+    await fetchLeaveTypes(false)
+  } catch (e: any) {
+    alert(e.response?.data?.error || 'Failed to update status.')
+  }
 }
 
 async function archive(t: LeaveType) {
-  await leaveService.updateLeaveType(t.id, { is_active: false })
-  await fetchLeaveTypes(false)
+  try {
+    await leaveService.updateLeaveType(t.id, { is_active: false })
+    await fetchLeaveTypes(false)
+  } catch (e: any) {
+    alert(e.response?.data?.error || 'Failed to archive leave type.')
+  }
 }
 
 const showModal = ref(false)
@@ -205,6 +226,8 @@ const form = reactive<Partial<LeaveType>>({
   leave_type: 'paid',
   accrual_frequency: 'monthly',
   max_days_per_year: undefined,
+  max_consecutive_days: undefined,
+  notice_period_days: 0,
   can_carry_forward: false,
   carry_forward_limit: undefined,
   is_encashable: false,
@@ -217,6 +240,9 @@ const form = reactive<Partial<LeaveType>>({
 
 const applicableDepartmentsText = ref('')
 const applicableRolesText = ref('')
+const saving = ref(false)
+const formError = ref('')
+const formSuccess = ref('')
 
 watch(() => form.applicable_to, (v) => {
   if (v !== 'departments') form.applicable_departments = []
@@ -228,7 +254,8 @@ function openCreate() {
   Object.assign(form, {
     id: undefined,
     name: '', code: '', description: '', leave_type: 'paid', accrual_frequency: 'monthly',
-    max_days_per_year: undefined, can_carry_forward: false, carry_forward_limit: undefined,
+    max_days_per_year: undefined, max_consecutive_days: undefined, notice_period_days: 0,
+    can_carry_forward: false, carry_forward_limit: undefined,
     is_encashable: false, applicable_to: 'all', applicable_departments: [], applicable_roles: [],
     requires_documentation: false, is_active: true,
   })
@@ -248,6 +275,11 @@ function openEdit(t: LeaveType) {
 function close() { showModal.value = false }
 
 async function save() {
+  if (saving.value) return
+  formError.value = ''
+  formSuccess.value = ''
+  saving.value = true
+
   if (form.applicable_to === 'departments') {
     form.applicable_departments = applicableDepartmentsText.value.split(',').map(s => s.trim()).filter(Boolean)
   }
@@ -255,12 +287,23 @@ async function save() {
     form.applicable_roles = applicableRolesText.value.split(',').map(s => s.trim()).filter(Boolean)
   }
 
-  if (editing.value && form.id) {
-    await leaveService.updateLeaveType(form.id, form)
-  } else {
-    await leaveService.createLeaveType(form)
+  try {
+    if (editing.value && form.id) {
+      await leaveService.updateLeaveType(form.id, form)
+    } else {
+      await leaveService.createLeaveType(form)
+    }
+    showModal.value = false
+    await fetchLeaveTypes(false)
+  } catch (e: any) {
+    const errors = e.response?.data?.errors
+    if (errors) {
+      formError.value = Object.values(errors).flat().join('. ')
+    } else {
+      formError.value = e.response?.data?.error || 'Failed to save leave type. Please try again.'
+    }
+  } finally {
+    saving.value = false
   }
-  showModal.value = false
-  await fetchLeaveTypes(false)
 }
 </script>

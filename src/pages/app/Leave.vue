@@ -27,6 +27,7 @@ const {
   fetchDashboard,
   approveLeaveRequest,
   rejectLeaveRequest,
+  cancelLeaveRequest,
 } = useLeave();
 
 // UI state

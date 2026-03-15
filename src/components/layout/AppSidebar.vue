@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
@@ -29,6 +29,23 @@ async function fetchBadges() {
 
 onMounted(fetchBadges)
 
+// ── Collapsible module groups ─────────────────────────
+const expanded = ref<Set<string>>(new Set())
+
+function toggle(key: string) {
+  if (expanded.value.has(key)) {
+    expanded.value.delete(key)
+  } else {
+    expanded.value.add(key)
+  }
+  // trigger reactivity
+  expanded.value = new Set(expanded.value)
+}
+
+function isExpanded(key: string) {
+  return expanded.value.has(key)
+}
+
 // ─────────────────────────────────────────────────────
 const initials = computed(() => {
   const name = user.value?.name ?? ''
@@ -42,14 +59,39 @@ const isActive = (routeName: string) => {
 
 const rLower = computed(() => roles().map((x: string) => String(x).toLowerCase()))
 
-// Admin (tenant owner) has all permissions by default — bypass checks
 const isAdmin      = computed(() => rLower.value.includes('admin') || rLower.value.includes('tenant admin'))
 const isSuperAdmin = computed(() => rLower.value.includes('super admin'))
 
-function canSee(item: NavItem): boolean {
-  // superAdminOnly items are never shown to anyone else — even admin
+interface NavChild {
+  name: string
+  to: { name: string }
+  icon: string
+  badge?: number | null
+  roles?: string[]
+  permissions?: string[]
+}
+
+interface NavGroup {
+  key: string
+  label: string
+  icon: string
+  superAdminOnly?: boolean
+  roles?: string[]
+  permissions?: string[]
+  // If children exists, this is a collapsible parent group
+  children?: NavChild[]
+  // If to exists, this is a direct link (no expand)
+  to?: { name: string }
+  badge?: number | null
+}
+
+interface NavSection {
+  label: string
+  items: NavGroup[]
+}
+
+function canSeeGroup(item: { superAdminOnly?: boolean; roles?: string[]; permissions?: string[] }): boolean {
   if (item.superAdminOnly) return isSuperAdmin.value
-  // Super admin and tenant admin see everything else
   if (isSuperAdmin.value || isAdmin.value) return true
   const itemRoles = item.roles?.map((x: string) => x.toLowerCase()) ?? []
   const itemPerms = item.permissions ?? []
@@ -60,138 +102,226 @@ function canSee(item: NavItem): boolean {
   return roleDefined && permDefined ? (roleOk || permOk) : (roleOk && permOk)
 }
 
-function handleLogout() {
-  showMenu.value = false
-  logout()
-  router.push({ name: 'login' })
+function canSeeChild(item: NavChild): boolean {
+  if (isSuperAdmin.value || isAdmin.value) return true
+  const itemRoles = item.roles?.map((x: string) => x.toLowerCase()) ?? []
+  const itemPerms = item.permissions ?? []
+  const roleDefined = itemRoles.length > 0
+  const permDefined = itemPerms.length > 0
+  const roleOk = !roleDefined || itemRoles.some((r: string) => rLower.value.includes(r))
+  const permOk = !permDefined || itemPerms.some((p: string) => hasPermission(p))
+  return roleDefined && permDefined ? (roleOk || permOk) : (roleOk && permOk)
 }
 
-interface NavItem {
-  name: string
-  to: { name: string }
-  icon: string
-  badge?: number | null
-  roles?: string[]
-  permissions?: string[]
-  superAdminOnly?: boolean
-}
-
-interface NavSection {
-  label: string
-  items: NavItem[]
-}
-
-const navSections = computed<NavSection[]>(() => [
+const moduleGroups = computed<NavGroup[]>(() => [
+  // ── Standalone items ──────────────────────────────
   {
-    label: 'Overview',
-    items: [
+    key: 'dashboard',
+    label: 'Dashboard',
+    to: { name: 'dashboard' },
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>',
+  },
+
+  // ── Employee Management (parent) ──────────────────
+  {
+    key: 'employee',
+    label: 'Employees',
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>',
+    badge: employeeCount.value,
+    permissions: ['view employees'],
+    roles: ['admin'],
+    children: [
       {
-        name: 'Dashboard', to: { name: 'dashboard' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>',
-      },
-      {
-        name: 'Employees', to: { name: 'employees' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>',
-        badge: employeeCount.value,
+        name: 'Employee Directory',
+        to: { name: 'employees' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>',
         permissions: ['view employees'], roles: ['admin'],
       },
+    ],
+  },
+
+  // ── Attendance (parent) ───────────────────────────
+  {
+    key: 'attendance',
+    label: 'Attendance',
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>',
+    permissions: ['view attendance'],
+    roles: ['admin'],
+    children: [
       {
-        name: 'Attendance', to: { name: 'attendance' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>',
+        name: 'Attendance Records',
+        to: { name: 'attendance' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>',
         permissions: ['view attendance'], roles: ['admin'],
       },
       {
-        name: 'Regularization', to: { name: 'regularizations' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>',
+        name: 'Regularization',
+        to: { name: 'regularizations' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>',
         permissions: ['regularize attendance'], roles: ['admin', 'manager', 'team_lead'],
       },
       {
-        name: 'My Requests', to: { name: 'my-regularizations' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
+        name: 'My Requests',
+        to: { name: 'my-regularizations' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
       },
     ],
   },
+
+  // ── Leave Management (parent) ─────────────────────
   {
-    label: 'Payroll & Finance',
-    items: [
+    key: 'leave',
+    label: 'Leave',
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>',
+    badge: pendingLeaves.value,
+    permissions: ['view leaves'],
+    roles: ['admin'],
+    children: [
       {
-        name: 'Payroll', to: { name: 'payroll' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>',
-        permissions: ['view payroll'], roles: ['admin'],
-      },
-      {
-        name: 'Payslips', to: { name: 'payslips' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
-        permissions: ['view payroll'], roles: ['admin', 'hr_manager'],
-      },
-      {
-        name: 'Performance', to: { name: 'performance' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>',
-        permissions: ['view performance'], roles: ['admin'],
-      },
-      {
-        name: 'Reports', to: { name: 'reports' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
-        permissions: ['manage-reports'], roles: ['admin'],
-      },
-      {
-        name: 'Billing', to: { name: 'billing' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z" clip-rule="evenodd"/></svg>',
-        permissions: ['manage-billing'], roles: ['admin'],
-      },
-    ],
-  },
-  {
-    label: 'People',
-    items: [
-      {
-        name: 'Leave', to: { name: 'leave' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>',
+        name: 'Leave Requests',
+        to: { name: 'leave' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>',
         badge: pendingLeaves.value,
         permissions: ['view leaves'], roles: ['admin'],
       },
       {
-        name: 'Recruitment', to: { name: 'recruitment' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>',
-        permissions: ['manage-recruitment'], roles: ['admin'],
+        name: 'Leave Types',
+        to: { name: 'leave-types' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>',
+        permissions: ['view leaves'], roles: ['admin', 'hr_manager'],
       },
       {
-        name: 'Announcements', to: { name: 'announcements' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z" clip-rule="evenodd"/></svg>',
+        name: 'Leave Policies',
+        to: { name: 'leave-policies' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+        permissions: ['view leaves'], roles: ['admin', 'hr_manager'],
       },
       {
-        name: 'Holiday Calendar', to: { name: 'holiday-calendar' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>',
-        roles: ['admin', 'hr_manager'],
-      },
-      {
-        name: 'Training', to: { name: 'training' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/></svg>',
-      },
-      {
-        name: 'Assets', to: { name: 'assets' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/><path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>',
+        name: 'Holiday Calendar',
+        to: { name: 'holiday-calendar' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>',
         roles: ['admin', 'hr_manager'],
       },
     ],
+  },
+
+  // ── Payroll (parent) ──────────────────────────────
+  {
+    key: 'payroll',
+    label: 'Payroll',
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>',
+    permissions: ['view payroll'],
+    roles: ['admin'],
+    children: [
+      {
+        name: 'Payroll Processing',
+        to: { name: 'payroll' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z" clip-rule="evenodd"/></svg>',
+        permissions: ['view payroll'], roles: ['admin'],
+      },
+      {
+        name: 'Payslips',
+        to: { name: 'payslips' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
+        permissions: ['view payroll'], roles: ['admin', 'hr_manager'],
+      },
+    ],
+  },
+
+  // ── Standalone items ──────────────────────────────
+  {
+    key: 'performance',
+    label: 'Performance',
+    to: { name: 'performance' },
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>',
+    permissions: ['view performance'],
+    roles: ['admin'],
+  },
+  {
+    key: 'announcements',
+    label: 'Announcements',
+    to: { name: 'announcements' },
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z" clip-rule="evenodd"/></svg>',
+  },
+  {
+    key: 'recruitment',
+    label: 'Recruitment',
+    to: { name: 'recruitment' },
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>',
+    permissions: ['manage-recruitment'],
+    roles: ['admin'],
+  },
+  {
+    key: 'reports',
+    label: 'Reports',
+    to: { name: 'reports' },
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
+    permissions: ['manage-reports'],
+    roles: ['admin'],
+  },
+  {
+    key: 'billing',
+    label: 'Billing',
+    to: { name: 'billing' },
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z" clip-rule="evenodd"/></svg>',
+    permissions: ['manage-billing'],
+    roles: ['admin'],
+  },
+])
+
+// Auto-expand parent group when a child route is active
+watch(
+  () => route.name,
+  () => {
+    for (const group of moduleGroups.value) {
+      if (group.children) {
+        const childActive = group.children.some(c => c.to.name === route.name)
+        if (childActive && !expanded.value.has(group.key)) {
+          expanded.value = new Set([...expanded.value, group.key])
+        }
+      }
+    }
+  },
+  { immediate: true }
+)
+
+const navSections = computed<NavSection[]>(() => [
+  {
+    label: 'Overview',
+    items: moduleGroups.value.filter(g =>
+      ['dashboard', 'employee', 'attendance', 'leave', 'payroll', 'performance', 'announcements', 'recruitment'].includes(g.key)
+    ),
   },
   {
     label: 'Workspace',
     items: [
       {
-        name: 'Settings', to: { name: 'settings' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>',
-        superAdminOnly: true,
+        key: 'workspace-settings',
+        label: 'Settings',
+        to: { name: 'settings' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>',
+        roles: ['admin'],
       },
       {
-        name: 'Modules', to: { name: 'tenant-modules' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>',
-        superAdminOnly: true,
+        key: 'modules',
+        label: 'Modules',
+        to: { name: 'tenant-modules' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>',
+        roles: ['admin'],
       },
       {
-        name: 'Help', to: { name: 'help' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>',
-        superAdminOnly: true,
+        key: 'reports',
+        label: 'Reports',
+        to: { name: 'reports' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
+        permissions: ['manage-reports'], roles: ['admin'],
+      },
+      {
+        key: 'billing',
+        label: 'Billing',
+        to: { name: 'billing' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z" clip-rule="evenodd"/></svg>',
+        permissions: ['manage-billing'], roles: ['admin'],
       },
     ],
   },
@@ -199,48 +329,66 @@ const navSections = computed<NavSection[]>(() => [
     label: 'Admin',
     items: [
       {
-        name: 'Users', to: { name: 'users' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07z"/></svg>',
+        key: 'users',
+        label: 'Users',
+        to: { name: 'users' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07z"/></svg>',
         superAdminOnly: true,
       },
       {
-        name: 'Roles & Permissions', to: { name: 'roles-permissions' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+        key: 'roles-permissions',
+        label: 'Roles & Permissions',
+        to: { name: 'roles-permissions' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
         superAdminOnly: true,
       },
       {
-        name: 'Domain Requests', to: { name: 'domain-requests' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16A8 8 0 0010 2zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clip-rule="evenodd"/></svg>',
+        key: 'domain-requests',
+        label: 'Domain Requests',
+        to: { name: 'domain-requests' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16A8 8 0 0010 2zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clip-rule="evenodd"/></svg>',
         superAdminOnly: true,
       },
       {
-        name: 'System Modules', to: { name: 'modules' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>',
+        key: 'system-modules',
+        label: 'System Modules',
+        to: { name: 'modules' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>',
         superAdminOnly: true,
       },
       {
-        name: 'Plans', to: { name: 'plans' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"/></svg>',
+        key: 'plans',
+        label: 'Plans',
+        to: { name: 'plans' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"/></svg>',
         superAdminOnly: true,
       },
       {
-        name: 'Transactions', to: { name: 'transactions' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>',
+        key: 'transactions',
+        label: 'Transactions',
+        to: { name: 'transactions' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>',
         superAdminOnly: true,
       },
       {
-        name: 'Admin Settings', to: { name: 'admin-settings' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>',
+        key: 'admin-settings',
+        label: 'Admin Settings',
+        to: { name: 'admin-settings' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>',
         superAdminOnly: true,
       },
       {
-        name: 'Landing Page', to: { name: 'landing-page' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>',
+        key: 'landing-page',
+        label: 'Landing Page',
+        to: { name: 'landing-page' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>',
         superAdminOnly: true,
       },
       {
-        name: 'Languages', to: { name: 'manage-languages' },
-        icon: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16A8 8 0 0010 2zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clip-rule="evenodd"/></svg>',
+        key: 'languages',
+        label: 'Languages',
+        to: { name: 'manage-languages' },
+        icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16A8 8 0 0010 2zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clip-rule="evenodd"/></svg>',
         superAdminOnly: true,
       },
     ],
@@ -250,9 +398,27 @@ const navSections = computed<NavSection[]>(() => [
 const visibleSections = computed(() =>
   navSections.value.map(sec => ({
     ...sec,
-    items: sec.items.filter(canSee),
+    items: sec.items.filter(item => {
+      if (!canSeeGroup(item)) return false
+      // For collapsible groups, only show if at least one child is visible
+      if (item.children) {
+        return item.children.some(canSeeChild)
+      }
+      return true
+    }),
   })).filter(sec => sec.items.length > 0)
 )
+
+function hasActiveChild(group: NavGroup): boolean {
+  if (!group.children) return false
+  return group.children.some(c => isActive(c.to.name))
+}
+
+function handleLogout() {
+  showMenu.value = false
+  logout()
+  router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -274,17 +440,56 @@ const visibleSections = computed(() =>
     <nav class="nav">
       <div v-for="sec in visibleSections" :key="sec.label">
         <div class="sec-label">{{ sec.label }}</div>
-        <RouterLink
-          v-for="item in sec.items"
-          :key="item.name"
-          :to="item.to"
-          class="nav-item"
-          :class="{ active: isActive(item.to.name) }"
-        >
-          <span class="ni-icon" v-html="item.icon" />
-          <span class="ni-label">{{ item.name }}</span>
-          <span v-if="item.badge" class="ni-badge">{{ item.badge }}</span>
-        </RouterLink>
+
+        <template v-for="item in sec.items" :key="item.key">
+          <!-- Collapsible parent group -->
+          <template v-if="item.children">
+            <button
+              class="nav-item nav-parent"
+              :class="{ 'parent-active': hasActiveChild(item) }"
+              @click="toggle(item.key)"
+            >
+              <span class="ni-icon" v-html="item.icon" />
+              <span class="ni-label">{{ item.label }}</span>
+              <span v-if="item.badge" class="ni-badge">{{ item.badge }}</span>
+              <svg
+                class="ni-chevron"
+                :class="{ open: isExpanded(item.key) }"
+                width="11" height="11" viewBox="0 0 20 20" fill="currentColor"
+              >
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+
+            <!-- Sub-items -->
+            <div v-if="isExpanded(item.key)" class="sub-items">
+              <RouterLink
+                v-for="child in item.children.filter(canSeeChild)"
+                :key="child.name"
+                :to="child.to"
+                class="nav-item nav-child"
+                :class="{ active: isActive(child.to.name) }"
+              >
+                <span class="ni-dot" />
+                <span class="ni-icon" v-html="child.icon" />
+                <span class="ni-label">{{ child.name }}</span>
+                <span v-if="child.badge" class="ni-badge">{{ child.badge }}</span>
+              </RouterLink>
+            </div>
+          </template>
+
+          <!-- Direct nav link -->
+          <RouterLink
+            v-else
+            :to="item.to!"
+            class="nav-item"
+            :class="{ active: isActive(item.to!.name) }"
+          >
+            <span class="ni-icon" v-html="item.icon" />
+            <span class="ni-label">{{ item.label }}</span>
+            <span v-if="item.badge" class="ni-badge">{{ item.badge }}</span>
+          </RouterLink>
+        </template>
       </div>
     </nav>
 
@@ -381,7 +586,8 @@ const visibleSections = computed(() =>
   padding: 9px 10px; border-radius: var(--rs);
   color: var(--dim); font-size: 13px; font-weight: 400;
   transition: all .14s; position: relative;
-  text-decoration: none;
+  text-decoration: none; width: 100%;
+  background: none; border: none; cursor: pointer; text-align: left;
 }
 .nav-item:hover { background: var(--surface2); color: var(--text); }
 .nav-item.active {
@@ -394,6 +600,53 @@ const visibleSections = computed(() =>
   position: absolute; left: 0; top: 20%; bottom: 20%;
   width: 3px; background: var(--accent); border-radius: 0 3px 3px 0;
 }
+
+/* Parent group item */
+.nav-parent {
+  font-weight: 500;
+}
+.nav-parent.parent-active {
+  color: var(--text);
+}
+
+/* Chevron */
+.ni-chevron {
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.ni-chevron.open { transform: rotate(180deg); }
+
+/* Sub-items */
+.sub-items {
+  padding-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.nav-child {
+  padding: 7px 10px 7px 8px;
+  font-size: 12.5px;
+}
+.nav-child::before { display: none; }
+.nav-child.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-weight: 500;
+}
+.nav-child.active .ni-dot {
+  background: var(--accent);
+}
+
+.ni-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border-hi);
+  flex-shrink: 0;
+  margin-right: -4px;
+}
+
 .ni-icon { flex-shrink: 0; opacity: .8; display: flex; align-items: center; }
 .ni-label { flex: 1; }
 .ni-badge {

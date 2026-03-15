@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { usePayroll } from '@/composables/usePayroll'
 import { useAuth } from '@/composables/useAuth'
+import { formatCurrency } from '@/utils/currency'
 import StatCard from '@/components/dashboard/StatCard.vue'
 import ActivityTimeline from '@/components/dashboard/ActivityTimeline.vue'
 import QuickActions from '@/components/dashboard/QuickActions.vue'
@@ -137,12 +138,6 @@ const loadData = async () => {
   }
 }
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amount)
-}
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('en-US', {

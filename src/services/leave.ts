@@ -52,6 +52,7 @@ export interface LeaveRequest {
   status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'taken' | 'partially_taken';
   approval_notes?: string;
   rejection_reason?: string;
+  cancellation_reason?: string;
   emergency_leave: boolean;
   document_path?: string;
   approved_at?: string;
@@ -75,7 +76,7 @@ export interface Holiday {
   id: number;
   name: string;
   date: string;
-  type: 'national' | 'regional' | 'religious' | 'company' | 'optional';
+  type: string;
   description?: string;
   is_recurring: boolean;
   is_active: boolean;
@@ -89,6 +90,51 @@ export interface LeaveDashboard {
   upcoming_leaves: LeaveRequest[];
   department_leaves: Array<{
     department: string;
+    total_days: number;
+  }>;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  backgroundColor: string;
+  borderColor: string;
+  textColor: string;
+  extendedProps: {
+    type: 'leave' | 'holiday';
+    leave_type?: string;
+    employee?: string;
+    department?: string;
+    days?: number;
+    reason?: string;
+    period?: string;
+    holiday_type?: string;
+    description?: string;
+    is_recurring?: boolean;
+  };
+}
+
+export interface CalendarFilters {
+  departments: string[];
+  leave_types: Array<{ id: number; name: string; code: string }>;
+  employees: Array<{ id: number; name: string; department: string; designation: string }>;
+}
+
+export interface MonthlySummary {
+  month: number;
+  year: number;
+  working_days: number;
+  leave_statistics: Array<{
+    leave_type: string;
+    leave_code: string;
+    total_requests: number;
+    total_days: number;
+  }>;
+  department_statistics: Array<{
+    department: string;
+    total_requests: number;
     total_days: number;
   }>;
 }
@@ -312,6 +358,26 @@ class LeaveService {
 
   async deleteLeaveAdjustment(id: number): Promise<void> {
     await api.delete(`/leave-adjustments/${id}`);
+  // Leave Calendar
+  async getCalendarEvents(params: {
+    start_date: string;
+    end_date: string;
+    employee_id?: number;
+    department?: string;
+    leave_type_id?: number;
+  }): Promise<CalendarEvent[]> {
+    const response = await api.get('/leave-calendar/events', { params });
+    return response.data;
+  }
+
+  async getCalendarFilters(): Promise<CalendarFilters> {
+    const response = await api.get('/leave-calendar/filters');
+    return response.data;
+  }
+
+  async getMonthlySummary(year: number, month: number): Promise<MonthlySummary> {
+    const response = await api.get('/leave-calendar/monthly-summary', { params: { year, month } });
+    return response.data;
   }
 
   // Dashboard

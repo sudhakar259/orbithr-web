@@ -52,6 +52,7 @@ export interface LeaveRequest {
   status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'taken' | 'partially_taken';
   approval_notes?: string;
   rejection_reason?: string;
+  cancellation_reason?: string;
   emergency_leave: boolean;
   document_path?: string;
   approved_at?: string;

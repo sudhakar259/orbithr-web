@@ -37,6 +37,8 @@ const showApprovalModal = ref(false);
 const selectedRequest = ref<LeaveRequest | null>(null);
 const approvalNotes = ref('');
 const rejectionReason = ref('');
+const submitError = ref('');
+const submitting = ref(false);
 
 // Form state for new request
 const requestForm = ref({
@@ -88,6 +90,8 @@ const loadData = async () => {
 };
 
 const submitLeaveRequest = async () => {
+  submitError.value = '';
+  submitting.value = true;
   try {
     const formData = {
       ...requestForm.value,
@@ -98,8 +102,15 @@ const submitLeaveRequest = async () => {
     showRequestModal.value = false;
     resetRequestForm();
     await loadData();
-  } catch (err) {
-    console.error('Failed to submit leave request:', err);
+  } catch (err: any) {
+    const data = err?.response?.data;
+    if (data?.errors) {
+      submitError.value = Object.values(data.errors).flat().join(', ');
+    } else {
+      submitError.value = data?.error || data?.message || 'Failed to submit leave request';
+    }
+  } finally {
+    submitting.value = false;
   }
 };
 
@@ -179,7 +190,7 @@ onMounted(() => {
 
         <button
           v-if="isEmployee"
-          @click="showRequestModal = true"
+          @click="submitError = ''; showRequestModal = true"
           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
         >
           <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -445,6 +456,15 @@ onMounted(() => {
                     >
                       {{ request.status }}
                     </span>
+                    <p v-if="request.status === 'approved' && request.approval_notes" class="mt-1 text-xs text-gray-500">
+                      Note: {{ request.approval_notes }}
+                    </p>
+                    <p v-if="request.status === 'rejected' && request.rejection_reason" class="mt-1 text-xs text-red-500">
+                      Reason: {{ request.rejection_reason }}
+                    </p>
+                    <p v-if="request.status === 'cancelled' && request.cancellation_reason" class="mt-1 text-xs text-gray-500">
+                      Reason: {{ request.cancellation_reason }}
+                    </p>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
@@ -521,6 +541,7 @@ onMounted(() => {
       <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div class="mt-3">
           <h3 class="text-lg font-medium text-gray-900 mb-4">Request Leave</h3>
+          <div v-if="submitError" class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{{ submitError }}</div>
           <form @submit.prevent="submitLeaveRequest" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700">Leave Type</label>
@@ -596,6 +617,16 @@ onMounted(() => {
               />
             </div>
 
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Document (optional)</label>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                @change="(e: Event) => requestForm.document = (e.target as HTMLInputElement).files?.[0] ?? null"
+              />
+            </div>
+
             <div class="flex items-center">
               <input
                 v-model="requestForm.emergency_leave"
@@ -617,10 +648,10 @@ onMounted(() => {
               </button>
               <button
                 type="submit"
-                :disabled="loading"
+                :disabled="submitting"
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
-                {{ loading ? 'Submitting...' : 'Submit Request' }}
+                {{ submitting ? 'Submitting...' : 'Submit Request' }}
               </button>
             </div>
           </form>

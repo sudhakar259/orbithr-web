@@ -187,6 +187,55 @@ export interface LeaveAdjustment {
   createdBy?: User;
 }
 
+export interface LeaveAuditLog {
+  id: number;
+  user_id: number;
+  action: string;
+  entity_type: string;
+  entity_id?: number;
+  employee_id?: number;
+  old_values?: Record<string, unknown>;
+  new_values?: Record<string, unknown>;
+  description?: string;
+  ip_address?: string;
+  created_at?: string;
+  user?: User;
+  employee?: Employee;
+}
+
+export interface UtilizationReportItem {
+  employee_id: number;
+  employee_name: string;
+  department: string;
+  designation: string;
+  leave_type: string;
+  leave_code: string;
+  balance_allocated: number;
+  balance_used: number;
+  balance_pending: number;
+  balance_available: number;
+  days_taken: number;
+  utilization_percentage: number;
+  requests_approved: number;
+  requests_rejected: number;
+  requests_pending: number;
+}
+
+export interface DepartmentReportItem {
+  department: string;
+  total_requests: number;
+  total_approved_days: number;
+  total_pending_days: number;
+  leave_types: Array<{
+    leave_type: string;
+    leave_code: string;
+    requests: number;
+    approved_days: number;
+    pending_days: number;
+    avg_days_per_request: number;
+  }>;
+}
+
 class LeaveService {
   // Leave Types
   async getLeaveTypes(params?: { active_only?: boolean }): Promise<LeaveType[]> {
@@ -304,6 +353,41 @@ class LeaveService {
 
   async deleteLeavePolicy(id: number): Promise<void> {
     await api.delete(`/leave-policies/${id}`);
+  }
+
+  // Leave Reports
+  async getUtilizationReport(params: { year: number; department?: string; leave_type_id?: number }) {
+    const response = await api.get('/leave-reports/utilization', { params });
+    return response.data as { year: number; data: UtilizationReportItem[]; summary: Record<string, number> };
+  }
+
+  async getDepartmentReport(params: { year: number; month?: number }) {
+    const response = await api.get('/leave-reports/department', { params });
+    return response.data as { year: number; month?: number; departments: DepartmentReportItem[]; summary: Record<string, number> };
+  }
+
+  async getTrendsReport(params: { start_year: number; end_year: number; leave_type_id?: number }) {
+    const response = await api.get('/leave-reports/trends', { params });
+    return response.data;
+  }
+
+  async getEmployeeSummaryReport(params: { year: number; employee_id?: number }) {
+    const response = await api.get('/leave-reports/employee-summary', { params });
+    return response.data;
+  }
+
+  // Leave Audit Logs
+  async getAuditLogs(params?: {
+    action?: string;
+    entity_type?: string;
+    user_id?: number;
+    employee_id?: number;
+    start_date?: string;
+    end_date?: string;
+    page?: number;
+  }): Promise<{ data: LeaveAuditLog[]; current_page: number; last_page: number; total: number }> {
+    const response = await api.get('/leave-audit-logs', { params });
+    return response.data;
   }
 
   // Holidays

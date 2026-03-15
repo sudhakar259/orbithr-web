@@ -5,7 +5,14 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
-const { sendOtpRequest, verifyOtp, registerWithOtp, register, login } = useAuth()
+const { sendOtpRequest, verifyOtp, registerWithOtp, register, login, setAuth } = useAuth()
+
+// Social OAuth state (populated from URL when redirected back from backend)
+const socialToken    = ref('')
+const socialEmail    = ref('')
+const socialName     = ref('')
+const socialProvider = ref('')
+const isSocialFlow   = computed(() => !!socialToken.value)
 
 const step = ref<'choose' | 'otp' | 'confirm' | 'org' | 'plan'>('choose')
 const email = ref('')
@@ -28,7 +35,13 @@ const showCpw = ref(false)
 const canSubmitOtp = computed(() => otpValue.value.length === 6)
 
 const stepLabels = ['Email', 'Verify', 'Details', 'Workspace', 'Plan']
-const stepIndex = computed(() => ({ choose: 0, otp: 1, confirm: 2, org: 3, plan: 4 }[step.value] ?? 0))
+const stepIndex = computed(() => {
+  if (isSocialFlow.value) {
+    // In social flow, first 3 steps are pre-completed by OAuth
+    return ({ org: 3, plan: 4 } as Record<string, number>)[step.value] ?? 3
+  }
+  return ({ choose: 0, otp: 1, confirm: 2, org: 3, plan: 4 } as Record<string, number>)[step.value] ?? 0
+})
 
 function setOtpRef(el: any, idx: number) { otpInputs.value[idx] = el }
 function focusIndex(i: number) { otpInputs.value[i]?.focus() }
@@ -105,27 +118,60 @@ async function complete() {
   if (!plan.value) { error.value = 'Please select a plan'; return }
   loading.value = true
   try {
-    await registerWithOtp({
-      email: email.value,
-      code: otpValue.value,
-      password: password.value,
-      password_confirmation: confirmPassword.value,
-      organization: organization.value,
-      plan_id: plan.value,
-      name: name.value,
-      selected_modules: selectedModules.value,
-    })
-    await login({ email: email.value, password: password.value })
+    if (isSocialFlow.value) {
+      // Social registration — no OTP or password needed
+      const res = await api.post('/auth/social/register', {
+        social_token: socialToken.value,
+        organization: organization.value,
+        plan_id: plan.value,
+      })
+      const { token: t, user: u } = res.data
+      setAuth(u, t)
+    } else {
+      // Normal OTP registration
+      await registerWithOtp({
+        email: email.value,
+        code: otpValue.value,
+        password: password.value,
+        password_confirmation: confirmPassword.value,
+        organization: organization.value,
+        plan_id: plan.value,
+        name: name.value,
+        selected_modules: selectedModules.value,
+      })
+      await login({ email: email.value, password: password.value })
+    }
     router.push({ name: 'dashboard' })
   } catch (e: any) {
     error.value = e?.response?.data?.message || e.message || 'Registration failed'
   } finally { loading.value = false }
 }
 
-function loginWithGoogle() { window.location.href = 'http://localhost:8000/auth/redirect/google' }
-function loginWithMicrosoft() { window.location.href = 'http://localhost:8000/auth/redirect/microsoft' }
+const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || 'http://localhost:8000'
+
+function loginWithGoogle() {
+  window.location.href = `${BACKEND_URL}/auth/redirect/google?action=register`
+}
+function loginWithMicrosoft() {
+  window.location.href = `${BACKEND_URL}/auth/redirect/microsoft?action=register`
+}
 
 onMounted(async () => {
+  // Handle social OAuth redirect: ?social_token=...&social_email=...&social_name=...
+  const params = new URLSearchParams(window.location.search)
+  const st = params.get('social_token')
+  if (st) {
+    socialToken.value    = st
+    socialEmail.value    = params.get('social_email') || ''
+    socialName.value     = params.get('social_name') || ''
+    socialProvider.value = params.get('social_provider') || ''
+    email.value          = socialEmail.value
+    name.value           = socialName.value
+    step.value           = 'org'
+    // Clean URL params
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
   // Fetch modules independently — don't let it block plan loading
   fetch('http://backend.test/api/v1/modules')
     .then(r => r.json())
@@ -281,6 +327,16 @@ onMounted(async () => {
         <template v-else-if="step === 'org'">
           <h1 class="rg-title">Your workspace</h1>
           <p class="rg-sub">What's the name of your company or team?</p>
+
+          <!-- Social flow: show which account was used -->
+          <div v-if="isSocialFlow" class="social-badge">
+            <img
+              :src="socialProvider === 'google' ? '/src/assets/google.svg' : '/src/assets/microsoft.svg'"
+              :alt="socialProvider"
+              class="social-badge-icon"
+            />
+            <span>Signed in as <strong>{{ socialEmail }}</strong> via {{ socialProvider === 'google' ? 'Google' : 'Microsoft' }}</span>
+          </div>
           <div class="rg-form">
             <div class="field">
               <label>Organization name</label>
@@ -312,7 +368,7 @@ onMounted(async () => {
             <div v-if="error" class="err-box">⚠️ {{ error }}</div>
             <div class="btn-row">
               <button class="btn-submit" @click="goNextFromOrg">Next →</button>
-              <button class="back-btn" @click="step = 'confirm'">← Back</button>
+              <button v-if="!isSocialFlow" class="back-btn" @click="step = 'confirm'">← Back</button>
             </div>
           </div>
         </template>
@@ -631,6 +687,22 @@ onMounted(async () => {
 }
 .rr-perk-title { font-size: 14px; font-weight: 600; color: #E8EAF0; margin-bottom: 3px; }
 .rr-perk-desc { font-size: 12px; color: #6B7280; line-height: 1.55; }
+
+/* Social provider badge shown on org step */
+.social-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: rgba(79,126,255,.08);
+  border: 1px solid rgba(79,126,255,.2);
+  border-radius: 10px;
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-bottom: 6px;
+}
+.social-badge strong { color: #E8EAF0; }
+.social-badge-icon { width: 16px; height: 16px; object-fit: contain; flex-shrink: 0; }
 
 @media (max-width: 900px) {
   .rg-right { display: none; }

@@ -49,6 +49,13 @@ const routes: RouteRecordRaw[] = [
     meta: { layout: 'marketing', title: 'Accept invite' },
   },
   {
+    // Receives ?token=&u= from backend OAuth callback redirect
+    path: '/auth/callback',
+    name: 'oauth-callback',
+    component: () => import('@/pages/marketing/OAuthCallback.vue'),
+    meta: { layout: 'marketing', title: 'Signing in…' },
+  },
+  {
     path: '/app',
     component: () => import('@/components/layout/AppShell.vue'),
     meta: { layout: 'app', requiresAuth: true },

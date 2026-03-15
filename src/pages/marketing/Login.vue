@@ -83,10 +83,27 @@ async function verifyOtp() {
   }
 }
 
-function loginWithGoogle()    { window.location.href = 'http://localhost:8000/auth/redirect/google' }
-function loginWithMicrosoft() { window.location.href = 'http://localhost:8000/auth/redirect/microsoft' }
+const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || 'http://localhost:8000'
 
-onMounted(() => { otpDigits.value = ['', '', '', '', '', ''] })
+function loginWithGoogle() {
+  const subdomain = window.location.hostname.split('.')[0]
+  window.location.href = `${BACKEND_URL}/auth/redirect/google?subdomain=${subdomain}`
+}
+function loginWithMicrosoft() {
+  const subdomain = window.location.hostname.split('.')[0]
+  window.location.href = `${BACKEND_URL}/auth/redirect/microsoft?subdomain=${subdomain}`
+}
+
+onMounted(() => {
+  otpDigits.value = ['', '', '', '', '', '']
+  // Show OAuth error passed from backend callback redirect
+  const params = new URLSearchParams(window.location.search)
+  const oauthError = params.get('error')
+  if (oauthError) {
+    error.value = decodeURIComponent(oauthError)
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+})
 
 const features = [
   { icon: '👥', t: 'Employee Management',  d: 'Full employee lifecycle management' },

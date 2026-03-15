@@ -1,169 +1,152 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <!-- Background overlay -->
-      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="$emit('close')"></div>
+  <div v-if="show" class="overlay" @click.self="$emit('close')">
+    <div class="modal">
+      <form @submit.prevent="handleSubmit">
 
-      <!-- Modal panel -->
-      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-        <form @submit.prevent="handleSubmit">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="sm:flex sm:items-start">
-              <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 sm:mx-0 sm:h-10 sm:w-10">
-                <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-              <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                  Regularize Attendance
-                </h3>
-                <p class="text-sm text-gray-500 mt-1">
-                  Request regularization for {{ formatDate(attendance?.attendance_date) }}
-                </p>
+        <!-- Header -->
+        <div class="modal-head">
+          <div class="modal-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title">Regularize Attendance</h3>
+            <p class="modal-sub">{{ formatDate(attendance?.attendance_date) }}</p>
+          </div>
+          <button type="button" class="modal-close" @click="$emit('close')" aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
 
-                <div class="mt-4 space-y-4">
-                  <!-- Current Status -->
-                  <div class="bg-gray-50 p-3 rounded-md">
-                    <h4 class="text-sm font-medium text-gray-900">Current Status</h4>
-                    <p class="text-sm text-gray-600 mt-1">
-                      Status: <span class="font-medium capitalize">{{ attendance?.status }}</span>
-                      <br>
-                      Date: {{ formatDate(attendance?.attendance_date) }}
-                    </p>
+        <!-- Body -->
+        <div class="modal-body">
 
-                    <!-- Lock Warning -->
-                    <div v-if="attendanceLocked" class="mt-3 p-3 bg-red-50 border border-red-200 rounded">
-                        <p class="text-xs font-medium text-red-800">
-                          ⚠️ <strong>Attendance Locked</strong>
-                        </p>
-                        <p class="text-xs text-red-700 mt-1">
-                          This attendance is locked for regularization (beyond 3 working days).
-                          Only HR/Admin can modify this record, and earned leave will be auto-deducted.
-                        </p>
-                      </div>
-                  </div>
+          <!-- Current status chip -->
+          <div class="status-row">
+            <span class="status-chip">
+              Status:
+              <strong class="status-val">{{ attendance?.status || '—' }}</strong>
+            </span>
+          </div>
 
-                  <!-- Regularization Type -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Regularization Type</label>
-                    <select
-                      v-model="form.regularization_type"
-                      required
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    >
-                      <option value="forgot_punch">Forgot to Punch</option>
-                      <option value="system_error">System Error</option>
-                      <option value="late_arrival">Late Arrival</option>
-                      <option value="early_departure">Early Departure</option>
-                      <option value="work_from_home">Work from Home</option>
-                      <option value="official_work">Official Work</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-
-                  <!-- Check In Time (if applicable) -->
-                  <div v-if="['forgot_punch', 'late_arrival', 'system_error'].includes(form.regularization_type)">
-                    <label class="block text-sm font-medium text-gray-700">Correct Check In Time</label>
-                    <input
-                      v-model="form.check_in"
-                      type="time"
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                  </div>
-
-                  <!-- Check Out Time (if applicable) -->
-                  <div v-if="['forgot_punch', 'early_departure', 'system_error'].includes(form.regularization_type)">
-                    <label class="block text-sm font-medium text-gray-700">Correct Check Out Time</label>
-                    <input
-                      v-model="form.check_out"
-                      type="time"
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                  </div>
-
-                  <!-- Working Hours -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Working Hours (Optional)</label>
-                    <input
-                      v-model.number="form.working_hours"
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      max="24"
-                      placeholder="e.g., 8.5"
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    <p class="mt-1 text-xs text-gray-500">Leave empty for auto-calculation</p>
-                  </div>
-
-                  <!-- Overtime Hours -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Overtime Hours (Optional)</label>
-                    <input
-                      v-model.number="form.overtime_hours"
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      max="12"
-                      placeholder="e.g., 2"
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    <p class="mt-1 text-xs text-gray-500">Optional overtime hours</p>
-                  </div>
-
-                  <!-- Reason -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Reason</label>
-                    <textarea
-                      v-model="form.reason"
-                      required
-                      rows="3"
-                      placeholder="Please provide detailed reason for regularization..."
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    ></textarea>
-                  </div>
-
-                  <!-- Supporting Documents -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Supporting Documents (Optional)</label>
-                    <input
-                      ref="fileInput"
-                      type="file"
-                      multiple
-                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                      @change="handleFileChange"
-                      class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    <p class="mt-1 text-xs text-gray-500">
-                      Upload relevant documents (max 5MB each)
-                    </p>
-                  </div>
-                </div>
-              </div>
+          <!-- Lock warning -->
+          <div v-if="attendanceLocked" class="lock-warning">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+              <path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M12 8v4M12 16h.01"/>
+            </svg>
+            <div>
+              <strong>Attendance Locked</strong>
+              <p>Beyond 3 working days — only HR/Admin can modify. Earned Leave will be auto-deducted on approval.</p>
             </div>
           </div>
 
-          <!-- Modal footer -->
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="submit"
-              :disabled="loading"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+          <!-- Fields -->
+          <div class="fields">
+
+            <!-- Regularization type -->
+            <div class="field">
+              <label class="field-label">Regularization Type</label>
+              <select v-model="form.regularization_type" required class="field-select">
+                <option value="forgot_punch">Forgot to Punch</option>
+                <option value="system_error">System Error</option>
+                <option value="late_arrival">Late Arrival</option>
+                <option value="early_departure">Early Departure</option>
+                <option value="work_from_home">Work from Home</option>
+                <option value="official_work">Official Work</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <!-- Time fields (conditional) -->
+            <div
+              v-if="['forgot_punch', 'late_arrival', 'system_error'].includes(form.regularization_type)"
+              class="field"
             >
-              <span v-if="loading">Submitting...</span>
-              <span v-else>Submit Request</span>
-            </button>
-            <button
-              type="button"
-              @click="$emit('close')"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              <label class="field-label">Correct Check-In Time</label>
+              <input v-model="form.check_in" type="time" class="field-input" />
+            </div>
+
+            <div
+              v-if="['forgot_punch', 'early_departure', 'system_error'].includes(form.regularization_type)"
+              class="field"
             >
-              Cancel
-            </button>
+              <label class="field-label">Correct Check-Out Time</label>
+              <input v-model="form.check_out" type="time" class="field-input" />
+            </div>
+
+            <!-- Hours (two-col) -->
+            <div class="fields-row">
+              <div class="field">
+                <label class="field-label">Working Hours <span class="optional">(optional)</span></label>
+                <input
+                  v-model.number="form.working_hours"
+                  type="number" step="0.5" min="0" max="24"
+                  placeholder="e.g. 8.5"
+                  class="field-input"
+                />
+                <p class="field-hint">Leave empty for auto-calculation</p>
+              </div>
+              <div class="field">
+                <label class="field-label">Overtime Hours <span class="optional">(optional)</span></label>
+                <input
+                  v-model.number="form.overtime_hours"
+                  type="number" step="0.5" min="0" max="12"
+                  placeholder="e.g. 2"
+                  class="field-input"
+                />
+              </div>
+            </div>
+
+            <!-- Reason -->
+            <div class="field">
+              <label class="field-label">Reason *</label>
+              <textarea
+                v-model="form.reason"
+                required
+                rows="3"
+                placeholder="Please provide a detailed reason (min. 10 characters)…"
+                class="field-input"
+              ></textarea>
+            </div>
+
+            <!-- Documents -->
+            <div class="field">
+              <label class="field-label">Supporting Documents <span class="optional">(optional)</span></label>
+              <label class="file-drop">
+                <input
+                  ref="fileInput"
+                  type="file"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                  @change="handleFileChange"
+                  class="file-input-hidden"
+                />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 16v-8m0 0L9 10m3-2l3 2M20 16.7A5 5 0 0018 7h-1.26A8 8 0 103 16.3"/>
+                </svg>
+                <span>{{ selectedFiles.length ? `${selectedFiles.length} file(s) selected` : 'Click to upload files' }}</span>
+              </label>
+              <p class="field-hint">PDF, JPG, PNG, DOC — max 5 MB each</p>
+            </div>
           </div>
-        </form>
-      </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-foot">
+          <button type="button" @click="$emit('close')" class="btn btn--ghost">Cancel</button>
+          <button type="submit" :disabled="loading" class="btn btn--primary">
+            <span v-if="loading">Submitting…</span>
+            <span v-else>Submit Request</span>
+          </button>
+        </div>
+
+      </form>
     </div>
   </div>
 </template>
@@ -181,11 +164,6 @@ interface Attendance {
   check_out?: string
 }
 
-interface Props {
-  show: boolean
-  attendance: Attendance | null
-}
-
 interface RegularizationData {
   attendance_id: number
   regularization_type: string
@@ -198,7 +176,7 @@ interface RegularizationData {
   attachments?: File[]
 }
 
-const props = defineProps<Props>()
+const props = defineProps<{ show: boolean; attendance: Attendance | null }>()
 
 const emit = defineEmits<{
   close: []
@@ -208,22 +186,15 @@ const emit = defineEmits<{
 const loading = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const selectedFiles = ref<File[]>([])
-
 const { user } = useAuth()
 
 const attendanceLocked = computed<boolean>(() => {
-  if (!props.attendance?.attendance_date) {
-    return false
-  }
-
-  // Parse date portion to local midnight to avoid UTC offset issues
+  if (!props.attendance?.attendance_date) return false
   const datePart = String(props.attendance.attendance_date).split('T')[0]
   const [y, m, d] = datePart.split('-').map(n => parseInt(n, 10))
-  const attendanceDate = new Date(y, (m || 1) - 1, d || 1)
-  attendanceDate.setHours(0, 0, 0, 0)
-
-  const employeeId = user.value?.employee_id || 1
-  return isAttendanceLocked(attendanceDate, employeeId)
+  const date = new Date(y, (m || 1) - 1, d || 1)
+  date.setHours(0, 0, 0, 0)
+  return isAttendanceLocked(date, user.value?.employee_id || 1)
 })
 
 const form = reactive<RegularizationData>({
@@ -235,12 +206,11 @@ const form = reactive<RegularizationData>({
   notes: '',
   working_hours: undefined,
   overtime_hours: undefined,
-  attachments: []
+  attachments: [],
 })
 
-// Reset form when modal opens
-watch(() => props.show, (newValue) => {
-  if (newValue && props.attendance) {
+watch(() => props.show, (val) => {
+  if (val && props.attendance) {
     form.attendance_id = props.attendance.id
     form.regularization_type = 'forgot_punch'
     form.check_in = props.attendance.check_in || ''
@@ -250,71 +220,161 @@ watch(() => props.show, (newValue) => {
     form.working_hours = undefined
     form.overtime_hours = undefined
     selectedFiles.value = []
-    if (fileInput.value) {
-      fileInput.value.value = ''
-    }
+    if (fileInput.value) fileInput.value.value = ''
   }
 })
 
-const formatDate = (dateString?: string): string => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
+const formatDate = (d?: string) => d
+  ? new Date(d).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  : ''
 
-const handleFileChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const files = target.files
-  if (files) {
-    selectedFiles.value = Array.from(files)
-  }
+const handleFileChange = (e: Event) => {
+  const files = (e.target as HTMLInputElement).files
+  if (files) selectedFiles.value = Array.from(files)
 }
 
 const handleSubmit = async () => {
   loading.value = true
-
   try {
-    // Validate form
     if (!form.reason || form.reason.trim().length < 10) {
-      throw new Error('Please provide a reason for regularization (minimum 10 characters)')
+      throw new Error('Reason must be at least 10 characters')
     }
-
-    if (!form.attendance_id) {
-      throw new Error('Attendance record not found')
-    }
-    // Create regularization data
-    const regularizationData: RegularizationData = {
+    const data: RegularizationData = {
       attendance_id: form.attendance_id,
       regularization_type: form.regularization_type,
       reason: form.reason,
       notes: form.notes || '',
-      attachments: selectedFiles.value
+      attachments: selectedFiles.value,
     }
-
-    // Add time fields if applicable
-    if (form.check_in) {
-      regularizationData.check_in = form.check_in
-    }
-    if (form.check_out) {
-      regularizationData.check_out = form.check_out
-    }
-    if (form.working_hours !== undefined && form.working_hours !== null) {
-      regularizationData.working_hours = form.working_hours
-    }
-    if (form.overtime_hours !== undefined && form.overtime_hours !== null) {
-      regularizationData.overtime_hours = form.overtime_hours
-    }
-
-    emit('submit', regularizationData)
-  } catch (error) {
-    console.error('Regularization submission error:', error)
-    // You might want to show an error message to the user
+    if (form.check_in)     data.check_in     = form.check_in
+    if (form.check_out)    data.check_out    = form.check_out
+    if (form.working_hours  != null) data.working_hours  = form.working_hours
+    if (form.overtime_hours != null) data.overtime_hours = form.overtime_hours
+    emit('submit', data)
+  } catch (err) {
+    console.error(err)
   } finally {
     loading.value = false
   }
 }
 </script>
+
+<style scoped>
+/* ── overlay / modal shell ────────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0,0,0,.65); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.modal {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 14px; width: 100%; max-width: 520px; max-height: 90vh;
+  overflow-y: auto; box-shadow: 0 32px 80px rgba(0,0,0,.55);
+}
+
+/* ── header ─────────────────────────────────────────────────────────── */
+.modal-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 20px 24px; border-bottom: 1px solid var(--surface2);
+  position: sticky; top: 0; background: var(--surface); z-index: 1;
+}
+.modal-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  background: rgba(249,168,37,.12); color: var(--yellow);
+  display: grid; place-items: center;
+}
+.modal-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; }
+.modal-sub   { font-size: 12px; color: var(--muted); margin: 2px 0 0; }
+.modal-close {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  color: var(--muted); padding: 4px; border-radius: 6px; display: grid; place-items: center;
+  transition: color .15s, background .15s;
+}
+.modal-close:hover { color: var(--text); background: var(--surface2); }
+
+/* ── body ────────────────────────────────────────────────────────────── */
+.modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+.status-row { display: flex; }
+.status-chip {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted);
+  background: var(--surface2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--surface3);
+}
+.status-val { color: var(--text); font-weight: 600; text-transform: capitalize; }
+
+/* lock warning */
+.lock-warning {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: rgba(255,107,107,.08); border: 1px solid rgba(255,107,107,.25);
+  border-radius: 8px; padding: 12px 14px; color: var(--red); font-size: 12px;
+}
+.lock-warning svg { flex-shrink: 0; margin-top: 1px; }
+.lock-warning strong { display: block; font-size: 13px; margin-bottom: 4px; }
+.lock-warning p { margin: 0; color: rgba(255,107,107,.85); line-height: 1.5; }
+
+/* ── fields ──────────────────────────────────────────────────────────── */
+.fields     { display: flex; flex-direction: column; gap: 14px; }
+.fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field      { display: flex; flex-direction: column; gap: 6px; }
+
+.field-label {
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.optional { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 10px; }
+
+.field-input,
+.field-select {
+  background: var(--surface2); border: 1px solid var(--surface3);
+  border-radius: 8px; padding: 9px 12px; font-size: 13px; color: var(--text);
+  outline: none; transition: border-color .15s; font-family: inherit; width: 100%; box-sizing: border-box;
+}
+.field-input::placeholder { color: var(--muted); }
+.field-input:focus,
+.field-select:focus { border-color: var(--accent); }
+textarea.field-input { resize: vertical; min-height: 80px; }
+
+/* native select arrow fix for dark bg */
+.field-select { appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath stroke='%236B7280' stroke-width='2' stroke-linecap='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+}
+.field-select option { background: #1C2030; color: #E8EAF0; }
+
+.field-hint { font-size: 11px; color: var(--muted); margin: 0; }
+
+/* file upload */
+.file-drop {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background: var(--surface2); border: 1px dashed var(--surface3);
+  border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--muted);
+  transition: border-color .15s, color .15s;
+}
+.file-drop:hover { border-color: var(--accent); color: var(--text); }
+.file-input-hidden { display: none; }
+
+/* ── footer ──────────────────────────────────────────────────────────── */
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 16px 24px; border-top: 1px solid var(--surface2); background: var(--surface2);
+  position: sticky; bottom: 0;
+}
+
+.btn {
+  padding: 8px 20px; font-size: 13px; font-weight: 600; border: none;
+  border-radius: 8px; cursor: pointer; transition: opacity .15s, filter .15s;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn--primary {
+  background: var(--accent); color: #fff;
+}
+.btn--primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn--ghost {
+  background: transparent; color: var(--muted); border: 1px solid var(--surface3);
+}
+.btn--ghost:hover { color: var(--text); border-color: var(--muted); }
+
+@media (max-width: 480px) {
+  .fields-row { grid-template-columns: 1fr; }
+}
+</style>

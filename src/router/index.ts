@@ -154,6 +154,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Regularization Requests', permissions: ['regularize attendance'], roles: ['admin', 'manager', 'team_lead']},
       },
       {
+        path: 'my-regularizations',
+        name: 'my-regularizations',
+        component: () => import('@/pages/app/MyRegularizations.vue'),
+        meta: { title: 'My Regularization Requests' },
+      },
+      {
         path: 'leave',
         name: 'leave',
         component: Leave,

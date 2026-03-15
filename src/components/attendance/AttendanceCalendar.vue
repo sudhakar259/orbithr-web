@@ -32,8 +32,16 @@
             <span v-else-if="day.attendance?.is_regularized" class="text-xs bg-red-100 text-orange-700 px-1 rounded" title="Attendance locked for regularization">⏰</span>
           </div>
 
+          <!-- On Leave badge (overrides absent status) -->
+          <div v-if="day.isOnLeave" class="flex-1 flex items-center justify-center text-center">
+            <div>
+              <div class="text-xs font-medium text-teal-700">On Leave</div>
+              <div class="text-xs text-teal-600 mt-0.5">{{ day.leaveTypeName }}</div>
+            </div>
+          </div>
+
           <!-- Attendance Status -->
-          <div v-if="day.attendance" class="flex-1">
+          <div v-else-if="day.attendance" class="flex-1">
             <div
               :class="getStatusClasses(day.attendance.status)"
               class="text-xs px-1 py-0.5 rounded text-center mb-1"
@@ -57,16 +65,20 @@
               </div>
             </div>
 
-            <!-- Regularization Button -->
-            <button
-              v-if="canRegularizeDay(day)"
-              @click.stop="$emit('regularize', day.attendance)"
-              class="mt-1 text-xs text-blue-600 hover:text-blue-800 underline"
-            >
-              Regularize
-            </button>
+            <!-- Regularization Button + remaining days indicator -->
+            <template v-if="canRegularizeDay(day)">
+              <button
+                @click.stop="$emit('regularize', day.attendance)"
+                class="mt-1 text-xs text-blue-600 hover:text-blue-800 underline block"
+              >
+                Regularize
+              </button>
+              <div v-if="day.daysRemainingToRegularize > 0" class="text-xs text-amber-600 font-medium">
+                {{ day.daysRemainingToRegularize }}d left
+              </div>
+            </template>
             <div v-else-if="day.attendance.status === 'absent' && day.isLocked" class="mt-1 text-xs text-gray-500">
-              Locked for regularization
+              Locked · EL deducted
             </div>
           </div>
 
@@ -120,9 +132,13 @@
           <div class="w-3 h-3 rounded bg-orange-100 border border-orange-300"></div>
           <span class="text-xs text-slate-600">Late</span>
         </div>
-         <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
           <div class="w-3 h-3 rounded bg-purple-100 border border-purple-300"></div>
           <span class="text-xs text-slate-600">Regularized</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded bg-teal-100 border border-teal-300"></div>
+          <span class="text-xs text-slate-600">On Leave</span>
         </div>
       </div>
     </div>
@@ -152,6 +168,14 @@ interface Attendance {
   is_regularized: boolean
 }
 
+interface LeaveRecord {
+  start_date: string
+  end_date: string
+  leave_type_name: string
+  days_requested: number
+  leave_period?: string | null
+}
+
 interface CalendarDay {
   date: string
   day: number
@@ -161,17 +185,22 @@ interface CalendarDay {
   isWeekOff: boolean
   holiday: Holiday[] | null
   isLocked: boolean
+  isOnLeave: boolean
+  leaveTypeName: string
   bgColorClass: string
+  daysRemainingToRegularize: number
 }
 
 interface Props {
   currentDate: Date
   attendanceData: Attendance[]
+  leaves?: LeaveRecord[]
   employeeId?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  employeeId: 1
+  employeeId: 1,
+  leaves: () => [],
 })
 
 const emit = defineEmits<{
@@ -194,6 +223,16 @@ const canRegularize = computed(() => {
 
   return roleNames.some(role => ['admin', 'hr_manager', 'manager'].includes(role))
 })
+
+// Check whether a date string (yyyy-mm-dd) falls within an approved leave period
+const isDateOnLeave = (dateStr: string): LeaveRecord | null => {
+  for (const leave of props.leaves) {
+    if (dateStr >= leave.start_date && dateStr <= leave.end_date) {
+      return leave
+    }
+  }
+  return null
+}
 
 // Create calendar days
 const normalizeDate = (dateString: string): string => {
@@ -247,11 +286,30 @@ const calendarDays = computed(() => {
       attendance = undefined as any
     }
 
+    // Check if the employee is on approved leave for this date
+    const leaveRecord = isDateOnLeave(dateStr)
+    const isOnLeave = !!leaveRecord
+    const leaveTypeName = leaveRecord?.leave_type_name ?? ''
+
     const isLocked = attendance?.status === 'absent' && isAttendanceLocked(currentDate, employeeId.value)
+
+    // Calculate days remaining for regularization on absent days
+    let daysRemainingToRegularize = 0
+    if (attendance?.status === 'absent' && !isOnLeave) {
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())
+      start.setDate(start.getDate() + 1)
+      start.setHours(0, 0, 0, 0)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const workingDaysPassed = countWorkingDays(start, today, employeeId.value)
+      daysRemainingToRegularize = Math.max(0, EL_DEDUCTION_CONFIG.daysBeforeLock - workingDaysPassed)
+    }
 
     let bgColorClass = 'bg-white'
     if (!currentDate.toDateString().includes(String(new Date().getFullYear()))) {
       bgColorClass = 'bg-gray-50'
+    } else if (isOnLeave) {
+      bgColorClass = 'bg-teal-50'
     } else if (holiday && holiday.length) {
       bgColorClass = 'bg-blue-50'
     } else if (isWeekOff) {
@@ -275,6 +333,9 @@ const calendarDays = computed(() => {
       isWeekOff,
       holiday,
       isLocked,
+      isOnLeave,
+      leaveTypeName,
+      daysRemainingToRegularize,
       bgColorClass
     })
 
@@ -292,8 +353,8 @@ const canRegularizeDay = (day: CalendarDay): boolean => {
   const isRegularizedFlag = day.attendance.is_regularized === true || String(day.attendance.is_regularized) === '1'
   if (isRegularizedFlag) return false
 
-  // Do not allow regularization on holidays or week offs
-  if (day?.holiday?.length || day.isWeekOff) return false
+  // Do not allow regularization on leave days, holidays, or week offs
+  if (day.isOnLeave || day?.holiday?.length || day.isWeekOff) return false
 
   // Localize dates to midnight to avoid timezone offsets
   const today = new Date()

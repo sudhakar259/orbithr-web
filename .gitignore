@@ -16,6 +16,9 @@ coverage
 
 /public/assets/*
 /public/index.html
+src/components/attendance/__tests__
+src/services/__tests__
+src/utils/__tests__
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

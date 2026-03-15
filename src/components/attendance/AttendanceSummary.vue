@@ -68,6 +68,23 @@
       </div>
     </div>
 
+    <!-- On Leave Days -->
+    <div v-if="stats.leave_days" class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+            <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4">
+          <div class="text-2xl font-bold text-gray-900">{{ stats.leave_days || 0 }}</div>
+          <div class="text-sm text-gray-500">On Leave</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Additional Stats Row -->
     <div class="bg-white rounded-lg shadow p-6 md:col-span-2 lg:col-span-4">
       <h3 class="text-lg font-medium text-gray-900 mb-4">Monthly Overview</h3>
@@ -104,6 +121,7 @@ interface AttendanceStats {
   total_working_hours?: number
   total_overtime_hours?: number
   regularized_count?: number
+  leave_days?: number
 }
 
 interface Props {

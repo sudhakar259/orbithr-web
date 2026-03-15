@@ -13,7 +13,7 @@ import TimesheetExportModal from '@/components/attendance/TimesheetExportModal.v
 import type { PunchPayload, AttendanceRecord } from '@/services/attendance'
 import { regularizationService } from '@/services/regularization'
 
-const { fetchMonthlyAttendance, fetchTodayAttendance, fetchWorkStatuses, recordPunch, records, summary, loading, error, todaysRecord, workStatuses } = useAttendance()
+const { fetchCalendarData, fetchTodayAttendance, fetchWorkStatuses, recordPunch, records, leaves, summary, loading, error, todaysRecord, workStatuses } = useAttendance()
 const { user } = useAuth()
 
 const currentDate = ref(new Date())
@@ -52,11 +52,11 @@ const nextMonth = () => {
 const loadAttendance = async () => {
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth() + 1
-  await fetchMonthlyAttendance(year, month)
+  await fetchCalendarData(year, month, user.value?.employee_id)
 }
 
 const loadTodayAttendance = async () => {
-  await fetchTodayAttendance()
+  await fetchTodayAttendance(user.value?.employee_id)
 }
 
 const handlePunch = async (punchData: any) => {
@@ -292,6 +292,7 @@ onMounted(() => {
       <AttendanceCalendar
         :current-date="currentDate"
         :attendance-data="records"
+        :leaves="leaves"
         @day-clicked="handleDayClick"
         @regularize="openRegularizationModal"
       />

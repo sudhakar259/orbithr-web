@@ -146,6 +146,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/app/admin/LeaveAdjustments.vue'),
         meta: { title: 'Leave Adjustments', roles: ['admin', 'hr_manager'], permissions: ['view leave'] },
       },
+      {
+        path: 'admin/leave-reports',
+        name: 'leave-reports',
+        component: () => import('@/pages/app/admin/LeaveReports.vue'),
+        meta: { title: 'Leave Reports', roles: ['admin', 'hr_manager', 'manager'], permissions: ['view leave'] },
+      },
+      {
+        path: 'admin/leave-audit-log',
+        name: 'leave-audit-log',
+        component: () => import('@/pages/app/admin/LeaveAuditLog.vue'),
+        meta: { title: 'Leave Audit Log', roles: ['admin', 'hr_manager'], permissions: ['view leave'] },
+      },
       ...employeeRoutes,
       {
         path: 'attendance',

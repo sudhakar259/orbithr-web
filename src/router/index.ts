@@ -239,6 +239,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Holiday Calendar', roles: ['admin', 'hr_manager'] },
       },
       {
+        path: 'leave-calendar',
+        name: 'leave-calendar',
+        component: () => import('@/pages/app/LeaveCalendar.vue'),
+        meta: { title: 'Leave Calendar' },
+      },
+      {
         path: 'assets',
         name: 'assets',
         component: () => import('@/pages/app/AssetManagement.vue'),

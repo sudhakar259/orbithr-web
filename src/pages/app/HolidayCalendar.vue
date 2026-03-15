@@ -25,7 +25,7 @@ const months = [
   'July','August','September','October','November','December',
 ]
 
-const typeOf       = (h: Holiday) => h.type ?? h.holiday_type ?? 'public'
+const typeOf       = (h: Holiday) => h.type ?? h.holiday_type ?? 'national'
 const applicableTo = (h: Holiday) => h.applicable ?? h.applicable_to ?? 'All Employees'
 
 async function load() {
@@ -44,8 +44,8 @@ const filteredHolidays = computed(() =>
 
 const summary = computed(() => [
   { v: filteredHolidays.value.length,                                              l: 'Total Holidays',  c: '#4F7EFF' },
-  { v: filteredHolidays.value.filter(h => typeOf(h) === 'public').length,         l: 'Public Holidays', c: '#36D399' },
-  { v: filteredHolidays.value.filter(h => typeOf(h) === 'restricted').length,     l: 'Restricted',      c: '#F9A825' },
+  { v: filteredHolidays.value.filter(h => ['national', 'regional'].includes(typeOf(h))).length, l: 'Public Holidays', c: '#36D399' },
+  { v: filteredHolidays.value.filter(h => typeOf(h) === 'optional').length,       l: 'Optional',        c: '#F9A825' },
   { v: filteredHolidays.value.filter(h => new Date(h.date) > new Date()).length,  l: 'Upcoming',        c: '#9B6EFF' },
 ])
 
@@ -66,8 +66,8 @@ function calCells(mi: number) {
       key: `${mi}-${d}`, day: d,
       isToday: year.value === now.getFullYear() && mi === now.getMonth() && d === now.getDate(),
       weekend: dow === 0 || dow === 6,
-      holiday:    !!hol && typeOf(hol) === 'public',
-      restricted: !!hol && typeOf(hol) === 'restricted',
+      holiday:    !!hol && ['national', 'regional', 'religious', 'company'].includes(typeOf(hol)),
+      restricted: !!hol && typeOf(hol) === 'optional',
       holidayName: hol?.name ?? '',
     })
   }
@@ -84,7 +84,7 @@ async function deleteHoliday(id: number | string) {
   toast.success('Holiday removed.')
 }
 
-const nh = reactive({ name: '', date: '', type: 'public', applicable: 'All Employees' })
+const nh = reactive({ name: '', date: '', type: 'national', applicable: 'All Employees' })
 
 async function addHoliday() {
   if (!nh.name || !nh.date) return
@@ -97,7 +97,7 @@ async function addHoliday() {
     holidays.value.push({ id: Date.now(), name: nh.name, date: nh.date, type: nh.type, applicable: nh.applicable })
   }
   holidays.value.sort((a, b) => a.date.localeCompare(b.date))
-  Object.assign(nh, { name: '', date: '', type: 'public', applicable: 'All Employees' })
+  Object.assign(nh, { name: '', date: '', type: 'national', applicable: 'All Employees' })
   showAdd.value = false
   toast.success('✓ Holiday added!')
 }
@@ -187,8 +187,10 @@ async function addHoliday() {
         <div class="field">
           <label>Type</label>
           <select v-model="nh.type">
-            <option value="public">Public Holiday</option>
-            <option value="restricted">Restricted Holiday</option>
+            <option value="national">National Holiday</option>
+            <option value="regional">Regional Holiday</option>
+            <option value="religious">Religious Holiday</option>
+            <option value="company">Company Holiday</option>
             <option value="optional">Optional Holiday</option>
           </select>
         </div>

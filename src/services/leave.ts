@@ -170,6 +170,23 @@ export interface LeavePolicy {
   assignments?: LeavePolicyAssignment[];
 }
 
+export interface LeaveAdjustment {
+  id: number;
+  employee_id: number;
+  leave_type_id: number;
+  adjustment_amount: number;
+  adjustment_type: 'credit' | 'debit' | 'override';
+  reason_type: 'encashment' | 'carry_forward_correction' | 'unpaid_leave_conversion' | 'manual_correction' | 'other';
+  reason: string;
+  balance_year: number;
+  created_by: number;
+  created_at?: string;
+  updated_at?: string;
+  employee?: Employee;
+  leaveType?: LeaveType;
+  createdBy?: User;
+}
+
 class LeaveService {
   // Leave Types
   async getLeaveTypes(params?: { active_only?: boolean }): Promise<LeaveType[]> {
@@ -313,6 +330,34 @@ class LeaveService {
     await api.delete(`/holidays/${id}`);
   }
 
+  // Leave Adjustments
+  async getLeaveAdjustments(params?: {
+    employee_id?: number;
+    leave_type_id?: number;
+    balance_year?: number;
+    adjustment_type?: string;
+    reason_type?: string;
+    page?: number;
+  }): Promise<{ data: LeaveAdjustment[]; current_page: number; last_page: number; total: number }> {
+    const response = await api.get('/leave-adjustments', { params });
+    return response.data;
+  }
+
+  async createLeaveAdjustment(data: {
+    employee_id: number;
+    leave_type_id: number;
+    adjustment_amount: number;
+    adjustment_type: 'credit' | 'debit' | 'override';
+    reason_type: string;
+    reason: string;
+    balance_year: number;
+  }): Promise<LeaveAdjustment> {
+    const response = await api.post('/leave-adjustments', data);
+    return response.data;
+  }
+
+  async deleteLeaveAdjustment(id: number): Promise<void> {
+    await api.delete(`/leave-adjustments/${id}`);
   // Leave Calendar
   async getCalendarEvents(params: {
     start_date: string;

@@ -99,4 +99,18 @@ export const tenantModuleApi = {
   update: (moduleId: number, data: { enabled: boolean; tenant_id?: string }) => api.put(`/tenant/modules/${moduleId}`, data),
 }
 
+export const superAdminApi = {
+  stats:         ()                                                          => api.get('/super/stats'),
+  tenants:       (params?: any)                                              => api.get('/super/tenants', { params }),
+  tenant:        (id: string | number)                                       => api.get(`/super/tenants/${id}`),
+  updateTenant:  (id: string | number, data: any)                           => api.patch(`/super/tenants/${id}`, data),
+  updateModule:  (tenantId: string | number, moduleId: string | number, data: any) => api.patch(`/super/tenants/${tenantId}/modules/${moduleId}`, data),
+  invoices:      (params?: any)                                              => api.get('/super/invoices', { params }),
+  updateInvoice: (id: string | number, data: any)                           => api.patch(`/super/invoices/${id}`, data),
+  modules:       ()                                                          => api.get('/super/modules'),
+  plans:         ()                                                          => api.get('/super/plans'),
+  subscriptions: (params?: any)                                              => api.get('/super/subscriptions', { params }),
+  auditLogs:     (params?: any)                                              => api.get('/super/audit-logs', { params }),
+}
+
 export default api

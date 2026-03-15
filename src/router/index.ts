@@ -193,10 +193,113 @@ const routes: RouteRecordRaw[] = [
         path: 'onboarding',
         name: 'onboarding',
         component: () => import('@/pages/app/Onboarding.vue'),
-        meta: { title: 'Onboarding',permissions: ['manage-onboarding'], roles: ['admin']  },
+        meta: { title: 'Onboarding', permissions: ['manage-onboarding'], roles: ['admin'] },
+      },
+      {
+        path: 'announcements',
+        name: 'announcements',
+        component: () => import('@/pages/app/Announcements.vue'),
+        meta: { title: 'Announcements' },
+      },
+      {
+        path: 'payslips',
+        name: 'payslips',
+        component: () => import('@/pages/app/Payslips.vue'),
+        meta: { title: 'Payslips', permissions: ['view payroll'], roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'profile',
+        name: 'profile',
+        component: () => import('@/pages/app/Profile.vue'),
+        meta: { title: 'My Profile' },
+      },
+      {
+        path: 'training',
+        name: 'training',
+        component: () => import('@/pages/app/Training.vue'),
+        meta: { title: 'Training & Development' },
+      },
+      {
+        path: 'holiday-calendar',
+        name: 'holiday-calendar',
+        component: () => import('@/pages/app/HolidayCalendar.vue'),
+        meta: { title: 'Holiday Calendar', roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'assets',
+        name: 'assets',
+        component: () => import('@/pages/app/AssetManagement.vue'),
+        meta: { title: 'Asset Management', roles: ['admin', 'hr_manager'] },
       },
     ],
   },
+  // API docs — full-screen dark layout, outside AppShell
+  {
+    path: '/api-docs',
+    name: 'api-docs',
+    component: () => import('@/pages/app/ApiDocs.vue'),
+    meta: { layout: 'docs', title: 'API Documentation', requiresAuth: true },
+  },
+
+  // Super admin login (public marketing layout)
+  {
+    path: '/super/login',
+    name: 'super-login',
+    component: () => import('@/pages/marketing/SuperAdminLogin.vue'),
+    meta: { layout: 'marketing', title: 'Super Admin Login' },
+  },
+
+  // Super admin area — dedicated shell
+  {
+    path: '/super',
+    component: () => import('@/components/layout/SuperAdminShell.vue'),
+    meta: { requiresAuth: true, superAdminOnly: true },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'super-dashboard',
+        component: () => import('@/pages/super/SuperDashboard.vue'),
+        meta: { title: 'Platform Dashboard' },
+      },
+      {
+        path: 'tenants',
+        name: 'super-tenants',
+        component: () => import('@/pages/super/TenantsView.vue'),
+        meta: { title: 'Tenants' },
+      },
+      {
+        path: 'tenants/:id',
+        name: 'super-tenant-detail',
+        component: () => import('@/pages/super/TenantDetail.vue'),
+        meta: { title: 'Tenant Detail' },
+      },
+      {
+        path: 'billing',
+        name: 'super-billing',
+        component: () => import('@/pages/super/BillingView.vue'),
+        meta: { title: 'Billing & Revenue' },
+      },
+      {
+        path: 'modules',
+        name: 'super-modules',
+        component: () => import('@/pages/super/ModulesView.vue'),
+        meta: { title: 'Modules' },
+      },
+      {
+        path: 'subscriptions',
+        name: 'super-subscriptions',
+        component: () => import('@/pages/super/SubscriptionsView.vue'),
+        meta: { title: 'Subscriptions' },
+      },
+      {
+        path: 'audit',
+        name: 'super-audit',
+        component: () => import('@/pages/super/AuditLogView.vue'),
+        meta: { title: 'Audit Log' },
+      },
+    ],
+  },
+
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 

@@ -28,10 +28,18 @@ export function useAuth() {
 
   // Removed manual setAuthToken logic, interceptor handles it
   function setAuth(newUser: any, newToken: string) {
-    user.value = newUser
-    token.value = newToken
-    localStorage.setItem(tokenKey, newToken)
-    localStorage.setItem(userKey, JSON.stringify(newUser))
+    user.value  = newUser  || null
+    token.value = newToken || null
+    if (newToken) {
+      localStorage.setItem(tokenKey, newToken)
+    } else {
+      localStorage.removeItem(tokenKey)
+    }
+    if (newUser) {
+      localStorage.setItem(userKey, JSON.stringify(newUser))
+    } else {
+      localStorage.removeItem(userKey)
+    }
   }
 
   /** Extract user roles (if needed) */

@@ -2,58 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-/* color palette from <https://github.com/vuejs/theme> */
+/* ─── Template design tokens ────────────────────────────────────────── */
 :root {
-  --vt-c-white: #ffffff;
-  --vt-c-white-soft: #f8f8f8;
-  --vt-c-white-mute: #f2f2f2;
+  /* Backgrounds */
+  --bg:       #0C0E14;
+  --surface:  #141720;
+  --surface2: #1C2030;
+  --surface3: #222840;
 
-  --vt-c-black: #181818;
-  --vt-c-black-soft: #222222;
-  --vt-c-black-mute: #282828;
+  /* Borders */
+  --border:    rgba(255,255,255,0.06);
+  --border-hi: rgba(255,255,255,0.13);
 
-  --vt-c-indigo: #2c3e50;
+  /* Accent / semantic */
+  --accent:      #4F7EFF;
+  --accent-glow: rgba(79,126,255,0.14);
+  --green:  #36D399;
+  --yellow: #F9A825;
+  --red:    #FF6B6B;
+  --purple: #9B6EFF;
 
-  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
-  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
-  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
-  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+  /* Text */
+  --text:  #E8EAF0;
+  --muted: #6B7280;
+  --dim:   #9CA3AF;
 
-  --vt-c-text-light-1: var(--vt-c-indigo);
-  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
-  --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+  /* Layout */
+  --sw: 260px;   /* sidebar width */
+  --th: 64px;    /* topbar height */
+  --r:  14px;    /* border-radius large */
+  --rs: 8px;     /* border-radius small */
 }
 
-/* semantic color variables for this project */
-:root {
-  --color-background: var(--vt-c-white);
-  --color-background-soft: var(--vt-c-white-soft);
-  --color-background-mute: var(--vt-c-white-mute);
-
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
-
-  --color-heading: var(--vt-c-text-light-1);
-  --color-text: var(--vt-c-text-light-1);
-
-  --section-gap: 160px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: var(--vt-c-black);
-    --color-background-soft: var(--vt-c-black-soft);
-    --color-background-mute: var(--vt-c-black-mute);
-
-    --color-border: var(--vt-c-divider-dark-2);
-    --color-border-hover: var(--vt-c-divider-dark-1);
-
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
-  }
-}
-
+/* ─── Base reset ─────────────────────────────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -63,52 +44,92 @@
 }
 
 body {
+  font-family: 'DM Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
   min-height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
-  line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
   font-size: 15px;
-  text-rendering: optimizeLegibility;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Tailwind component overrides and helpers */
+a { text-decoration: none; color: inherit; }
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+img { max-width: 100%; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────── */
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 4px; }
+
+/* ─── Animations ─────────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Component utilities (dark-theme aware) ────────────────────────── */
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-brand-700;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all;
+    background: var(--accent);
+    border: none;
+    box-shadow: 0 0 16px rgba(79,126,255,0.3);
   }
+  .btn-primary:hover {
+    background: #3d6ee8;
+    transform: translateY(-1px);
+    box-shadow: 0 0 22px rgba(79,126,255,0.45);
+  }
+
   .btn-danger {
-    @apply inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-red-700;
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-all;
+    background: var(--red);
   }
+  .btn-danger:hover { filter: brightness(1.1); }
+
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50;
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all;
+    background: var(--surface2);
+    border: 1px solid var(--border-hi);
+    color: var(--dim);
   }
+  .btn-ghost:hover {
+    background: var(--surface3);
+    color: var(--text);
+    border-color: var(--accent);
+  }
+
   .card {
-    @apply rounded-xl border border-slate-200 bg-white p-6 shadow-soft;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.5rem;
   }
+
   .input {
-    @apply w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-200;
+    @apply w-full rounded-lg px-3 py-2 text-sm transition-all;
+    background: var(--surface2);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    outline: none;
   }
+  .input::placeholder { color: var(--muted); }
+  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
   .stat {
-    @apply rounded-xl border border-slate-200 bg-white p-5 shadow-soft;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.25rem;
   }
+
   .sparkline {
     height: 40px;
     width: 100%;
@@ -116,27 +137,7 @@ body {
 }
 
 @layer utilities {
-  .text-xxs {
-    font-size: 11px;
-  }
+  .text-xxs { font-size: 11px; }
 }
 
-/* small refinements */
-.container {
-  @apply mx-auto max-w-7xl px-4;
-}
-
-/* ensure images fit */
-img {
-  max-width: 100%;
-}
-
-/* subtle scrollbar */
-*::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
-}
-*::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-}
+.container { @apply mx-auto max-w-7xl px-4; }

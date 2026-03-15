@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
+import { formatCurrency } from '@/utils/currency'
 import StatusPill from '@/components/ui/StatusPill.vue'
 import { useToast } from '@/composables/useToast'
 
@@ -73,7 +74,7 @@ const deductions = (r: PayslipRow) => r.deductions ?? Math.round(gross(r) * 0.17
 const statusOf = (r: PayslipRow) => r.status ?? r.pay_status ?? 'paid'
 const nameOf   = (r: PayslipRow) => r.name ?? r.employee_name ?? '—'
 const deptOf   = (r: PayslipRow) => r.department ?? r.dept ?? '—'
-const fmt      = (n: number) => Math.round(n).toLocaleString('en-IN')
+const fmt      = (n: number) => formatCurrency(n)
 
 const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 

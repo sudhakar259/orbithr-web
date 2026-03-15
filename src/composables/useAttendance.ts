@@ -6,6 +6,7 @@ import {
   type AttendanceRecord,
   type AttendanceRecordsQuery,
   type AttendanceSummary,
+  type LeaveRecord,
   type PunchPayload,
   type RegularizationPayload,
   type Shift,
@@ -22,6 +23,7 @@ const createEmptySummary = (): AttendanceSummary => ({
   total_working_hours: 0,
   total_overtime_hours: 0,
   regularized_count: 0,
+  leave_days: 0,
 })
 
 const isSameDate = (left: string | null | undefined, right: string | null | undefined) => {
@@ -124,6 +126,7 @@ const extractErrorMessage = (error: unknown): string => {
 
 export function useAttendance() {
   const records = ref<AttendanceRecord[]>([])
+  const leaves = ref<LeaveRecord[]>([])
   const todaysRecord = ref<AttendanceRecord | null>(null)
   const devices = ref<AttendanceDevice[]>([])
   const shifts = ref<Shift[]>([])
@@ -216,6 +219,14 @@ export function useAttendance() {
     })
   }
 
+  const fetchCalendarData = async (year: number, month: number, employeeId?: number) => {
+    const result = await runRequest(() => attendanceService.getCalendarData(year, month, employeeId))
+    records.value = sortRecords(result.records)
+    leaves.value = result.leaves
+    summary.value = result.summary
+    return result
+  }
+
   const refreshAttendanceRecords = async () => {
     if (!lastRecordsQuery.value) return null
     return fetchAttendanceRecords(lastRecordsQuery.value)
@@ -281,6 +292,7 @@ export function useAttendance() {
   return {
     // state
     records,
+    leaves,
     todaysRecord,
     devices,
     shifts,
@@ -294,6 +306,7 @@ export function useAttendance() {
     // fetchers
     fetchAttendanceRecords,
     fetchMonthlyAttendance,
+    fetchCalendarData,
     refreshAttendanceRecords,
     fetchTodayAttendance,
     fetchAttendanceSummary,

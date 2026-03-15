@@ -59,6 +59,7 @@ export interface AttendanceSummary {
   total_working_hours: number
   total_overtime_hours: number
   regularized_count: number
+  leave_days?: number
 }
 
 export interface AttendanceRecordsQuery {
@@ -78,6 +79,20 @@ export interface AttendanceCollectionResult {
   records: AttendanceRecord[]
   summary?: AttendanceSummary
   meta?: Record<string, unknown> | null
+}
+
+export interface LeaveRecord {
+  start_date: string
+  end_date: string
+  leave_type_name: string
+  days_requested: number
+  leave_period?: string | null
+}
+
+export interface CalendarDataResult {
+  records: AttendanceRecord[]
+  leaves: LeaveRecord[]
+  summary: AttendanceSummary
 }
 
 export interface PunchPayload {
@@ -221,6 +236,22 @@ class AttendanceService {
       include_summary: true,
       ...options,
     })
+  }
+
+  async getCalendarData(year: number, month: number, employeeId?: number): Promise<CalendarDataResult> {
+    const params: Record<string, unknown> = { year, month }
+    if (employeeId) params.employee_id = employeeId
+    const response = await api.get(`${this.basePath}/calendar`, { params })
+    const payload = this.unwrapPayload<any>(response)
+    return {
+      records: payload?.records ?? [],
+      leaves: payload?.leaves ?? [],
+      summary: payload?.summary ?? {
+        total_days: 0, present_days: 0, absent_days: 0, half_days: 0,
+        late_days: 0, early_leave_days: 0, total_working_hours: 0,
+        total_overtime_hours: 0, regularized_count: 0,
+      },
+    }
   }
 
   async getAttendanceSummary(params: AttendanceRecordsQuery = {}): Promise<AttendanceSummary> {

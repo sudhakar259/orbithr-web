@@ -1,175 +1,136 @@
 <template>
-  <div class="space-y-6">
+  <div class="page">
     <!-- Header -->
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Regularization Requests</h1>
-      <p class="text-slate-600">Review and approve pending attendance regularization requests</p>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Regularization Requests</h1>
+        <p class="page-sub">Review and approve pending attendance regularization requests</p>
+      </div>
     </div>
 
     <!-- Filter Tabs -->
-    <div class="flex gap-2 border-b border-slate-200">
+    <div class="tabs">
       <button
         v-for="tab in tabs"
         :key="tab.value"
         @click="activeTab = tab.value"
-        :class="[
-          'px-4 py-2 border-b-2 font-medium text-sm transition-colors',
-          activeTab === tab.value
-            ? 'border-brand-600 text-brand-600'
-            : 'border-transparent text-slate-600 hover:text-slate-900'
-        ]"
+        :class="['tab', activeTab === tab.value && 'tab--active']"
       >
         {{ tab.label }}
-        <span
-          v-if="tab.count > 0"
-          class="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700"
-        >
-          {{ tab.count }}
+        <span v-if="tabCounts[tab.value] > 0" class="tab-count">
+          {{ tabCounts[tab.value] }}
         </span>
       </button>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="flex justify-center py-12">
-      <div class="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-brand-600"></div>
+    <!-- Loading -->
+    <div v-if="loading" class="state-center">
+      <div class="spinner"></div>
     </div>
 
-    <!-- Error Message -->
-    <div v-else-if="error" class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-      {{ error }}
-    </div>
+    <!-- Error -->
+    <div v-else-if="error" class="alert-error">{{ error }}</div>
 
-    <!-- Empty State -->
-    <div v-else-if="filteredRequests.length === 0" class="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
-      <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+    <!-- Empty -->
+    <div v-else-if="filteredRequests.length === 0" class="state-empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" stroke="currentColor"
+          d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
       </svg>
-      <h3 class="mt-2 text-sm font-medium text-slate-900">No requests</h3>
-      <p class="mt-1 text-sm text-slate-500">
-        {{ activeTab === 'pending' ? 'No pending regularization requests' : 'No regularization requests found' }}
+      <p class="state-empty__msg">
+        {{ activeTab === 'pending' ? 'No pending regularization requests' : 'No requests found' }}
       </p>
     </div>
 
     <!-- Requests List -->
-    <div v-else class="space-y-4">
-      <div
-        v-for="request in filteredRequests"
-        :key="request.id"
-        class="rounded-lg border border-slate-200 bg-white shadow-soft transition-shadow hover:shadow-md"
-      >
-        <!-- Request Header -->
-        <div class="flex items-start justify-between border-b border-slate-100 p-6">
-          <div class="flex-1">
-            <div class="flex items-center gap-3">
-              <div>
-                <h3 class="text-lg font-semibold text-slate-900">
-                  {{ request.employee?.full_name }}
-                </h3>
-                <p class="text-sm text-slate-600">
-                  {{ request.employee?.employee_id }} • {{ request.employee?.designation }}
-                </p>
-              </div>
+    <div v-else class="list">
+      <div v-for="request in filteredRequests" :key="request.id" class="card">
+
+        <!-- Card header -->
+        <div class="card-head">
+          <div class="emp-info">
+            <div class="emp-name">{{ request.employee?.full_name }}</div>
+            <div class="emp-sub">
+              {{ request.employee?.employee_id }}
+              <span v-if="request.employee?.designation"> · {{ request.employee?.designation }}</span>
             </div>
           </div>
-          <div class="text-right">
-            <div class="text-sm font-medium text-slate-900">
-              {{ formatDate(request.attendance?.attendance_date) }}
-            </div>
-            <span
-              :class="[
-                'mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                request.status === 'pending' && 'bg-yellow-100 text-yellow-800',
-                request.status === 'approved' && 'bg-green-100 text-green-800',
-                request.status === 'rejected' && 'bg-red-100 text-red-800'
-              ]"
-            >
+          <div class="card-head-right">
+            <div class="date-label">{{ formatDate(request.attendance?.attendance_date) }}</div>
+            <span :class="['badge', `badge--${request.status}`]">
               {{ formatStatus(request.status) }}
-              <span v-if="request.auto_approved" class="ml-1 text-xs">(Auto-approved)</span>
+              <span v-if="request.auto_approved" class="badge-note">(Auto)</span>
             </span>
           </div>
         </div>
 
-        <!-- Request Details -->
-        <div class="space-y-4 p-6">
-          <!-- Regularization Type -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <div class="text-xs font-medium uppercase tracking-wide text-slate-600">Type</div>
-              <div class="mt-1 text-sm font-medium text-slate-900">
-                {{ formatRegularizationType(request.regularization_type) }}
-              </div>
+        <!-- Details -->
+        <div class="card-body">
+          <!-- Meta row -->
+          <div class="meta-grid">
+            <div class="meta-item">
+              <div class="meta-label">Type</div>
+              <div class="meta-value">{{ formatRegularizationType(request.regularization_type) }}</div>
             </div>
-            <div>
-              <div class="text-xs font-medium uppercase tracking-wide text-slate-600">Requested Date</div>
-              <div class="mt-1 text-sm font-medium text-slate-900">
-                {{ formatDate(request.created_at) }}
-              </div>
+            <div class="meta-item">
+              <div class="meta-label">Requested On</div>
+              <div class="meta-value">{{ formatDate(request.created_at) }}</div>
             </div>
-            <div v-if="request.auto_approved">
-              <div class="text-xs font-medium uppercase tracking-wide text-slate-600">Auto-Approved On</div>
-              <div class="mt-1 text-sm font-medium text-slate-900">
-                {{ formatDate(request.approved_at) }}
-              </div>
+            <div v-if="request.auto_approved" class="meta-item">
+              <div class="meta-label">Auto-Approved On</div>
+              <div class="meta-value">{{ formatDate(request.approved_at) }}</div>
             </div>
           </div>
 
-          <!-- Proposed Changes -->
-          <div class="rounded-lg bg-slate-50 p-4">
-            <h4 class="text-sm font-semibold text-slate-900 mb-3">Proposed Changes</h4>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <div class="text-xs text-slate-600">Check In</div>
-                <div class="font-medium text-slate-900">
-                  {{ request.check_in ? formatTime(request.check_in) : '—' }}
-                </div>
+          <!-- Proposed changes -->
+          <div class="proposed">
+            <h4 class="section-label">Proposed Changes</h4>
+            <div class="proposed-grid">
+              <div class="proposed-item">
+                <div class="prop-key">Check In</div>
+                <div class="prop-val">{{ request.check_in ? formatTime(request.check_in) : '—' }}</div>
               </div>
-              <div>
-                <div class="text-xs text-slate-600">Check Out</div>
-                <div class="font-medium text-slate-900">
-                  {{ request.check_out ? formatTime(request.check_out) : '—' }}
-                </div>
+              <div class="proposed-item">
+                <div class="prop-key">Check Out</div>
+                <div class="prop-val">{{ request.check_out ? formatTime(request.check_out) : '—' }}</div>
               </div>
-              <div>
-                <div class="text-xs text-slate-600">Working Hours</div>
-                <div class="font-medium text-slate-900">
-                  {{ request.working_hours ? `${request.working_hours}h` : '—' }}
-                </div>
+              <div class="proposed-item">
+                <div class="prop-key">Working Hrs</div>
+                <div class="prop-val">{{ request.working_hours ? `${request.working_hours}h` : '—' }}</div>
               </div>
-              <div>
-                <div class="text-xs text-slate-600">Overtime Hours</div>
-                <div class="font-medium text-slate-900">
-                  {{ request.overtime_hours ? `${request.overtime_hours}h` : '—' }}
-                </div>
+              <div class="proposed-item">
+                <div class="prop-key">Overtime Hrs</div>
+                <div class="prop-val">{{ request.overtime_hours ? `${request.overtime_hours}h` : '—' }}</div>
               </div>
             </div>
           </div>
 
           <!-- Reason -->
-          <div>
-            <h4 class="text-sm font-semibold text-slate-900 mb-2">Reason for Regularization</h4>
-            <p class="text-sm text-slate-600 bg-slate-50 p-3 rounded">{{ request.reason }}</p>
+          <div class="reason-block">
+            <h4 class="section-label">Reason</h4>
+            <p class="reason-text">{{ request.reason }}</p>
             <div v-if="request.notes" class="mt-2">
-              <p class="text-xs text-slate-600 font-medium">Additional Notes:</p>
-              <p class="text-sm text-slate-600 bg-slate-50 p-3 rounded">{{ request.notes }}</p>
+              <p class="notes-label">Additional Notes:</p>
+              <p class="reason-text">{{ request.notes }}</p>
             </div>
           </div>
 
-          <!-- Approval Info -->
-          <div v-if="request.status !== 'pending'" class="rounded-lg bg-blue-50 p-4 border border-blue-100">
-            <h4 class="text-sm font-semibold text-blue-900 mb-2">
+          <!-- Approval info -->
+          <div v-if="request.status !== 'pending'" :class="['approval-info', `approval-info--${request.status}`]">
+            <h4 class="section-label">
               {{ request.status === 'approved' ? 'Approval Details' : 'Rejection Details' }}
             </h4>
-            <div class="space-y-1 text-sm text-blue-800">
+            <div class="approval-rows">
               <p>
-                <span class="font-medium">{{ request.status === 'approved' ? 'Approved' : 'Rejected' }} By:</span>
-                {{ request.approved_by_user?.name }}
+                <span class="approval-key">{{ request.status === 'approved' ? 'Approved' : 'Rejected' }} By:</span>
+                {{ request.approved_by_user?.name || '—' }}
               </p>
               <p>
-                <span class="font-medium">{{ request.status === 'approved' ? 'Approved' : 'Rejected' }} On:</span>
+                <span class="approval-key">On:</span>
                 {{ formatDate(request.approved_at) }}
               </p>
               <p v-if="request.approval_notes">
-                <span class="font-medium">Notes:</span>
+                <span class="approval-key">Notes:</span>
                 {{ request.approval_notes }}
               </p>
             </div>
@@ -177,121 +138,84 @@
         </div>
 
         <!-- Actions -->
-        <div
-          v-if="request.status === 'pending'"
-          class="flex gap-3 border-t border-slate-100 bg-slate-50 p-6"
-        >
+        <div v-if="request.status === 'pending'" class="card-actions">
           <button
             @click="openApprovalModal(request)"
-            :disabled="submitting"
-            class="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+            :disabled="!!submitting"
+            class="btn btn--approve"
           >
-            <span v-if="submitting === request.id">Approving...</span>
+            <span v-if="submitting === request.id">Approving…</span>
             <span v-else>✓ Approve</span>
           </button>
           <button
             @click="openRejectionModal(request)"
-            :disabled="submitting"
-            class="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+            :disabled="!!submitting"
+            class="btn btn--reject"
           >
-            <span v-if="submitting === request.id">Rejecting...</span>
+            <span v-if="submitting === request.id">Rejecting…</span>
             <span v-else>✗ Reject</span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Approval Modal -->
-    <div
-      v-if="showApprovalModal && selectedRequest"
-      class="fixed inset-0 z-50 overflow-y-auto"
-    >
-      <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="showApprovalModal = false"></div>
-      <div class="flex min-h-screen items-center justify-center p-4">
-        <div class="relative bg-white rounded-lg shadow-lg max-w-md w-full" @click.stop>
-          <div class="border-b border-slate-200 px-6 py-4">
-            <h2 class="text-lg font-semibold text-slate-900">Approve Request</h2>
-            <p class="mt-1 text-sm text-slate-600">
-              {{ selectedRequest.employee?.full_name }} - {{ formatDate(selectedRequest.attendance?.attendance_date) }}
-            </p>
-          </div>
-
-          <div class="space-y-4 px-6 py-4">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-2">Approval Notes (Optional)</label>
-              <textarea
-                v-model="approvalNotes"
-                rows="3"
-                placeholder="Add notes about this approval..."
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:border-brand-500 focus:ring-brand-500"
-              ></textarea>
-            </div>
-          </div>
-
-          <div class="flex gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-            <button
-              @click="showApprovalModal = false"
-              class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              @click="approveRequest"
-              :disabled="submitting"
-              class="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-            >
-              {{ submitting ? 'Approving...' : 'Approve' }}
-            </button>
-          </div>
+    <!-- Approve modal -->
+    <div v-if="showApprovalModal && selectedRequest" class="overlay" @click.self="showApprovalModal = false">
+      <div class="modal">
+        <div class="modal-head">
+          <h2 class="modal-title">Approve Request</h2>
+          <p class="modal-sub">
+            {{ selectedRequest.employee?.full_name }} — {{ formatDate(selectedRequest.attendance?.attendance_date) }}
+          </p>
+        </div>
+        <div class="modal-body">
+          <label class="field-label">Approval Notes (Optional)</label>
+          <textarea
+            v-model="approvalNotes"
+            rows="3"
+            placeholder="Add notes about this approval…"
+            class="field-input"
+          ></textarea>
+        </div>
+        <div class="modal-foot">
+          <button @click="showApprovalModal = false" class="btn btn--ghost">Cancel</button>
+          <button @click="approveRequest" :disabled="!!submitting" class="btn btn--approve">
+            {{ submitting ? 'Approving…' : 'Approve' }}
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Rejection Modal -->
-    <div
-      v-if="showRejectionModal && selectedRequest"
-      class="fixed inset-0 z-50 overflow-y-auto"
-    >
-      <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="showRejectionModal = false"></div>
-      <div class="flex min-h-screen items-center justify-center p-4">
-        <div class="relative bg-white rounded-lg shadow-lg max-w-md w-full" @click.stop>
-          <div class="border-b border-slate-200 px-6 py-4">
-            <h2 class="text-lg font-semibold text-slate-900">Reject Request</h2>
-            <p class="mt-1 text-sm text-slate-600">
-              {{ selectedRequest.employee?.full_name }} - {{ formatDate(selectedRequest.attendance?.attendance_date) }}
-            </p>
-          </div>
-
-          <div class="space-y-4 px-6 py-4">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-2">Reason for Rejection *</label>
-              <textarea
-                v-model="rejectionNotes"
-                rows="3"
-                placeholder="Please provide the reason for rejection..."
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:border-brand-500 focus:ring-brand-500"
-              ></textarea>
-              <p v-if="rejectionNotes.length < 10" class="mt-1 text-xs text-red-600">
-                Minimum 10 characters required
-              </p>
-            </div>
-          </div>
-
-          <div class="flex gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-            <button
-              @click="showRejectionModal = false"
-              class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              @click="rejectRequest"
-              :disabled="submitting || rejectionNotes.length < 10"
-              class="flex-1 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              {{ submitting ? 'Rejecting...' : 'Reject' }}
-            </button>
-          </div>
+    <!-- Reject modal -->
+    <div v-if="showRejectionModal && selectedRequest" class="overlay" @click.self="showRejectionModal = false">
+      <div class="modal">
+        <div class="modal-head">
+          <h2 class="modal-title">Reject Request</h2>
+          <p class="modal-sub">
+            {{ selectedRequest.employee?.full_name }} — {{ formatDate(selectedRequest.attendance?.attendance_date) }}
+          </p>
+        </div>
+        <div class="modal-body">
+          <label class="field-label">Reason for Rejection *</label>
+          <textarea
+            v-model="rejectionNotes"
+            rows="3"
+            placeholder="Please provide the reason for rejection…"
+            class="field-input"
+          ></textarea>
+          <p v-if="rejectionNotes.length > 0 && rejectionNotes.length < 10" class="field-hint field-hint--error">
+            Minimum 10 characters required
+          </p>
+        </div>
+        <div class="modal-foot">
+          <button @click="showRejectionModal = false" class="btn btn--ghost">Cancel</button>
+          <button
+            @click="rejectRequest"
+            :disabled="!!submitting || rejectionNotes.length < 10"
+            class="btn btn--reject"
+          >
+            {{ submitting ? 'Rejecting…' : 'Reject' }}
+          </button>
         </div>
       </div>
     </div>
@@ -306,15 +230,8 @@ interface AttendanceRegularization {
   id: number
   employee_id: number
   attendance_id: number
-  employee?: {
-    id: number
-    full_name: string
-    employee_id: string
-    designation: string
-  }
-  attendance?: {
-    attendance_date: string
-  }
+  employee?: { id: number; full_name: string; employee_id: string; designation: string }
+  attendance?: { attendance_date: string }
   regularization_type: string
   reason: string
   notes?: string
@@ -327,10 +244,7 @@ interface AttendanceRegularization {
   approved_at?: string
   approval_notes?: string
   auto_approved: boolean
-  approved_by_user?: {
-    id: number
-    name: string
-  }
+  approved_by_user?: { id: number; name: string }
 }
 
 const loading = ref(false)
@@ -345,30 +259,26 @@ const approvalNotes = ref('')
 const rejectionNotes = ref('')
 
 const tabs = [
-  { value: 'pending', label: 'Pending', count: 0 },
-  { value: 'approved', label: 'Approved', count: 0 },
-  { value: 'rejected', label: 'Rejected', count: 0 },
-  { value: 'all', label: 'All', count: 0 },
+  { value: 'pending',  label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'all',      label: 'All' },
 ]
 
-const filteredRequests = computed(() => {
-  if (activeTab.value === 'all') return requests.value
-  return requests.value.filter(r => r.status === activeTab.value)
-})
+const filteredRequests = computed(() =>
+  activeTab.value === 'all' ? requests.value : requests.value.filter(r => r.status === activeTab.value)
+)
 
-const tabCounts = computed(() => {
-  return {
-    pending: requests.value.filter(r => r.status === 'pending').length,
-    approved: requests.value.filter(r => r.status === 'approved').length,
-    rejected: requests.value.filter(r => r.status === 'rejected').length,
-    all: requests.value.length,
-  }
-})
+const tabCounts = computed(() => ({
+  pending:  requests.value.filter(r => r.status === 'pending').length,
+  approved: requests.value.filter(r => r.status === 'approved').length,
+  rejected: requests.value.filter(r => r.status === 'rejected').length,
+  all:      requests.value.length,
+}))
 
 const fetchRequests = async () => {
   loading.value = true
   error.value = ''
-
   try {
     const result = await regularizationService.getPendingRequests()
     requests.value = result.data || []
@@ -393,26 +303,16 @@ const openRejectionModal = (request: AttendanceRegularization) => {
 
 const approveRequest = async () => {
   if (!selectedRequest.value) return
-
   submitting.value = selectedRequest.value.id
   error.value = ''
-
   try {
-    const result = await regularizationService.approveRequest(
-      selectedRequest.value.id,
-      {
-        approval_notes: approvalNotes.value || null,
-      }
-    )
-
-    // Update local data
-    const index = requests.value.findIndex(r => r.id === selectedRequest.value!.id)
-    if (index !== -1) {
-      requests.value[index].status = 'approved'
-      requests.value[index].approved_at = new Date().toISOString()
-      requests.value[index].approval_notes = approvalNotes.value
+    await regularizationService.approveRequest(selectedRequest.value.id, { approval_notes: approvalNotes.value || null })
+    const idx = requests.value.findIndex(r => r.id === selectedRequest.value!.id)
+    if (idx !== -1) {
+      requests.value[idx].status = 'approved'
+      requests.value[idx].approved_at = new Date().toISOString()
+      requests.value[idx].approval_notes = approvalNotes.value
     }
-
     showApprovalModal.value = false
     selectedRequest.value = null
     approvalNotes.value = ''
@@ -425,26 +325,16 @@ const approveRequest = async () => {
 
 const rejectRequest = async () => {
   if (!selectedRequest.value || rejectionNotes.value.length < 10) return
-
   submitting.value = selectedRequest.value.id
   error.value = ''
-
   try {
-    const result = await regularizationService.rejectRequest(
-      selectedRequest.value.id,
-      {
-        approval_notes: rejectionNotes.value,
-      }
-    )
-
-    // Update local data
-    const index = requests.value.findIndex(r => r.id === selectedRequest.value!.id)
-    if (index !== -1) {
-      requests.value[index].status = 'rejected'
-      requests.value[index].approved_at = new Date().toISOString()
-      requests.value[index].approval_notes = rejectionNotes.value
+    await regularizationService.rejectRequest(selectedRequest.value.id, { approval_notes: rejectionNotes.value })
+    const idx = requests.value.findIndex(r => r.id === selectedRequest.value!.id)
+    if (idx !== -1) {
+      requests.value[idx].status = 'rejected'
+      requests.value[idx].approved_at = new Date().toISOString()
+      requests.value[idx].approval_notes = rejectionNotes.value
     }
-
     showRejectionModal.value = false
     selectedRequest.value = null
     rejectionNotes.value = ''
@@ -455,46 +345,165 @@ const rejectRequest = async () => {
   }
 }
 
-const formatDate = (dateString?: string): string => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
+const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : ''
+const formatTime = (t?: string) => t ? new Date(`1970-01-01T${t}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
+const formatStatus = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const formatRegularizationType = (type: string) => ({
+  forgot_punch: 'Forgot to Punch', system_error: 'System Error', late_arrival: 'Late Arrival',
+  early_departure: 'Early Departure', work_from_home: 'Work from Home', official_work: 'Official Work', other: 'Other',
+}[type] ?? type)
 
-const formatTime = (timeString?: string): string => {
-  if (!timeString) return '—'
-  const time = new Date(`1970-01-01T${timeString}`)
-  return time.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  })
-}
-
-const formatStatus = (status: string): string => {
-  return status.charAt(0).toUpperCase() + status.slice(1)
-}
-
-const formatRegularizationType = (type: string): string => {
-  const typeMap: Record<string, string> = {
-    forgot_punch: 'Forgot to Punch',
-    system_error: 'System Error',
-    late_arrival: 'Late Arrival',
-    early_departure: 'Early Departure',
-    work_from_home: 'Work from Home',
-    official_work: 'Official Work',
-    other: 'Other',
-  }
-  return typeMap[type] || type
-}
-
-onMounted(() => {
-  fetchRequests()
-})
+onMounted(fetchRequests)
 </script>
 
 <style scoped>
+/* ── layout ─────────────────────────────────────────────────────────────── */
+.page        { display: flex; flex-direction: column; gap: 24px; }
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; }
+.page-title  { font-size: 22px; font-weight: 700; color: var(--text); margin: 0; }
+.page-sub    { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+
+/* ── tabs ─────────────────────────────────────────────────────────────────*/
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--surface3); }
+.tab {
+  padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--muted);
+  background: none; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; transition: color .15s, border-color .15s; display: flex; align-items: center; gap: 6px;
+}
+.tab:hover        { color: var(--text); }
+.tab--active      { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-count        {
+  font-size: 11px; font-weight: 600; padding: 1px 6px;
+  background: var(--surface3); color: var(--muted); border-radius: 10px;
+}
+
+/* ── states ───────────────────────────────────────────────────────────────*/
+.state-center { display: flex; justify-content: center; padding: 48px; }
+.spinner {
+  width: 28px; height: 28px;
+  border: 2.5px solid rgba(79,126,255,.2); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.alert-error { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.3); color: var(--red); padding: 12px 16px; border-radius: 8px; font-size: 13px; }
+
+.state-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 48px; color: var(--muted); background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px;
+}
+.state-empty__msg { font-size: 14px; }
+
+/* ── list / card ──────────────────────────────────────────────────────────*/
+.list { display: flex; flex-direction: column; gap: 16px; }
+.card {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 12px; overflow: hidden; transition: border-color .15s;
+}
+.card:hover { border-color: var(--surface2); }
+
+/* card header */
+.card-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid var(--surface2);
+}
+.emp-name  { font-size: 15px; font-weight: 600; color: var(--text); }
+.emp-sub   { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.card-head-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.date-label { font-size: 13px; font-weight: 500; color: var(--text); }
+
+/* badges */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; letter-spacing: .3px;
+}
+.badge--pending  { background: rgba(249,168,37,.12); color: var(--yellow); border: 1px solid rgba(249,168,37,.25); }
+.badge--approved { background: rgba(54,211,153,.12);  color: var(--green);  border: 1px solid rgba(54,211,153,.25); }
+.badge--rejected { background: rgba(255,107,107,.12); color: var(--red);    border: 1px solid rgba(255,107,107,.25); }
+.badge-note      { font-weight: 400; opacity: .8; }
+
+/* card body */
+.card-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+.meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.meta-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.meta-value { font-size: 13px; font-weight: 500; color: var(--text); margin-top: 4px; }
+
+.proposed        { background: var(--surface2); border-radius: 8px; padding: 14px 16px; }
+.proposed-grid   { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 10px; }
+.prop-key        { font-size: 11px; color: var(--muted); }
+.prop-val        { font-size: 13px; font-weight: 500; color: var(--text); margin-top: 3px; }
+
+.section-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin: 0; }
+
+.reason-text  { font-size: 13px; color: var(--text); background: var(--surface2); padding: 10px 12px; border-radius: 6px; margin-top: 8px; line-height: 1.5; }
+.notes-label  { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+.approval-info {
+  border-radius: 8px; padding: 14px 16px;
+}
+.approval-info--approved { background: rgba(54,211,153,.08);  border: 1px solid rgba(54,211,153,.2); }
+.approval-info--rejected { background: rgba(255,107,107,.08); border: 1px solid rgba(255,107,107,.2); }
+.approval-rows { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text); }
+.approval-key  { font-weight: 600; margin-right: 4px; }
+
+/* card actions */
+.card-actions {
+  display: flex; gap: 12px; padding: 16px 24px;
+  border-top: 1px solid var(--surface2); background: var(--surface2);
+}
+
+/* ── buttons ──────────────────────────────────────────────────────────────*/
+.btn {
+  flex: 1; padding: 8px 16px; font-size: 13px; font-weight: 600;
+  border: none; border-radius: 8px; cursor: pointer; transition: opacity .15s, filter .15s;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn--approve { background: var(--green);  color: #0a1a12; }
+.btn--reject  { background: var(--red);    color: #1a0a0a; }
+.btn--ghost   {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--surface3); flex: none;
+}
+.btn--approve:hover:not(:disabled), .btn--reject:hover:not(:disabled) { filter: brightness(1.1); }
+.btn--ghost:hover { color: var(--text); border-color: var(--muted); }
+
+/* ── modals ───────────────────────────────────────────────────────────────*/
+.overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.modal {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 14px; width: 100%; max-width: 480px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5); overflow: hidden;
+}
+.modal-head { padding: 20px 24px; border-bottom: 1px solid var(--surface2); }
+.modal-title { font-size: 16px; font-weight: 700; color: var(--text); margin: 0; }
+.modal-sub   { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.modal-body  { padding: 20px 24px; }
+.modal-foot  {
+  display: flex; gap: 10px; justify-content: flex-end;
+  padding: 16px 24px; border-top: 1px solid var(--surface2); background: var(--surface2);
+}
+.modal-foot .btn { flex: none; }
+
+.field-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+.field-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--surface2); border: 1px solid var(--surface3);
+  border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--text);
+  resize: vertical; outline: none; font-family: inherit;
+  transition: border-color .15s;
+}
+.field-input::placeholder { color: var(--muted); }
+.field-input:focus { border-color: var(--accent); }
+.field-hint { font-size: 11px; margin-top: 6px; }
+.field-hint--error { color: var(--red); }
+
+@media (max-width: 640px) {
+  .meta-grid    { grid-template-columns: 1fr 1fr; }
+  .proposed-grid { grid-template-columns: 1fr 1fr; }
+}
 </style>

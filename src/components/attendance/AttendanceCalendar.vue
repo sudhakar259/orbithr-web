@@ -1,131 +1,113 @@
 <template>
-  <div class="calendar space-y-4">
-    <!-- Calendar Header -->
-    <div class="grid grid-cols-7 gap-px bg-gray-200 border-b">
-      <div
-        v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']"
-        :key="day"
-        class="bg-gray-50 py-2 text-center text-sm font-medium text-gray-500"
-      >
+  <div class="calendar">
+
+    <!-- Day-of-week headers -->
+    <div class="dow-row">
+      <div v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="day" class="dow-cell">
         {{ day }}
       </div>
     </div>
 
     <!-- Calendar Body -->
-    <div class="grid grid-cols-7 gap-px bg-gray-200">
+    <div class="cal-grid">
       <div
         v-for="day in calendarDays"
         :key="day.date"
         :class="[
-          'p-2 min-h-[120px] cursor-pointer transition-colors relative',
-          day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400 bg-gray-50',
-          day.isToday ? 'ring-2 ring-blue-500' : '',
+          'cal-cell',
           day.bgColorClass,
-          day.isLocked ? 'opacity-75' : ''
+          !day.isCurrentMonth && 'cal-cell--other',
+          day.isToday && 'cal-cell--today',
+          day.isLocked && 'cal-cell--locked',
         ]"
         @click="selectDate(day)"
       >
-        <div class="flex flex-col h-full">
-          <div class="flex items-start justify-between mb-1">
-            <span class="text-sm font-medium">{{ day.day }}</span>
-            <span v-if="day.isLocked" class="text-xs bg-red-100 text-red-700 px-1 rounded" title="Attendance locked for regularization">🔒</span>
-            <span v-else-if="day.attendance?.is_regularized" class="text-xs bg-red-100 text-orange-700 px-1 rounded" title="Attendance locked for regularization">⏰</span>
+        <div class="cell-inner">
+
+          <!-- Date number + lock/regularized icons -->
+          <div class="cell-header">
+            <span class="cell-day" :class="!day.isCurrentMonth && 'cell-day--other'">{{ day.day }}</span>
+            <span v-if="day.isLocked" class="cell-badge cell-badge--lock" title="Attendance locked">🔒</span>
+            <span v-else-if="day.attendance?.is_regularized" class="cell-badge cell-badge--reg" title="Regularized">⏰</span>
           </div>
 
-          <!-- Attendance Status -->
-          <div v-if="day.attendance" class="flex-1">
-            <div
-              :class="getStatusClasses(day.attendance.status)"
-              class="text-xs px-1 py-0.5 rounded text-center mb-1"
-            >
+          <!-- On Leave (overrides absent) -->
+          <div v-if="day.isOnLeave" class="cell-body cell-body--center">
+            <div class="status-label status-label--leave">On Leave</div>
+            <div class="leave-type">{{ day.leaveTypeName }}</div>
+          </div>
+
+          <!-- Attendance record -->
+          <div v-else-if="day.attendance" class="cell-body">
+            <div :class="['status-badge', getStatusClass(day.attendance.status)]">
               {{ getStatusText(day.attendance.status) }}
             </div>
 
-            <!-- Punch Times -->
-            <div class="text-xs text-gray-600 space-y-0.5">
-              <div v-if="day.attendance.check_in" class="flex justify-between">
-                <span>In:</span>
-                <span>{{ formatTime(day.attendance.check_in) }}</span>
+            <div class="punch-times">
+              <div v-if="day.attendance.check_in" class="punch-row">
+                <span>In</span><span>{{ formatTime(day.attendance.check_in) }}</span>
               </div>
-              <div v-if="day.attendance.check_out" class="flex justify-between">
-                <span>Out:</span>
-                <span>{{ formatTime(day.attendance.check_out) }}</span>
+              <div v-if="day.attendance.check_out" class="punch-row">
+                <span>Out</span><span>{{ formatTime(day.attendance.check_out) }}</span>
               </div>
-              <div v-if="day.attendance.working_hours > 0" class="flex justify-between font-medium">
-                <span>Hrs:</span>
-                <span>{{ day.attendance.working_hours }}</span>
+              <div v-if="day.attendance.working_hours > 0" class="punch-row punch-row--hrs">
+                <span>Hrs</span><span>{{ day.attendance.working_hours }}</span>
               </div>
             </div>
 
-            <!-- Regularization Button -->
-            <button
-              v-if="canRegularizeDay(day)"
-              @click.stop="$emit('regularize', day.attendance)"
-              class="mt-1 text-xs text-blue-600 hover:text-blue-800 underline"
-            >
-              Regularize
-            </button>
-            <div v-else-if="day.attendance.status === 'absent' && day.isLocked" class="mt-1 text-xs text-gray-500">
-              Locked for regularization
+            <template v-if="canRegularizeDay(day)">
+              <button @click.stop="$emit('regularize', day.attendance)" class="reg-btn">
+                Regularize
+              </button>
+              <div v-if="day.daysRemainingToRegularize > 0" class="days-left">
+                {{ day.daysRemainingToRegularize }}d left
+              </div>
+            </template>
+            <div v-else-if="day.attendance.status === 'absent' && day.isLocked" class="locked-note">
+              Locked · EL deducted
             </div>
           </div>
 
-          <!-- Holiday/Weekend/Weekoff Badge -->
-          <div v-else-if="!day.isCurrentMonth" class="flex-1 flex items-center justify-center">
-            <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
+          <!-- Other-month placeholder -->
+          <div v-else-if="!day.isCurrentMonth" class="cell-body cell-body--center">
+            <div class="cell-dot"></div>
           </div>
-          <div v-else-if="day.holiday && day.holiday.length" class="flex-1 flex items-center justify-center text-center">
-            <div>
-              <div class="text-xs font-medium text-blue-700">Holiday</div>
-              <div class="text-xs text-blue-600 space-y-0.5">
-                <div v-for="(h, idx) in day.holiday" :key="idx">{{ h.name }}</div>
-              </div>
-            </div>
+
+          <!-- Holiday -->
+          <div v-else-if="day.holiday && day.holiday.length" class="cell-body cell-body--center">
+            <div class="status-label status-label--holiday">Holiday</div>
+            <div v-for="(h, idx) in day.holiday" :key="idx" class="holiday-name">{{ h.name }}</div>
           </div>
-          <div v-else-if="day.isWeekOff" class="flex-1 flex items-center justify-center">
-            <div class="text-xs font-medium text-gray-500">Week Off</div>
+
+          <!-- Week Off -->
+          <div v-else-if="day.isWeekOff" class="cell-body cell-body--center">
+            <div class="status-label status-label--weekend">Week Off</div>
           </div>
-          <div v-else class="flex-1 flex items-center justify-center">
-            <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
+
+          <!-- Empty working day -->
+          <div v-else class="cell-body cell-body--center">
+            <div class="cell-dot"></div>
           </div>
+
         </div>
       </div>
     </div>
 
-    <!-- Legend Section -->
-    <div class="rounded-lg border border-slate-200 bg-white p-4 mt-4">
-      <h4 class="mb-3 text-sm font-semibold text-slate-900">Calendar Legend</h4>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded bg-green-100 border border-green-300"></div>
-          <span class="text-xs text-slate-600">Present</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded bg-red-100 border border-red-300"></div>
-          <span class="text-xs text-slate-600">Absent</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded bg-yellow-100 border border-yellow-300"></div>
-          <span class="text-xs text-slate-600">Half Day</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded bg-gray-100 border border-gray-300"></div>
-          <span class="text-xs text-slate-600">Weekend</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded bg-blue-100 border border-blue-300"></div>
-          <span class="text-xs text-slate-600">Holiday</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded bg-orange-100 border border-orange-300"></div>
-          <span class="text-xs text-slate-600">Late</span>
-        </div>
-         <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded bg-purple-100 border border-purple-300"></div>
-          <span class="text-xs text-slate-600">Regularized</span>
-        </div>
+    <!-- Legend -->
+    <div class="legend">
+      <h4 class="legend-title">Calendar Legend</h4>
+      <div class="legend-items">
+        <div class="legend-item"><div class="legend-swatch swatch--present"></div><span>Present</span></div>
+        <div class="legend-item"><div class="legend-swatch swatch--absent"></div><span>Absent</span></div>
+        <div class="legend-item"><div class="legend-swatch swatch--halfday"></div><span>Half Day</span></div>
+        <div class="legend-item"><div class="legend-swatch swatch--weekend"></div><span>Weekend</span></div>
+        <div class="legend-item"><div class="legend-swatch swatch--holiday"></div><span>Holiday</span></div>
+        <div class="legend-item"><div class="legend-swatch swatch--late"></div><span>Late</span></div>
+        <div class="legend-item"><div class="legend-swatch swatch--reg"></div><span>Regularized</span></div>
+        <div class="legend-item"><div class="legend-swatch swatch--leave"></div><span>On Leave</span></div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -152,6 +134,14 @@ interface Attendance {
   is_regularized: boolean
 }
 
+interface LeaveRecord {
+  start_date: string
+  end_date: string
+  leave_type_name: string
+  days_requested: number
+  leave_period?: string | null
+}
+
 interface CalendarDay {
   date: string
   day: number
@@ -161,17 +151,22 @@ interface CalendarDay {
   isWeekOff: boolean
   holiday: Holiday[] | null
   isLocked: boolean
+  isOnLeave: boolean
+  leaveTypeName: string
   bgColorClass: string
+  daysRemainingToRegularize: number
 }
 
 interface Props {
   currentDate: Date
   attendanceData: Attendance[]
+  leaves?: LeaveRecord[]
   employeeId?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  employeeId: 1
+  employeeId: 1,
+  leaves: () => [],
 })
 
 const emit = defineEmits<{
@@ -184,21 +179,22 @@ const { hasPermission, roles, user } = useAuth()
 const employeeId = computed(() => props.employeeId || user.value?.employee_id || 1)
 
 const canRegularize = computed(() => {
-  if (hasPermission('regularize attendance')) {
-    return true
-  }
-
+  if (hasPermission('regularize attendance')) return true
   const roleNames = roles()
     .map(role => (typeof role === 'string' ? role : String(role?.name ?? role)))
     .map(role => role.toLowerCase())
-
   return roleNames.some(role => ['admin', 'hr_manager', 'manager'].includes(role))
 })
 
-// Create calendar days
+const isDateOnLeave = (dateStr: string): LeaveRecord | null => {
+  for (const leave of props.leaves) {
+    if (dateStr >= leave.start_date && dateStr <= leave.end_date) return leave
+  }
+  return null
+}
+
 const normalizeDate = (dateString: string): string => {
   if (!dateString) return ''
-  // Parse ISO timestamp into a Date and return the local yyyy-mm-dd
   const d = new Date(dateString)
   if (!isNaN(d.getTime())) {
     const y = d.getFullYear()
@@ -206,31 +202,25 @@ const normalizeDate = (dateString: string): string => {
     const day = String(d.getDate()).padStart(2, '0')
     return `${y}-${m}-${day}`
   }
-  // Fallback for plain date strings
   return String(dateString).split('T')[0]
 }
 
 const calendarDays = computed(() => {
   const year = props.currentDate.getFullYear()
   const month = props.currentDate.getMonth()
-
   const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
   const startDate = new Date(firstDay)
   startDate.setDate(startDate.getDate() - firstDay.getDay())
 
   const days: CalendarDay[] = []
   const currentDate = new Date(startDate)
 
-  // Create 42 days (6 weeks)
   for (let i = 0; i < 42; i++) {
     const pad = (n: number) => String(n).padStart(2, '0')
     const dateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(currentDate.getDate())}`
     let attendance = props.attendanceData.find(att => normalizeDate(att.attendance_date) === dateStr)
 
-    // For future dates, do not show 'absent' status — treat as no attendance record
-    const todayNorm = new Date()
-    todayNorm.setHours(0, 0, 0, 0)
+    const todayNorm = new Date(); todayNorm.setHours(0, 0, 0, 0)
     const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())
     dayDate.setHours(0, 0, 0, 0)
 
@@ -241,29 +231,44 @@ const calendarDays = computed(() => {
     const holiday = isCompanyHoliday(currentDate)
     const isWeekOff = isEmployeeWeekOff(currentDate, employeeId.value)
 
-    // If the attendance is marked 'absent' but the day is a company holiday or an employee week off,
-    // treat it as no attendance so that 'A' is not shown on off days.
     if (attendance && attendance.status === 'absent' && (isWeekOff || (holiday && holiday.length))) {
       attendance = undefined as any
     }
 
+    const leaveRecord = isDateOnLeave(dateStr)
+    const isOnLeave = !!leaveRecord
+    const leaveTypeName = leaveRecord?.leave_type_name ?? ''
+
     const isLocked = attendance?.status === 'absent' && isAttendanceLocked(currentDate, employeeId.value)
 
-    let bgColorClass = 'bg-white'
+    let daysRemainingToRegularize = 0
+    if (attendance?.status === 'absent' && !isOnLeave) {
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())
+      start.setDate(start.getDate() + 1)
+      start.setHours(0, 0, 0, 0)
+      const today = new Date(); today.setHours(0, 0, 0, 0)
+      const workingDaysPassed = countWorkingDays(start, today, employeeId.value)
+      daysRemainingToRegularize = Math.max(0, EL_DEDUCTION_CONFIG.daysBeforeLock - workingDaysPassed)
+    }
+
+    // CSS class names (dark theme variants defined in <style scoped>)
+    let bgColorClass = 'cell--default'
     if (!currentDate.toDateString().includes(String(new Date().getFullYear()))) {
-      bgColorClass = 'bg-gray-50'
+      bgColorClass = 'cell--other-month'
+    } else if (isOnLeave) {
+      bgColorClass = 'cell--leave'
     } else if (holiday && holiday.length) {
-      bgColorClass = 'bg-blue-50'
+      bgColorClass = 'cell--holiday'
     } else if (isWeekOff) {
-      bgColorClass = 'bg-gray-100'
+      bgColorClass = 'cell--weekend'
     } else if (attendance && (attendance.is_regularized === true || String(attendance.is_regularized) === '1')) {
-      bgColorClass = 'bg-orange-100 border border-orange-300'
+      bgColorClass = 'cell--regularized'
     } else if (attendance?.status === 'present') {
-      bgColorClass = 'bg-green-50'
+      bgColorClass = 'cell--present'
     } else if (attendance?.status === 'absent') {
-      bgColorClass = 'bg-red-50'
+      bgColorClass = 'cell--absent'
     } else if (attendance?.status === 'half_day') {
-      bgColorClass = 'bg-yellow-50'
+      bgColorClass = 'cell--halfday'
     }
 
     days.push({
@@ -275,7 +280,10 @@ const calendarDays = computed(() => {
       isWeekOff,
       holiday,
       isLocked,
-      bgColorClass
+      isOnLeave,
+      leaveTypeName,
+      daysRemainingToRegularize,
+      bgColorClass,
     })
 
     currentDate.setDate(currentDate.getDate() + 1)
@@ -285,93 +293,59 @@ const calendarDays = computed(() => {
 })
 
 const canRegularizeDay = (day: CalendarDay): boolean => {
-  // Must have an attendance record marked absent
   if (!day.attendance || day.attendance.status !== 'absent') return false
-
-  // Do not show if already regularized (handle string '0'/'1' or boolean)
   const isRegularizedFlag = day.attendance.is_regularized === true || String(day.attendance.is_regularized) === '1'
   if (isRegularizedFlag) return false
+  if (day.isOnLeave || day?.holiday?.length || day.isWeekOff) return false
 
-  // Do not allow regularization on holidays or week offs
-  if (day?.holiday?.length || day.isWeekOff) return false
-
-  // Localize dates to midnight to avoid timezone offsets
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
   const [y, m, d] = day.date.split('-').map(n => parseInt(n, 10))
-  const target = new Date(y, (m || 1) - 1, d || 1)
-  target.setHours(0, 0, 0, 0)
+  const target = new Date(y, (m || 1) - 1, d || 1); target.setHours(0, 0, 0, 0)
 
-  // The regularization should be available starting from the next working day
-  const nextWorking = getNextWorkingDay(target, employeeId.value)
-  nextWorking.setHours(0, 0, 0, 0)
+  const nextWorking = getNextWorkingDay(target, employeeId.value); nextWorking.setHours(0, 0, 0, 0)
   if (today < nextWorking) return false
 
-  // Calculate number of working days passed since the attendance date (excluding the attendance date itself)
-  const start = new Date(target)
-  start.setDate(start.getDate() + 1)
-  start.setHours(0, 0, 0, 0)
+  const start = new Date(target); start.setDate(start.getDate() + 1); start.setHours(0, 0, 0, 0)
   const workingDaysPassed = countWorkingDays(start, today, employeeId.value)
-
-  // Allow regularization for up to configured working days (EL_DEDUCTION_CONFIG.daysBeforeLock)
   if (workingDaysPassed > EL_DEDUCTION_CONFIG.daysBeforeLock) return false
-
-  // Respect explicit lock unless user has override permissions
   if (day.isLocked && !canRegularize.value) return false
 
   return true
 }
 
-const getStatusClasses = (status: string): string => {
+const getStatusClass = (status: string): string => {
   switch (status) {
-    case 'present':
-      return 'bg-green-100 text-green-800'
-    case 'absent':
-      return 'bg-red-100 text-red-800'
-    case 'half_day':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'late':
-      return 'bg-orange-100 text-orange-800'
-    case 'early_leave':
-      return 'bg-purple-100 text-purple-800'
-    case 'holiday':
-      return 'bg-blue-100 text-blue-800'
-    case 'weekend':
-      return 'bg-gray-100 text-gray-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
+    case 'present':     return 'status-badge--present'
+    case 'absent':      return 'status-badge--absent'
+    case 'half_day':    return 'status-badge--halfday'
+    case 'late':        return 'status-badge--late'
+    case 'early_leave': return 'status-badge--early-leave'
+    case 'holiday':     return 'status-badge--holiday'
+    case 'regularised':
+    case 'regularized': return 'status-badge--regularised'
+    default:            return 'status-badge--weekend'
   }
 }
 
 const getStatusText = (status: string): string => {
   switch (status) {
-    case 'present':
-      return 'P'
-    case 'absent':
-      return 'A'
-    case 'half_day':
-      return 'HD'
-    case 'late':
-      return 'L'
-    case 'early_leave':
-      return 'EL'
-    case 'holiday':
-      return 'H'
-    case 'weekend':
-      return 'W'
-    default:
-      return status.charAt(0).toUpperCase()
+    case 'present':     return 'P'
+    case 'absent':      return 'A'
+    case 'half_day':    return 'HD'
+    case 'late':        return 'L'
+    case 'early_leave': return 'EL'
+    case 'holiday':     return 'H'
+    case 'weekend':     return 'W'
+    case 'regularised':
+    case 'regularized': return 'Reg'
+    default:            return status.charAt(0).toUpperCase()
   }
 }
 
 const formatTime = (timeString: string): string => {
   if (!timeString) return ''
   const time = new Date(`1970-01-01T${timeString}`)
-  return time.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
+  return time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
 const selectDate = (day: CalendarDay) => {
@@ -381,7 +355,180 @@ const selectDate = (day: CalendarDay) => {
 </script>
 
 <style scoped>
+/* ── shell ───────────────────────────────────────────────────────────────── */
 .calendar {
-  @apply border border-gray-200 rounded-lg overflow-hidden;
+  border: 1px solid var(--surface3);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ── day-of-week header ──────────────────────────────────────────────────── */
+.dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--surface3);
+}
+.dow-cell {
+  padding: 10px 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* ── calendar grid ───────────────────────────────────────────────────────── */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--surface3);
+}
+.cal-cell {
+  min-height: 120px;
+  cursor: pointer;
+  transition: filter .1s;
+  position: relative;
+}
+.cal-cell:hover { filter: brightness(1.08); }
+.cal-cell--today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cal-cell--locked { opacity: .75; }
+.cal-cell--other  { opacity: .5; }
+
+/* cell background variants (dark) */
+.cell--default      { background: var(--surface); }
+.cell--other-month  { background: var(--bg); }
+.cell--leave        { background: rgba(20,184,166,.10); }
+.cell--holiday      { background: rgba(79,126,255,.10); }
+.cell--weekend      { background: var(--surface2); }
+.cell--regularized  { background: rgba(249,115,22,.10); outline: 1px solid rgba(249,115,22,.3); outline-offset: -1px; }
+.cell--present      { background: rgba(54,211,153,.08); }
+.cell--absent       { background: rgba(255,107,107,.08); }
+.cell--halfday      { background: rgba(249,168,37,.08); }
+
+.cell-inner {
+  padding: 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* date row */
+.cell-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.cell-day { font-size: 12px; font-weight: 600; color: var(--text); }
+.cell-day--other { color: var(--muted); }
+
+.cell-badge {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+.cell-badge--lock { background: rgba(255,107,107,.15); }
+.cell-badge--reg  { background: rgba(249,115,22,.15); }
+
+/* body sections */
+.cell-body       { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.cell-body--center { align-items: center; justify-content: center; text-align: center; }
+
+.cell-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--surface3);
+}
+
+/* status badge (P / A / HD / L / EL / H) */
+.status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-align: center;
+  align-self: flex-start;
+}
+.status-badge--present    { background: rgba(54,211,153,.2);  color: var(--green); }
+.status-badge--absent     { background: rgba(255,107,107,.2); color: var(--red); }
+.status-badge--halfday    { background: rgba(249,168,37,.2);  color: var(--yellow); }
+.status-badge--late       { background: rgba(249,115,22,.2);  color: #fb923c; }
+.status-badge--early-leave{ background: rgba(155,110,255,.2); color: var(--purple); }
+.status-badge--holiday     { background: rgba(79,126,255,.2);  color: var(--accent); }
+.status-badge--regularised { background: rgba(249,115,22,.2);  color: #fb923c; }
+.status-badge--weekend     { background: var(--surface2);      color: var(--muted); }
+
+/* punch times */
+.punch-times { display: flex; flex-direction: column; gap: 2px; }
+.punch-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+}
+.punch-row--hrs { font-weight: 600; color: var(--text); }
+
+/* regularize */
+.reg-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 10px; color: var(--accent);
+  text-decoration: underline;
+  padding: 0; margin-top: 2px;
+  text-align: left;
+}
+.reg-btn:hover { color: #7da4ff; }
+
+.days-left { font-size: 10px; color: var(--yellow); font-weight: 600; }
+.locked-note { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* status labels (On Leave / Holiday / Week Off) */
+.status-label { font-size: 11px; font-weight: 600; }
+.status-label--leave   { color: #14b8a6; }
+.status-label--holiday { color: var(--accent); }
+.status-label--weekend { color: var(--muted); }
+
+.leave-type   { font-size: 10px; color: #0d9488; margin-top: 2px; }
+.holiday-name { font-size: 10px; color: #6b8fff; margin-top: 1px; }
+
+/* ── legend ──────────────────────────────────────────────────────────────── */
+.legend {
+  border-top: 1px solid var(--surface3);
+  background: var(--surface2);
+  padding: 14px 16px;
+}
+.legend-title { font-size: 12px; font-weight: 600; color: var(--text); margin: 0 0 10px; }
+.legend-items {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.legend-swatch {
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.swatch--present  { background: rgba(54,211,153,.25);  border: 1px solid rgba(54,211,153,.4); }
+.swatch--absent   { background: rgba(255,107,107,.25); border: 1px solid rgba(255,107,107,.4); }
+.swatch--halfday  { background: rgba(249,168,37,.25);  border: 1px solid rgba(249,168,37,.4); }
+.swatch--weekend  { background: var(--surface2);       border: 1px solid var(--surface3); }
+.swatch--holiday  { background: rgba(79,126,255,.25);  border: 1px solid rgba(79,126,255,.4); }
+.swatch--late     { background: rgba(249,115,22,.25);  border: 1px solid rgba(249,115,22,.4); }
+.swatch--reg      { background: rgba(249,115,22,.20);  border: 1px solid rgba(249,115,22,.4); }
+.swatch--leave    { background: rgba(20,184,166,.20);  border: 1px solid rgba(20,184,166,.4); }
+
+@media (max-width: 640px) {
+  .legend-items { grid-template-columns: repeat(2, 1fr); }
+  .cal-cell { min-height: 80px; }
 }
 </style>

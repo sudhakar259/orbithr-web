@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
-const { sendOtpRequest, verifyOtp, registerWithOtp, register, login, setAuth } = useAuth()
+const { sendOtpRequest, verifyOtp, registerWithOtp, register, setAuth } = useAuth()
 
 // Social OAuth state (populated from URL when redirected back from backend)
 const socialToken    = ref('')
@@ -14,7 +14,7 @@ const socialName     = ref('')
 const socialProvider = ref('')
 const isSocialFlow   = computed(() => !!socialToken.value)
 
-const step = ref<'choose' | 'otp' | 'confirm' | 'org' | 'plan'>('choose')
+const step = ref<'choose' | 'otp' | 'confirm' | 'org' | 'plan' | 'pending'>('choose')
 const email = ref('')
 const name = ref('')
 const password = ref('')
@@ -22,7 +22,14 @@ const confirmPassword = ref('')
 const organization = ref('')
 const plan = ref<string>('')
 const modules = ref<{ id: number; name: string }[]>([])
-const selectedModules = ref<string[]>([])
+const selectedModules = ref<number[]>([])
+const CORE_MODULE_NAMES = ['user', 'role', 'permission', 'language', 'setting']
+
+function toggleModule(id: number) {
+  const idx = selectedModules.value.indexOf(id)
+  if (idx > -1) selectedModules.value.splice(idx, 1)
+  else selectedModules.value.push(id)
+}
 const plans = ref<any[]>([])
 const otpDigits = ref<string[]>(['', '', '', '', '', ''])
 const otpInputs = ref<(HTMLInputElement | null)[]>([])
@@ -40,7 +47,7 @@ const stepIndex = computed(() => {
     // In social flow, first 3 steps are pre-completed by OAuth
     return ({ org: 3, plan: 4 } as Record<string, number>)[step.value] ?? 3
   }
-  return ({ choose: 0, otp: 1, confirm: 2, org: 3, plan: 4 } as Record<string, number>)[step.value] ?? 0
+  return ({ choose: 0, otp: 1, confirm: 2, org: 3, plan: 4, pending: 5 } as Record<string, number>)[step.value] ?? 0
 })
 
 function setOtpRef(el: any, idx: number) { otpInputs.value[idx] = el }
@@ -107,10 +114,13 @@ function goNextFromConfirm() {
   step.value = 'org'
 }
 
-function goNextFromOrg() {
+async function goNextFromOrg() {
   if (!organization.value) { error.value = 'Please enter organization name'; return }
   error.value = ''
   step.value = 'plan'
+  // Re-fetch plans every time the user enters the plan step
+  // so a failed initial load or empty DB doesn't leave the user stuck
+  await loadPlans()
 }
 
 async function complete() {
@@ -128,7 +138,7 @@ async function complete() {
       const { token: t, user: u } = res.data
       setAuth(u, t)
     } else {
-      // Normal OTP registration
+      // Normal OTP registration — backend saves to request_domains (pending approval)
       await registerWithOtp({
         email: email.value,
         code: otpValue.value,
@@ -139,7 +149,9 @@ async function complete() {
         name: name.value,
         selected_modules: selectedModules.value,
       })
-      await login({ email: email.value, password: password.value })
+      // Show pending approval screen — tenant is not live yet
+      step.value = 'pending'
+      return
     }
     router.push({ name: 'dashboard' })
   } catch (e: any) {
@@ -156,6 +168,26 @@ function loginWithMicrosoft() {
   window.location.href = `${BACKEND_URL}/auth/redirect/microsoft?action=register`
 }
 
+async function loadPlans() {
+  plansLoading.value = true
+  try {
+    const res = await api.get('/auth/plans/available')
+    const fetched: { id: number; price: number; is_popular?: boolean }[] = res.data.plans || res.data || []
+    if (fetched.length > 0) {
+      plans.value = fetched
+      // Default to the cheapest (Starter) plan on first load
+      if (!plan.value) {
+        const cheapest = [...fetched].sort((a, b) => Number(a.price) - Number(b.price))[0]
+        plan.value = cheapest.id.toString()
+      }
+    }
+  } catch {
+    // plans stays [], the template shows a retry button
+  } finally {
+    plansLoading.value = false
+  }
+}
+
 onMounted(async () => {
   // Handle social OAuth redirect: ?social_token=...&social_email=...&social_name=...
   const params = new URLSearchParams(window.location.search)
@@ -168,28 +200,15 @@ onMounted(async () => {
     email.value          = socialEmail.value
     name.value           = socialName.value
     step.value           = 'org'
-    // Clean URL params
     window.history.replaceState({}, '', window.location.pathname)
   }
 
-  // Fetch modules independently — don't let it block plan loading
-  fetch('http://backend.test/api/v1/modules')
-    .then(r => r.json())
-    .then(data => { modules.value = Array.isArray(data) ? data : [] })
+  // Fetch modules independently
+  api.get('/modules')
+    .then(({ data }) => { modules.value = Array.isArray(data) ? data : data?.data || [] })
     .catch(() => {})
 
-  // Fetch plans
-  plansLoading.value = true
-  try {
-    const plansRes = await api.get('/auth/plans/available')
-    plans.value = plansRes.data.plans || plansRes.data || []
-    if (plans.value.length > 0) {
-      const popular = plans.value.find((p: any) => p.is_popular)
-      plan.value = (popular?.id || plans.value[0].id).toString()
-    }
-  } catch (e) {
-    console.error('Failed to fetch plans', e)
-  } finally { plansLoading.value = false }
+  await loadPlans()
 })
 </script>
 
@@ -346,21 +365,23 @@ onMounted(async () => {
             <div v-if="modules.length > 0" class="field">
               <label>Enable modules</label>
               <div class="modules-grid">
-                <label
+                <div
                   v-for="m in modules"
                   :key="m.id"
                   class="module-item"
-                  :class="{ disabled: ['user','role','permission','language','setting'].includes(m.name) }"
+                  :class="{
+                    disabled: CORE_MODULE_NAMES.includes(m.name),
+                    'module-item--on': selectedModules.includes(m.id),
+                  }"
+                  @click="!CORE_MODULE_NAMES.includes(m.name) && toggleModule(m.id)"
                 >
-                  <input
-                    type="checkbox"
-                    :value="m.name"
-                    v-model="selectedModules"
-                    :disabled="['user','role','permission','language','setting'].includes(m.name)"
-                    class="mod-check"
-                  />
+                  <div class="mod-check-box" :class="{ 'mod-check-box--on': selectedModules.includes(m.id) }">
+                    <svg v-if="selectedModules.includes(m.id)" viewBox="0 0 10 10" fill="none">
+                      <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
                   <span class="mod-name">{{ m.name.replaceAll('-', ' ') }}</span>
-                </label>
+                </div>
               </div>
               <p class="field-hint">Core modules (users, roles, permissions) are always enabled.</p>
             </div>
@@ -382,29 +403,36 @@ onMounted(async () => {
             <span class="spinner spinner-lg" />
             <span>Loading plans…</span>
           </div>
-          <div v-else-if="plans.length === 0" class="empty-plans">No plans available. Try again later.</div>
+          <div v-else-if="plans.length === 0" class="empty-plans">
+            <p>Could not load plans. Please try again.</p>
+            <button class="link-btn" style="margin-top:8px" @click="loadPlans">Retry</button>
+          </div>
           <div v-else class="plans-list">
-            <label
+            <div
               v-for="p in plans"
               :key="p.id"
               class="plan-option"
               :class="{ selected: plan === p.id.toString() }"
+              @click="plan = p.id.toString()"
             >
-              <input type="radio" :value="p.id.toString()" v-model="plan" class="plan-radio" />
+              <div class="plan-radio-dot" :class="{ 'plan-radio-dot--on': plan === p.id.toString() }" />
               <div class="plan-info">
                 <div class="plan-top">
                   <span class="plan-name">{{ p.name }}</span>
                   <span v-if="p.is_popular" class="pop-tag">Most popular</span>
                 </div>
                 <div class="plan-desc">{{ p.description }}</div>
-                <div class="plan-price">${{ p.price }}<span class="plan-period">/{{ p.billing_cycle }}</span></div>
+                <div class="plan-price">
+                  <template v-if="Number(p.price) === 0">Free</template>
+                  <template v-else>₹{{ p.price }}<span class="plan-period">/{{ p.billing_cycle }}</span></template>
+                </div>
                 <div class="plan-meta">
                   <span v-if="p.max_users === -1">Unlimited users</span>
                   <span v-else>Up to {{ p.max_users }} users</span>
                   <span v-if="p.trial_days > 0"> · {{ p.trial_days }}-day free trial</span>
                 </div>
               </div>
-            </label>
+            </div>
           </div>
 
           <div v-if="error" class="err-box">⚠️ {{ error }}</div>
@@ -414,6 +442,36 @@ onMounted(async () => {
               <span v-else class="spin-wrap"><span class="spinner" /> Creating…</span>
             </button>
             <button class="back-btn" @click="step = 'org'">← Back</button>
+          </div>
+        </template>
+
+        <!-- Pending approval screen -->
+        <template v-else-if="step === 'pending'">
+          <div class="pending-wrap">
+            <div class="pending-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="#36D399" stroke-width="1.8"/>
+                <path d="M8 12l3 3 5-5" stroke="#36D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h1 class="rg-title" style="text-align:center">Request submitted!</h1>
+            <p class="rg-sub" style="text-align:center">
+              Your workspace request for <strong>{{ organization }}</strong> is pending review.
+              You'll receive an email at <strong>{{ email }}</strong> once your account is approved and ready.
+            </p>
+            <div class="pending-info">
+              <div class="pending-info-row">
+                <span class="pending-label">Organization</span>
+                <span class="pending-value">{{ organization }}</span>
+              </div>
+              <div class="pending-info-row">
+                <span class="pending-label">Email</span>
+                <span class="pending-value">{{ email }}</span>
+              </div>
+            </div>
+            <RouterLink to="/login" class="btn-submit" style="display:block;text-align:center;text-decoration:none">
+              Back to login
+            </RouterLink>
           </div>
         </template>
       </div>
@@ -599,6 +657,21 @@ onMounted(async () => {
 .back-btn:hover { color: #E8EAF0; }
 .btn-row { display: flex; align-items: center; gap: 16px; }
 
+/* Pending approval screen */
+.pending-wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 8px 0; }
+.pending-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: rgba(54,211,153,.1); border: 1px solid rgba(54,211,153,.3);
+  display: grid; place-items: center;
+}
+.pending-info {
+  width: 100%; background: #131520; border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.pending-info-row { display: flex; justify-content: space-between; align-items: center; }
+.pending-label { font-size: 12px; color: #6B7280; }
+.pending-value { font-size: 13px; color: #E8EAF0; font-weight: 500; }
+
 /* Spinner */
 .spin-wrap { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .spinner {
@@ -617,10 +690,18 @@ onMounted(async () => {
   cursor: pointer; transition: border-color .15s;
   font-size: 12px; color: #9CA3AF; text-transform: capitalize;
 }
-.module-item:hover:not(.disabled) { border-color: rgba(79,126,255,.3); color: #E8EAF0; }
+.module-item:hover:not(.disabled):not(.module-item--on) { border-color: rgba(79,126,255,.3); color: #E8EAF0; }
 .module-item.disabled { opacity: .45; cursor: not-allowed; }
-.mod-check { accent-color: #4F7EFF; }
-.mod-name { font-size: 12px; }
+.module-item--on { border-color: #4F7EFF; background: rgba(79,126,255,.12); color: #E8EAF0; }
+.mod-check-box {
+  width: 14px; height: 14px; flex-shrink: 0;
+  border-radius: 3px; border: 1.5px solid rgba(255,255,255,.2);
+  background: transparent;
+  display: grid; place-items: center;
+  transition: all .12s;
+}
+.mod-check-box--on { background: #4F7EFF; border-color: #4F7EFF; color: #fff; }
+.mod-name { font-size: 12px; flex: 1; }
 
 /* Plans list */
 .plans-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
@@ -632,7 +713,11 @@ onMounted(async () => {
 }
 .plan-option.selected { border-color: #4F7EFF; background: rgba(79,126,255,.06); }
 .plan-option:hover:not(.selected) { border-color: rgba(79,126,255,.3); }
-.plan-radio { accent-color: #4F7EFF; margin-top: 3px; flex-shrink: 0; }
+.plan-radio-dot {
+  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; margin-top: 2px;
+  border: 1.5px solid rgba(255,255,255,.25); background: transparent; transition: all .12s;
+}
+.plan-radio-dot--on { border-color: #4F7EFF; background: #4F7EFF; box-shadow: 0 0 0 3px rgba(79,126,255,.2); }
 .plan-info { flex: 1; }
 .plan-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
 .plan-name { font-size: 14px; font-weight: 600; color: #E8EAF0; }

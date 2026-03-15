@@ -1,303 +1,246 @@
-<template>
-  <div class="space-y-6">
-    <!-- Reporting Structure -->
-    <div class="rounded-lg border border-slate-200 bg-white p-6">
-      <h3 class="mb-4 text-lg font-semibold text-slate-900">Reporting Structure</h3>
+<script setup lang="ts">
+import { onMounted, ref, reactive, computed } from 'vue'
+import api from '@/services/api'
 
-      <div class="grid gap-4 sm:grid-cols-2">
+const props = withDefaults(defineProps<{ employeeId: number; currentManager?: number | null }>(), {
+  currentManager: null,
+})
+
+const allEmployees  = ref<any[]>([])
+const manager       = ref<any>(null)
+const subordinates  = ref<any[]>([])
+const allTeams      = ref<any[]>([])
+const assignedTeams = ref<any[]>([])
+
+const showManagerModal = ref(false)
+const showTeamForm   = ref(false)
+const teamLoading    = ref(false)
+const removeTeamLoading = ref(false)
+const teamError      = ref('')
+
+const teamForm = reactive({ team_id: '', role: '' })
+
+const availableManagers = computed(() =>
+  allEmployees.value.filter(e => e.id !== props.employeeId && e.status === 'Active')
+)
+const availableTeams = computed(() =>
+  allTeams.value.filter(t => !assignedTeams.value.some(at => at.id === t.id))
+)
+
+async function loadEmployees() {
+  try { const { data } = await api.get('/employees?status=Active'); allEmployees.value = Array.isArray(data) ? data : data?.data || [] } catch {}
+}
+async function loadManagerInfo() {
+  try {
+    const { data } = await api.get(`/employees/${props.employeeId}`)
+    manager.value = data.manager || null
+    subordinates.value = data.subordinates || []
+  } catch {}
+}
+async function loadTeams() {
+  try { const { data } = await api.get('/employee-teams/list'); allTeams.value = Array.isArray(data) ? data : data?.data || [] } catch {}
+}
+async function loadAssignedTeams() {
+  try { const { data } = await api.get(`/employees/${props.employeeId}/teams`); assignedTeams.value = Array.isArray(data) ? data : data?.data || [] } catch {}
+}
+
+async function setManager(managerId: number | null) {
+  try { await api.put(`/employees/${props.employeeId}`, { manager_id: managerId }); await loadManagerInfo(); showManagerModal.value = false } catch {}
+}
+async function assignTeam() {
+  teamError.value = ''; teamLoading.value = true
+  try {
+    await api.post(`/employees/${props.employeeId}/assign-team`, teamForm)
+    await loadAssignedTeams(); teamForm.team_id = ''; teamForm.role = ''; showTeamForm.value = false
+  } catch (e: any) {
+    teamError.value = e?.response?.data?.message || 'Failed to assign team'
+  } finally { teamLoading.value = false }
+}
+async function removeTeam(teamId: number) {
+  if (!confirm('Remove this team assignment?')) return
+  removeTeamLoading.value = true
+  try { await api.delete(`/employees/${props.employeeId}/remove-team/${teamId}`); await loadAssignedTeams() } catch {}
+  finally { removeTeamLoading.value = false }
+}
+
+onMounted(() => { loadEmployees(); loadManagerInfo(); loadTeams(); loadAssignedTeams() })
+</script>
+
+<template>
+  <div class="ha-wrap">
+    <!-- Reporting Structure -->
+    <div class="ha-card">
+      <h3 class="ha-title">Reporting Structure</h3>
+      <div class="ha-grid2">
         <!-- Manager -->
-        <div class="rounded-lg bg-slate-50 p-4">
-          <p class="text-xs font-medium uppercase text-slate-600">Reporting Manager</p>
-          <div v-if="manager" class="mt-3">
-            <p class="font-medium text-slate-900">{{ manager.first_name }} {{ manager.last_name }}</p>
-            <p class="text-sm text-slate-600">{{ manager.designation }}</p>
-            <button
-              type="button"
-              class="mt-2 text-sm text-red-600 hover:text-red-700"
-              @click="changeManager"
-            >
-              Change Manager
-            </button>
+        <div class="ha-box">
+          <p class="ha-box-label">Reporting Manager</p>
+          <div v-if="manager" class="ha-person">
+            <p class="ha-person-name">{{ manager.first_name }} {{ manager.last_name }}</p>
+            <p class="ha-person-role">{{ manager.designation || manager.role || '—' }}</p>
           </div>
-          <div v-else>
-            <p class="italic text-slate-600">No manager assigned</p>
-            <button
-              type="button"
-              class="mt-2 text-sm text-brand-600 hover:text-brand-700"
-              @click="changeManager"
-            >
-              Assign Manager
-            </button>
-          </div>
+          <p v-else class="ha-none">No manager assigned</p>
+          <button class="ha-change-btn" @click="showManagerModal = true">
+            {{ manager ? 'Change Manager' : 'Assign Manager' }}
+          </button>
         </div>
 
         <!-- Subordinates -->
-        <div class="rounded-lg bg-slate-50 p-4">
-          <p class="text-xs font-medium uppercase text-slate-600">Subordinates</p>
-          <div v-if="subordinates.length > 0" class="mt-3 space-y-2">
-            <div v-for="sub in subordinates" :key="sub.id" class="text-sm">
-              <p class="font-medium text-slate-900">{{ sub.first_name }} {{ sub.last_name }}</p>
-              <p class="text-xs text-slate-600">{{ sub.designation }}</p>
+        <div class="ha-box">
+          <p class="ha-box-label">Subordinates ({{ subordinates.length }})</p>
+          <div v-if="subordinates.length" class="ha-sub-list">
+            <div v-for="sub in subordinates" :key="sub.id" class="ha-sub">
+              <p class="ha-sub-name">{{ sub.first_name }} {{ sub.last_name }}</p>
+              <p class="ha-sub-role">{{ sub.designation || '—' }}</p>
             </div>
           </div>
-          <p v-else class="mt-3 italic text-slate-600">No subordinates</p>
-        </div>
-      </div>
-
-      <!-- Change Manager Modal -->
-      <div v-if="showManagerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-          <h3 class="mb-4 text-lg font-semibold text-slate-900">Select Reporting Manager</h3>
-
-          <div class="max-h-96 space-y-2 overflow-y-auto">
-            <button
-              type="button"
-              class="w-full rounded-lg border border-slate-300 p-3 text-left transition-colors hover:bg-slate-50"
-              @click="setManager(null)"
-            >
-              <p class="font-medium text-slate-900">None</p>
-              <p class="text-sm text-slate-600">No reporting manager</p>
-            </button>
-            <button
-              v-for="emp in availableManagers"
-              :key="emp.id"
-              type="button"
-              class="w-full rounded-lg border border-slate-300 p-3 text-left transition-colors hover:bg-slate-50"
-              @click="setManager(emp.id)"
-            >
-              <p class="font-medium text-slate-900">{{ emp.first_name }} {{ emp.last_name }}</p>
-              <p class="text-sm text-slate-600">{{ emp.designation }}</p>
-            </button>
-          </div>
-
-          <div class="mt-4 flex justify-end gap-3">
-            <button type="button" class="btn-ghost" @click="showManagerModal = false">Cancel</button>
-          </div>
+          <p v-else class="ha-none">No subordinates</p>
         </div>
       </div>
     </div>
 
-    <!-- Teams Assignment -->
-    <div class="rounded-lg border border-slate-200 bg-white p-6">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-slate-900">Team Assignments</h3>
-        <button
-          type="button"
-          class="btn-primary text-sm"
-          @click="showTeamForm = !showTeamForm"
-        >
-          {{ showTeamForm ? 'Cancel' : '+ Assign Team' }}
-        </button>
+    <!-- Teams -->
+    <div class="ha-card">
+      <div class="ha-card-head">
+        <h3 class="ha-title">Team Assignments</h3>
+        <button class="ha-toggle" @click="showTeamForm = !showTeamForm">{{ showTeamForm ? 'Cancel' : '+ Assign Team' }}</button>
       </div>
 
-      <!-- Assign Team Form -->
-      <form v-if="showTeamForm" @submit.prevent="assignTeam" class="mb-4 rounded-lg bg-slate-50 p-4">
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label class="block text-sm font-medium text-slate-700">Team *</label>
-            <select v-model="newTeamForm.team_id" required class="input mt-1">
-              <option value="">Select Team</option>
-              <option v-for="team in availableTeams" :key="team.id" :value="team.id">
-                {{ team.team_name }} ({{ team.team_code }})
-              </option>
-            </select>
+      <!-- Team form -->
+      <div v-if="showTeamForm" class="ha-form-wrap">
+        <form @submit.prevent="assignTeam" class="ha-form">
+          <div class="ha-grid">
+            <div class="ha-field">
+              <label class="ha-label">Team <span class="req">*</span></label>
+              <select v-model="teamForm.team_id" required class="ha-input">
+                <option value="">Select team</option>
+                <option v-for="t in availableTeams" :key="t.id" :value="t.id">{{ t.team_name }} ({{ t.team_code }})</option>
+              </select>
+            </div>
+            <div class="ha-field">
+              <label class="ha-label">Role in Team</label>
+              <input v-model="teamForm.role" type="text" class="ha-input" placeholder="e.g. Member, Lead" />
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700">Role in Team</label>
-            <input v-model="newTeamForm.role" type="text" class="input mt-1" placeholder="e.g., Team Member, Lead" />
+          <div v-if="teamError" class="ha-error">{{ teamError }}</div>
+          <div class="ha-form-foot">
+            <button type="submit" class="ha-btn ha-btn--primary" :disabled="teamLoading">{{ teamLoading ? 'Assigning…' : 'Assign' }}</button>
           </div>
-        </div>
-        <p v-if="teamError" class="mt-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">{{ teamError }}</p>
-        <div class="mt-3 flex justify-end gap-2">
-          <button type="submit" class="btn-primary text-sm" :disabled="teamLoading">
-            {{ teamLoading ? 'Assigning…' : 'Assign' }}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
 
-      <!-- Teams List -->
-      <div v-if="assignedTeams.length > 0" class="overflow-hidden rounded-lg border border-slate-200">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-          <thead class="bg-slate-50">
-            <tr>
-              <th class="px-4 py-2 text-left font-semibold text-slate-700">Team</th>
-              <th class="px-4 py-2 text-left font-semibold text-slate-700">Code</th>
-              <th class="px-4 py-2 text-left font-semibold text-slate-700">Role</th>
-              <th class="px-4 py-2 text-left font-semibold text-slate-700">Team Lead</th>
-              <th class="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 bg-white">
-            <tr v-for="team in assignedTeams" :key="team.id">
-              <td class="px-4 py-2 font-medium text-slate-900">{{ team.team_name }}</td>
-              <td class="px-4 py-2 text-slate-600">{{ team.team_code }}</td>
-              <td class="px-4 py-2 text-slate-600">{{ team.team_role || '-' }}</td>
-              <td class="px-4 py-2 text-slate-600">
-                {{ team.teamLead?.first_name || '-' }} {{ team.teamLead?.last_name || '' }}
-              </td>
-              <td class="px-4 py-2 text-right">
-                <button
-                  type="button"
-                  class="text-sm text-red-600 hover:text-red-700"
-                  @click="removeTeam(team.id)"
-                  :disabled="removeTeamLoading"
-                >
-                  Remove
-                </button>
+      <!-- Teams table -->
+      <div v-if="assignedTeams.length" class="ha-table-wrap">
+        <table class="ha-table">
+          <thead><tr>
+            <th class="ha-th">Team</th>
+            <th class="ha-th">Code</th>
+            <th class="ha-th">Role</th>
+            <th class="ha-th">Team Lead</th>
+            <th class="ha-th"></th>
+          </tr></thead>
+          <tbody>
+            <tr v-for="t in assignedTeams" :key="t.id" class="ha-tr">
+              <td class="ha-td ha-td--bold">{{ t.team_name }}</td>
+              <td class="ha-td ha-td--muted">{{ t.team_code }}</td>
+              <td class="ha-td ha-td--muted">{{ t.team_role || '—' }}</td>
+              <td class="ha-td ha-td--muted">{{ t.teamLead ? `${t.teamLead.first_name} ${t.teamLead.last_name}` : '—' }}</td>
+              <td class="ha-td ha-td-act">
+                <button class="ha-rm" @click="removeTeam(t.id)" :disabled="removeTeamLoading">Remove</button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div v-else class="py-8 text-center text-slate-500">No teams assigned</div>
+      <div v-else class="ha-empty">No teams assigned</div>
     </div>
+
+    <!-- Manager modal -->
+    <Teleport to="body">
+      <div v-if="showManagerModal" class="modal-overlay" @click.self="showManagerModal = false">
+        <div class="modal-box">
+          <div class="modal-head">
+            <h3 class="modal-title">Select Reporting Manager</h3>
+            <button class="modal-close" @click="showManagerModal = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <button class="modal-opt" @click="setManager(null)">
+              <p class="modal-opt-name">None</p>
+              <p class="modal-opt-role">No reporting manager</p>
+            </button>
+            <button v-for="emp in availableManagers" :key="emp.id" class="modal-opt" @click="setManager(emp.id)">
+              <p class="modal-opt-name">{{ emp.first_name }} {{ emp.last_name }}</p>
+              <p class="modal-opt-role">{{ emp.designation || emp.role || '—' }}</p>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
-<script setup lang="ts">
-import { onMounted, ref, reactive, computed } from 'vue'
-import api from '@/services/api'
-
-interface Props {
-  employeeId: number
-  currentManager?: number | null
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  currentManager: null,
-})
-
-const allEmployees = ref<any[]>([])
-const manager = ref<any>(null)
-const subordinates = ref<any[]>([])
-const allTeams = ref<any[]>([])
-const assignedTeams = ref<any[]>([])
-
-const showManagerModal = ref(false)
-const showTeamForm = ref(false)
-const teamLoading = ref(false)
-const removeTeamLoading = ref(false)
-const teamError = ref('')
-
-const newTeamForm = reactive({
-  team_id: '',
-  role: '',
-})
-
-const availableManagers = computed(() => {
-  return allEmployees.value.filter(e => e.id !== props.employeeId && e.status === 'Active')
-})
-
-const availableTeams = computed(() => {
-  return allTeams.value.filter(t => !assignedTeams.value.some(at => at.id === t.id))
-})
-
-async function loadEmployees() {
-  try {
-    const { data } = await api.get('/employees?status=Active')
-    allEmployees.value = Array.isArray(data) ? data : data?.data || []
-  } catch (e) {
-    console.error('Failed to load employees', e)
-  }
-}
-
-async function loadManagerInfo() {
-  try {
-    const { data } = await api.get(`/employees/${props.employeeId}`)
-    if (data.manager_id) {
-      manager.value = data.manager
-    }
-    subordinates.value = data.subordinates || []
-  } catch (e) {
-    console.error('Failed to load manager info', e)
-  }
-}
-
-async function loadTeams() {
-  try {
-    const { data } = await api.get('/employee-teams/list')
-    allTeams.value = Array.isArray(data) ? data : data?.data || []
-  } catch (e) {
-    console.error('Failed to load teams', e)
-  }
-}
-
-async function loadAssignedTeams() {
-  try {
-    const { data } = await api.get(`/employees/${props.employeeId}/teams`)
-    assignedTeams.value = Array.isArray(data) ? data : data?.data || []
-  } catch (e) {
-    console.error('Failed to load assigned teams', e)
-  }
-}
-
-function changeManager() {
-  showManagerModal.value = true
-}
-
-async function setManager(managerId: number | null) {
-  try {
-    await api.put(`/employees/${props.employeeId}`, {
-      manager_id: managerId,
-    })
-    await loadManagerInfo()
-    showManagerModal.value = false
-  } catch (e: any) {
-    console.error('Failed to set manager', e)
-  }
-}
-
-async function assignTeam() {
-  teamError.value = ''
-  teamLoading.value = true
-
-  try {
-    await api.post(`/employees/${props.employeeId}/assign-team`, newTeamForm)
-    await loadAssignedTeams()
-
-    newTeamForm.team_id = ''
-    newTeamForm.role = ''
-    showTeamForm.value = false
-  } catch (e: any) {
-    teamError.value = e?.response?.data?.message || e?.response?.data?.error || 'Failed to assign team'
-  } finally {
-    teamLoading.value = false
-  }
-}
-
-async function removeTeam(teamId: number) {
-  if (!confirm('Remove this team assignment?')) return
-
-  removeTeamLoading.value = true
-
-  try {
-    await api.delete(`/employees/${props.employeeId}/remove-team/${teamId}`)
-    await loadAssignedTeams()
-  } catch (e: any) {
-    console.error('Failed to remove team', e)
-  } finally {
-    removeTeamLoading.value = false
-  }
-}
-
-onMounted(() => {
-  loadEmployees()
-  loadManagerInfo()
-  loadTeams()
-  loadAssignedTeams()
-})
-</script>
-
 <style scoped>
-.input {
-  @apply w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
-}
+.ha-wrap { display: flex; flex-direction: column; gap: 16px; }
+.ha-card { background: var(--surface); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 16px; }
+.ha-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.ha-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.ha-grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (max-width: 640px) { .ha-grid2 { grid-template-columns: 1fr; } }
 
-.btn-primary {
-  @apply inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50;
-}
+.ha-box { background: var(--surface2); border: 1px solid rgba(255,255,255,.07); border-radius: 8px; padding: 14px; }
+.ha-box-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; }
+.ha-person { margin-bottom: 8px; }
+.ha-person-name { font-weight: 600; color: var(--text); font-size: 0.9rem; }
+.ha-person-role { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.ha-none { font-size: 0.875rem; color: var(--muted); font-style: italic; margin-bottom: 8px; }
+.ha-change-btn { font-size: 0.8rem; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0; }
+.ha-change-btn:hover { text-decoration: underline; }
 
-.btn-ghost {
-  @apply inline-flex items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50;
-}
+.ha-sub-list { display: flex; flex-direction: column; gap: 8px; max-height: 160px; overflow-y: auto; }
+.ha-sub { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+.ha-sub:last-child { border-bottom: none; }
+.ha-sub-name { font-size: 0.85rem; font-weight: 500; color: var(--text); }
+.ha-sub-role { font-size: 0.75rem; color: var(--muted); }
+
+.ha-toggle { padding: 6px 14px; border-radius: 7px; font-size: 0.8rem; font-weight: 500; cursor: pointer; background: var(--accent); border: none; color: #fff; }
+.ha-toggle:hover { opacity: .88; }
+.ha-form-wrap { background: var(--surface2); border: 1px solid rgba(255,255,255,.07); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+.ha-form { display: flex; flex-direction: column; gap: 12px; }
+.ha-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (max-width: 640px) { .ha-grid { grid-template-columns: 1fr; } }
+.ha-field { display: flex; flex-direction: column; gap: 5px; }
+.ha-label { font-size: 0.78rem; font-weight: 500; color: var(--muted); }
+.req { color: var(--red); }
+.ha-input { background: var(--surface3); border: 1px solid rgba(255,255,255,.08); border-radius: 7px; padding: 7px 10px; font-size: 0.875rem; color: var(--text); outline: none; width: 100%; box-sizing: border-box; }
+.ha-input:focus { border-color: var(--accent); }
+.ha-error { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.25); border-radius: 7px; padding: 8px 12px; font-size: 0.8rem; color: var(--red); }
+.ha-form-foot { display: flex; justify-content: flex-end; }
+.ha-btn { padding: 7px 16px; border-radius: 7px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; }
+.ha-btn:disabled { opacity: .45; cursor: not-allowed; }
+.ha-btn--primary { background: var(--accent); color: #fff; }
+.ha-table-wrap { border: 1px solid rgba(255,255,255,.06); border-radius: 8px; overflow: hidden; }
+.ha-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.ha-th { padding: 8px 12px; text-align: left; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); background: var(--surface2); border-bottom: 1px solid rgba(255,255,255,.06); }
+.ha-tr:not(:last-child) td { border-bottom: 1px solid rgba(255,255,255,.04); }
+.ha-td { padding: 9px 12px; vertical-align: middle; color: var(--text); }
+.ha-td--muted { color: var(--muted); }
+.ha-td--bold  { font-weight: 500; }
+.ha-td-act   { text-align: right; }
+.ha-rm { font-size: 0.8rem; color: var(--red); background: none; border: none; cursor: pointer; }
+.ha-rm:hover { text-decoration: underline; }
+.ha-rm:disabled { opacity: .45; cursor: not-allowed; }
+.ha-empty { padding: 24px; text-align: center; font-size: 0.875rem; color: var(--muted); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); }
+.modal-box { background: var(--surface); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; width: 100%; max-width: 420px; overflow: hidden; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.modal-title { font-size: 1rem; font-weight: 600; color: var(--text); }
+.modal-close { background: none; border: none; color: var(--muted); font-size: 1rem; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 8px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.modal-opt { width: 100%; text-align: left; background: transparent; border: 1px solid rgba(255,255,255,.07); border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+.modal-opt:hover { background: var(--surface2); }
+.modal-opt-name { font-size: 0.875rem; font-weight: 500; color: var(--text); }
+.modal-opt-role { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
 </style>

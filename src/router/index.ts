@@ -154,6 +154,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Regularization Requests', permissions: ['regularize attendance'], roles: ['admin', 'manager', 'team_lead']},
       },
       {
+        path: 'my-regularizations',
+        name: 'my-regularizations',
+        component: () => import('@/pages/app/MyRegularizations.vue'),
+        meta: { title: 'My Regularization Requests' },
+      },
+      {
         path: 'leave',
         name: 'leave',
         component: Leave,
@@ -339,7 +345,14 @@ function isTenantHost(host: string) {
   return base.endsWith('.' + MAIN_HOST) && getSubdomain(base) !== ''
 }
 let hostValidated = false
-async function validateTenantHost(subdomain: string): Promise<{ registered: boolean; subdomain?: string; domain?: string } | null> {
+interface TenantHostInfo {
+  registered: boolean
+  subdomain?: string
+  domain?: string
+  tenant_status?: string | null
+  pending_request?: { status: string; email: string } | null
+}
+async function validateTenantHost(subdomain: string): Promise<TenantHostInfo | null> {
   try {
     const controller = new AbortController()
     const id = setTimeout(() => controller.abort(), 1500)
@@ -350,7 +363,13 @@ async function validateTenantHost(subdomain: string): Promise<{ registered: bool
     clearTimeout(id)
     if (!response.ok) return null
     const data = await response.json()
-    return { registered: !!data.registered, subdomain: data.subdomain, domain: data.domain }
+    return {
+      registered: !!data.registered,
+      subdomain: data.subdomain,
+      domain: data.domain,
+      tenant_status: data.tenant_status,
+      pending_request: data.pending_request,
+    }
   } catch {
     return null
   }
@@ -366,7 +385,20 @@ router.beforeEach(async (to, from, next) => {
     const subdomain = getSubdomain(location.hostname)
     const info = await validateTenantHost(subdomain)
     hostValidated = true
-    if (!info?.registered) return window.location.href = `http://${MAIN_HOST}:${MAIN_PORT}/register`
+    if (!info?.registered) {
+      // Check if there's a pending request for this domain
+      if (info?.pending_request) {
+        // Domain exists as pending/rejected request — show appropriate page
+        if (info.pending_request.status === 'pending') {
+          return window.location.href = `http://${MAIN_HOST}:${MAIN_PORT}/register?status=pending&email=${encodeURIComponent(info.pending_request.email)}`
+        }
+      }
+      return window.location.href = `http://${MAIN_HOST}:${MAIN_PORT}/register`
+    }
+    // Tenant exists but is not active (suspended/expired)
+    if (info.tenant_status && info.tenant_status !== 'active') {
+      return window.location.href = `http://${MAIN_HOST}:${MAIN_PORT}/login?tenant_status=${info.tenant_status}`
+    }
   }
 
   // 2. Require login

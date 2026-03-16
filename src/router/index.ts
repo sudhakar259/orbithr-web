@@ -81,6 +81,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Roles & Permissions', roles: ['Super Admin', 'Tenant Admin'] },
       },
       {
+        path: 'marketplace',
+        name: 'marketplace',
+        component: () => import('@/pages/app/Marketplace.vue'),
+        meta: { title: 'Module Marketplace', requiresAuth: true },
+      },
+      {
         path: 'admin/modules',
         name: 'modules',
         component: () => import('@/pages/app/admin/Modules.vue'),

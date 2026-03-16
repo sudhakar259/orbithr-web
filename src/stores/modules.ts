@@ -1,34 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { modulesService } from '@/services/modules'
+import type { Module, TenantModule } from '@/services/modules'
 
-interface Module {
-  id: number
-  name: string
-  slug: string
-  description: string
-  features: string[]
-  price: number
-  billing_type: string
-  is_free: boolean
-  is_core: boolean
-  status?: string
-  icon?: string
-  category?: string
-  meta?: Record<string, unknown>
-}
-
-interface TenantModule {
-  id: number
-  module_id: number
-  module_name: string
-  module_slug: string
-  status: string
-  activated_at: string | null
-  expires_at: string | null
-  days_until_expiry: number | null
-  billing_reference: string | null
-  is_core: boolean
-}
+export type { Module, TenantModule }
 
 export const useModuleStore = defineStore('modules', () => {
   const modules = ref<Module[]>([])
@@ -54,19 +29,8 @@ export const useModuleStore = defineStore('modules', () => {
   const loadMarketplaceModules = async () => {
     loading.value = true
     error.value = null
-
     try {
-      const response = await fetch('/api/marketplace', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to load marketplace modules')
-      }
-
-      modules.value = await response.json()
+      modules.value = await modulesService.getMarketplaceModules()
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
     } finally {
@@ -77,19 +41,8 @@ export const useModuleStore = defineStore('modules', () => {
   const loadTenantModules = async () => {
     loading.value = true
     error.value = null
-
     try {
-      const response = await fetch('/api/tenant/modules', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to load tenant modules')
-      }
-
-      tenantModules.value = await response.json()
+      tenantModules.value = await modulesService.getTenantModules()
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
     } finally {
@@ -99,18 +52,7 @@ export const useModuleStore = defineStore('modules', () => {
 
   const activateModule = async (slug: string) => {
     try {
-      const response = await fetch(`/api/tenant/modules/${slug}/enable`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to activate module')
-      }
-
+      await modulesService.enableModule(slug)
       await loadTenantModules()
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
@@ -120,18 +62,7 @@ export const useModuleStore = defineStore('modules', () => {
 
   const deactivateModule = async (slug: string) => {
     try {
-      const response = await fetch(`/api/tenant/modules/${slug}/disable`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to deactivate module')
-      }
-
+      await modulesService.disableModule(slug)
       await loadTenantModules()
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
@@ -141,17 +72,7 @@ export const useModuleStore = defineStore('modules', () => {
 
   const getModuleStatus = async (slug: string) => {
     try {
-      const response = await fetch(`/api/tenant/modules/${slug}/status`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to get module status')
-      }
-
-      return await response.json()
+      return await modulesService.getModuleStatus(slug)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
       throw err
@@ -160,20 +81,7 @@ export const useModuleStore = defineStore('modules', () => {
 
   const updateModuleSettings = async (slug: string, settings: Record<string, unknown>) => {
     try {
-      const response = await fetch(`/api/tenant/modules/${slug}/settings`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ settings }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update module settings')
-      }
-
-      return await response.json()
+      return await modulesService.updateModuleSettings(slug, settings)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
       throw err
@@ -187,24 +95,7 @@ export const useModuleStore = defineStore('modules', () => {
     cancelUrl: string,
   ) => {
     try {
-      const response = await fetch(`/api/tenant/modules/${slug}/purchase`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          price_id: priceId,
-          success_url: successUrl,
-          cancel_url: cancelUrl,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to initiate checkout')
-      }
-
-      return await response.json()
+      return await modulesService.initiateCheckout(slug, priceId, successUrl, cancelUrl)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An error occurred'
       throw err

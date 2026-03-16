@@ -32,6 +32,10 @@ let   searchTimer: number | undefined
 const drawerOpen = ref(false)
 const drawerRow  = ref<DomainRequest | null>(null)
 
+// approval success
+const approvedLoginUrl = ref('')
+const approvedName     = ref('')
+
 // reject modal
 const rejectOpen   = ref(false)
 const rejectRow    = ref<DomainRequest | null>(null)
@@ -101,7 +105,11 @@ async function approve(row: DomainRequest) {
   if (!confirm(`Approve workspace for "${row.name}" (${row.domain_name})?`)) return
   actionId.value = row.id
   try {
-    await api.post(`requested-domain/${row.id}/approve`)
+    const { data } = await api.post(`requested-domain/${row.id}/approve`)
+    if (data.login_url) {
+      approvedLoginUrl.value = data.login_url
+      approvedName.value     = row.name
+    }
     await load()
   } finally { actionId.value = null }
 }
@@ -207,6 +215,21 @@ onMounted(() => { if (isAuthenticated()) load() })
         </div>
       </div>
     </div>
+
+    <!-- ── Approval success banner ──────────────────────────── -->
+    <Transition name="fade">
+      <div v-if="approvedLoginUrl" class="approval-banner">
+        <div class="approval-icon">✓</div>
+        <div>
+          <div class="approval-title">Workspace approved for {{ approvedName }}</div>
+          <div class="approval-sub">
+            Tenant login URL:
+            <a :href="approvedLoginUrl" target="_blank" class="approval-link">{{ approvedLoginUrl }}</a>
+          </div>
+        </div>
+        <button class="approval-close" @click="approvedLoginUrl = ''">✕</button>
+      </div>
+    </Transition>
 
     <!-- ── Bulk actions ─────────────────────────────────────── -->
     <div v-if="selectedIds.size" class="bulk-bar">
@@ -657,6 +680,26 @@ onMounted(() => { if (isAuthenticated()) load() })
   background: var(--red); color: #fff; border: none; cursor: pointer; transition: filter .15s;
 }
 .btn-danger:hover { filter: brightness(1.1); }
+
+/* Approval banner */
+.approval-banner {
+  display: flex; align-items: center; gap: 14px;
+  background: rgba(54,211,153,.1); border: 1px solid rgba(54,211,153,.3);
+  border-radius: var(--r); padding: 14px 18px;
+}
+.approval-icon {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(54,211,153,.2); color: var(--green);
+  display: grid; place-items: center; font-size: 16px; font-weight: 700;
+}
+.approval-title { font-weight: 600; color: var(--green); font-size: 14px; }
+.approval-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.approval-link  { color: var(--accent); text-decoration: underline; }
+.approval-close {
+  margin-left: auto; background: none; border: none;
+  color: var(--muted); font-size: 14px; cursor: pointer; padding: 4px;
+}
+.approval-close:hover { color: var(--text); }
 
 /* Transitions */
 .drawer-enter-active, .drawer-leave-active { transition: opacity .2s; }

@@ -340,6 +340,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/super/AuditLogView.vue'),
         meta: { title: 'Audit Log' },
       },
+      {
+        path: 'domain-requests',
+        name: 'super-domain-requests',
+        component: () => import('@/pages/app/admin/DomainRequests.vue'),
+        meta: { title: 'Domain Requests' },
+      },
+      {
+        path: 'transactions',
+        name: 'super-transactions',
+        component: () => import('@/pages/super/TransactionsView.vue'),
+        meta: { title: 'Transactions' },
+      },
     ],
   },
 

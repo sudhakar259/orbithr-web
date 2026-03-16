@@ -176,7 +176,7 @@ const downloadAll = () => {
             </div>
             <div class="slip-period">
               <div class="sp-title">PAYSLIP</div>
-              <div class="sp-period">{{ monthF || previewSlip.period ?? previewSlip.month ?? '—' }}</div>
+              <div class="sp-period">{{ monthF || (previewSlip.period ?? previewSlip.month ?? '—') }}</div>
             </div>
           </div>
           <div class="slip-emp">

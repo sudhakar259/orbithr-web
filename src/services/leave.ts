@@ -442,6 +442,8 @@ class LeaveService {
 
   async deleteLeaveAdjustment(id: number): Promise<void> {
     await api.delete(`/leave-adjustments/${id}`);
+  }
+
   // Leave Calendar
   async getCalendarEvents(params: {
     start_date: string;

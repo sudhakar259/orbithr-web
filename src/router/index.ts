@@ -89,8 +89,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'admin/modules',
         name: 'modules',
-        component: () => import('@/pages/app/admin/Modules.vue'),
-        meta: { title: 'Modules', superAdminOnly: true },
+        redirect: '/super/modules',
       },
       {
         path: 'admin/tenant-modules',
@@ -107,14 +106,12 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'admin/plans',
         name: 'plans',
-        component: () => import('@/pages/app/admin/Plans.vue'),
-        meta: { title: 'Plans', superAdminOnly: true },
+        redirect: '/super/plans',
       },
       {
         path: 'admin/transactions',
         name: 'transactions',
-        component: () => import('@/pages/app/admin/Transactions.vue'),
-        meta: { title: 'Transactions', superAdminOnly: true },
+        redirect: '/super/transactions',
       },
       {
         path: 'admin/settings',
@@ -351,6 +348,12 @@ const routes: RouteRecordRaw[] = [
         name: 'super-transactions',
         component: () => import('@/pages/super/TransactionsView.vue'),
         meta: { title: 'Transactions' },
+      },
+      {
+        path: 'plans',
+        name: 'super-plans',
+        component: () => import('@/pages/super/PlansView.vue'),
+        meta: { title: 'Plans & Pricing' },
       },
     ],
   },

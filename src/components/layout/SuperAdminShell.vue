@@ -82,7 +82,7 @@ function handleLogout() {
         <RouterLink to="/app/admin/roles-permissions" class="sa-nav-item" :class="{ active: isActive('/app/admin/roles-permissions') }">
           <span>🛡️</span> Roles & Permissions
         </RouterLink>
-        <RouterLink to="/app/admin/plans" class="sa-nav-item" :class="{ active: isActive('/app/admin/plans') }">
+        <RouterLink to="/super/plans" class="sa-nav-item" :class="{ active: isActive('/super/plans') }">
           <span>🏷️</span> Plans
         </RouterLink>
         <RouterLink to="/super/transactions" class="sa-nav-item" :class="{ active: isActive('/super/transactions') }">

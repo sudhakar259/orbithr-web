@@ -22,16 +22,20 @@ interface SubItem {
   amount?: number
 }
 
-const plans  = ref<Plan[]>([])
-const subs   = ref<SubItem[]>([])
-const loading = ref(false)
+const plans    = ref<Plan[]>([])
+const subs     = ref<SubItem[]>([])
+const loading  = ref(false)
+const page     = ref(1)
+const perPage  = ref(25)
+const total    = ref(0)
+const lastPage = ref(1)
 
 async function load() {
   loading.value = true
   try {
     const [plansRes, subsRes] = await Promise.allSettled([
       api.get('/super/plans'),
-      api.get('/super/subscriptions', { params: { per_page: 50 } }),
+      api.get('/super/subscriptions', { params: { page: page.value, per_page: perPage.value } }),
     ])
     if (plansRes.status === 'fulfilled') {
       const d = plansRes.value.data
@@ -39,7 +43,9 @@ async function load() {
     }
     if (subsRes.status === 'fulfilled') {
       const d = subsRes.value.data
-      subs.value = Array.isArray(d) ? d : (d.data ?? [])
+      subs.value     = Array.isArray(d) ? d : (d.data ?? [])
+      total.value    = d.total ?? subs.value.length
+      lastPage.value = d.last_page ?? 1
     }
   } finally {
     loading.value = false
@@ -104,6 +110,22 @@ const statusColor = (s?: string) => ({
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination -->
+      <div v-if="total >= 10" class="pagination">
+        <span class="pg-info">{{ total === 0 ? 0 : (page - 1) * perPage + 1 }}–{{ Math.min(page * perPage, total) }} of {{ total }}</span>
+        <div class="pg-nav">
+          <button class="pg-btn" :disabled="page <= 1" @click="page--; load()">‹</button>
+          <span class="pg-pages">{{ page }} / {{ lastPage }}</span>
+          <button class="pg-btn" :disabled="page >= lastPage" @click="page++; load()">›</button>
+        </div>
+        <select class="pg-sel" :value="perPage" @change="perPage = +($event.target as HTMLSelectElement).value; page = 1; load()">
+          <option :value="10">10 / page</option>
+          <option :value="25">25 / page</option>
+          <option :value="50">50 / page</option>
+          <option :value="100">100 / page</option>
+        </select>
+      </div>
     </div>
   </div>
 </template>
@@ -141,4 +163,13 @@ const statusColor = (s?: string) => ({
 .dim { color: #9CA3AF; } .sm { font-size: 12px; } .mono { font-family: monospace; font-size: 12px; }
 
 .pill { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,.06); }
+.pg-info { font-size: 12px; color: #6B7280; }
+.pg-nav { display: flex; align-items: center; gap: 8px; }
+.pg-btn { width: 28px; height: 28px; border-radius: 6px; font-size: 15px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #9CA3AF; cursor: pointer; transition: all .15s; }
+.pg-btn:not(:disabled):hover { background: rgba(79,126,255,.2); color: #4F7EFF; border-color: rgba(79,126,255,.3); }
+.pg-btn:disabled { opacity: .3; cursor: not-allowed; }
+.pg-pages { font-size: 12px; color: #6B7280; }
+.pg-sel { background: #0D0F1A; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; color: #9CA3AF; font-size: 12px; font-family: inherit; padding: 5px 8px; cursor: pointer; outline: none; }
 </style>

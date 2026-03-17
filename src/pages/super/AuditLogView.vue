@@ -17,18 +17,24 @@ interface LogEntry {
   severity?: 'info' | 'warning' | 'critical'
 }
 
-const loading = ref(false)
-const logs    = ref<LogEntry[]>([])
-const search  = ref('')
-const sevF    = ref('')
+const loading  = ref(false)
+const logs     = ref<LogEntry[]>([])
+const search   = ref('')
+const sevF     = ref('')
+const page     = ref(1)
+const perPage  = ref(25)
+const total    = ref(0)
+const lastPage = ref(1)
 
 async function load() {
   loading.value = true
   try {
     const { data } = await api.get('/super/audit-logs', {
-      params: { per_page: 100, search: search.value || undefined },
+      params: { page: page.value, per_page: perPage.value, search: search.value || undefined, status: sevF.value || undefined },
     })
-    logs.value = Array.isArray(data) ? data : (data.data ?? [])
+    logs.value     = Array.isArray(data) ? data : (data.data ?? [])
+    total.value    = data.total ?? logs.value.length
+    lastPage.value = data.last_page ?? 1
   } finally {
     loading.value = false
   }
@@ -36,19 +42,7 @@ async function load() {
 
 onMounted(load)
 
-const filtered = computed(() => {
-  let list = logs.value
-  if (sevF.value) list = list.filter(l => (l.severity ?? 'info') === sevF.value)
-  if (search.value) {
-    const q = search.value.toLowerCase()
-    list = list.filter(l =>
-      [l.action, l.event, l.description, l.user_name, l.user_email, l.target].some(v =>
-        String(v ?? '').toLowerCase().includes(q),
-      ),
-    )
-  }
-  return list
-})
+const filtered = computed(() => logs.value)
 
 const severityColor = (s?: string) => ({
   info: '#4F7EFF', warning: '#F9A825', critical: '#FF6B6B',
@@ -67,9 +61,9 @@ const severityBg = (s?: string) => ({
         <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" style="color:#6B7280;flex-shrink:0">
           <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
         </svg>
-        <input v-model="search" placeholder="Search logs…" @input="load" />
+        <input v-model="search" placeholder="Search logs…" @input="page = 1; load()" />
       </div>
-      <select v-model="sevF" class="sel">
+      <select v-model="sevF" class="sel" @change="page = 1; load()">
         <option value="">All severities</option>
         <option value="info">Info</option>
         <option value="warning">Warning</option>
@@ -80,7 +74,7 @@ const severityBg = (s?: string) => ({
     <!-- Log list -->
     <div class="sa-card">
       <div class="sa-card-head">
-        <div class="sa-card-title">Audit Log <span class="ct-count">{{ filtered.length }}</span></div>
+        <div class="sa-card-title">Audit Log <span class="ct-count">{{ total }}</span></div>
       </div>
       <div v-if="loading" class="sa-empty">Loading logs…</div>
       <div v-else-if="!filtered.length" class="sa-empty">No audit log entries found.</div>
@@ -111,6 +105,22 @@ const severityBg = (s?: string) => ({
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination -->
+      <div v-if="total >= 10" class="pagination">
+        <span class="pg-info">{{ total === 0 ? 0 : (page - 1) * perPage + 1 }}–{{ Math.min(page * perPage, total) }} of {{ total }}</span>
+        <div class="pg-nav">
+          <button class="pg-btn" :disabled="page <= 1" @click="page--; load()">‹</button>
+          <span class="pg-pages">{{ page }} / {{ lastPage }}</span>
+          <button class="pg-btn" :disabled="page >= lastPage" @click="page++; load()">›</button>
+        </div>
+        <select class="pg-sel" :value="perPage" @change="perPage = +($event.target as HTMLSelectElement).value; page = 1; load()">
+          <option :value="10">10 / page</option>
+          <option :value="25">25 / page</option>
+          <option :value="50">50 / page</option>
+          <option :value="100">100 / page</option>
+        </select>
+      </div>
     </div>
   </div>
 </template>
@@ -155,4 +165,13 @@ const severityBg = (s?: string) => ({
 .ev-desc { font-size: 11px; color: #6B7280; margin-top: 2px; }
 
 .sev-pill { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,.06); }
+.pg-info { font-size: 12px; color: #6B7280; }
+.pg-nav { display: flex; align-items: center; gap: 8px; }
+.pg-btn { width: 28px; height: 28px; border-radius: 6px; font-size: 15px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #9CA3AF; cursor: pointer; transition: all .15s; }
+.pg-btn:not(:disabled):hover { background: rgba(79,126,255,.2); color: #4F7EFF; border-color: rgba(79,126,255,.3); }
+.pg-btn:disabled { opacity: .3; cursor: not-allowed; }
+.pg-pages { font-size: 12px; color: #6B7280; }
+.pg-sel { background: #0D0F1A; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; color: #9CA3AF; font-size: 12px; font-family: inherit; padding: 5px 8px; cursor: pointer; outline: none; }
 </style>

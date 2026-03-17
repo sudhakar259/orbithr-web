@@ -16,12 +16,20 @@ interface Invoice {
 const loading  = ref(false)
 const invoices = ref<Invoice[]>([])
 const statusF  = ref('')
+const page     = ref(1)
+const perPage  = ref(25)
+const total    = ref(0)
+const lastPage = ref(1)
 
 async function load() {
   loading.value = true
   try {
-    const { data } = await api.get('/super/invoices', { params: { per_page: 100 } })
+    const { data } = await api.get('/super/invoices', {
+      params: { page: page.value, per_page: perPage.value, status: statusF.value || undefined },
+    })
     invoices.value = Array.isArray(data) ? data : (data.data ?? [])
+    total.value    = data.total ?? invoices.value.length
+    lastPage.value = data.last_page ?? 1
   } finally {
     loading.value = false
   }
@@ -29,9 +37,7 @@ async function load() {
 
 onMounted(load)
 
-const filtered = computed(() =>
-  invoices.value.filter(i => !statusF.value || i.status === statusF.value),
-)
+const filtered = computed(() => invoices.value)
 
 const totalCollected = computed(() =>
   invoices.value.filter(i => i.status === 'paid').reduce((a, i) => a + Number(i.amount ?? 0), 0),
@@ -48,6 +54,11 @@ async function markPaid(inv: Invoice) {
     await api.patch(`/super/invoices/${inv.id}`, { status: 'paid' })
     inv.status = 'paid'
   } catch {}
+}
+
+async function onStatusChange() {
+  page.value = 1
+  await load()
 }
 </script>
 
@@ -77,7 +88,7 @@ async function markPaid(inv: Invoice) {
     <div class="sa-card">
       <div class="sa-card-head">
         <div class="sa-card-title">All Invoices</div>
-        <select v-model="statusF" class="sel">
+        <select v-model="statusF" class="sel" @change="onStatusChange">
           <option value="">All</option>
           <option value="paid">Paid</option>
           <option value="pending">Pending</option>
@@ -111,6 +122,22 @@ async function markPaid(inv: Invoice) {
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination -->
+      <div v-if="total >= 10" class="pagination">
+        <span class="pg-info">{{ total === 0 ? 0 : (page - 1) * perPage + 1 }}–{{ Math.min(page * perPage, total) }} of {{ total }}</span>
+        <div class="pg-nav">
+          <button class="pg-btn" :disabled="page <= 1" @click="page--; load()">‹</button>
+          <span class="pg-pages">{{ page }} / {{ lastPage }}</span>
+          <button class="pg-btn" :disabled="page >= lastPage" @click="page++; load()">›</button>
+        </div>
+        <select class="pg-sel" :value="perPage" @change="perPage = +($event.target as HTMLSelectElement).value; page = 1; load()">
+          <option :value="10">10 / page</option>
+          <option :value="25">25 / page</option>
+          <option :value="50">50 / page</option>
+          <option :value="100">100 / page</option>
+        </select>
+      </div>
     </div>
   </div>
 </template>
@@ -156,4 +183,13 @@ async function markPaid(inv: Invoice) {
   padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: inherit; font-weight: 600; transition: all .14s;
 }
 .pay-btn:hover { background: rgba(54,211,153,.2); }
+
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,.06); }
+.pg-info { font-size: 12px; color: #6B7280; }
+.pg-nav { display: flex; align-items: center; gap: 8px; }
+.pg-btn { width: 28px; height: 28px; border-radius: 6px; font-size: 15px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #9CA3AF; cursor: pointer; transition: all .15s; }
+.pg-btn:not(:disabled):hover { background: rgba(79,126,255,.2); color: #4F7EFF; border-color: rgba(79,126,255,.3); }
+.pg-btn:disabled { opacity: .3; cursor: not-allowed; }
+.pg-pages { font-size: 12px; color: #6B7280; }
+.pg-sel { background: #0D0F1A; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; color: #9CA3AF; font-size: 12px; font-family: inherit; padding: 5px 8px; cursor: pointer; outline: none; }
 </style>

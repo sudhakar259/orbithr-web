@@ -60,7 +60,7 @@ function onSearch() {
   searchTimer = window.setTimeout(() => { page.value = 1; load() }, 300)
 }
 
-function mapRow(r: any): DomainRequest {
+function mapRow(r: Record<string, unknown> & { plan?: { name?: string }; order?: { plan?: { name?: string } } }): DomainRequest {
   const planName = r.plan?.name ?? r.plan_name ?? r.order?.plan?.name ?? '—'
   const status: DomainRequest['status'] =
     r.is_approved === 1 ? 'approved' : r.is_approved === 2 ? 'rejected' : 'pending'
@@ -92,10 +92,10 @@ async function load() {
       total.value = data.meta?.total ?? items.value.length
     }
     selectedIds.value.clear()
-  } catch (err: any) {
+  } catch (err) {
     items.value = []
     total.value = 0
-    if (err.response?.status === 401) router.push('/login')
+    if ((err as { response?: { status?: number } })?.response?.status === 401) router.push('/login')
   } finally {
     loading.value = false
   }
@@ -343,7 +343,7 @@ onMounted(() => { if (isAuthenticated()) load() })
       </div>
 
       <!-- Pagination -->
-      <div class="dr-pagination">
+      <div v-if="total >= 10" class="dr-pagination">
         <span class="pg-info">
           Showing {{ total === 0 ? 0 : (page - 1) * perPage + 1 }}–{{ Math.min(page * perPage, total) }} of {{ total }}
         </span>
@@ -352,6 +352,7 @@ onMounted(() => { if (isAuthenticated()) load() })
             <option :value="10">10 / page</option>
             <option :value="25">25 / page</option>
             <option :value="50">50 / page</option>
+            <option :value="100">100 / page</option>
           </select>
           <button class="pg-btn" :disabled="page <= 1" @click="page--; load()">‹</button>
           <span class="pg-current">{{ page }} / {{ lastPage }}</span>

@@ -19,6 +19,7 @@ const items    = ref<Transaction[]>([])
 const statusF  = ref('')
 const search   = ref('')
 const page     = ref(1)
+const perPage  = ref(25)
 const lastPage = ref(1)
 const total    = ref(0)
 
@@ -28,7 +29,7 @@ async function load() {
     const { data } = await api.get('/transactions', {
       params: {
         page: page.value,
-        per_page: 25,
+        per_page: perPage.value,
         status: statusF.value || undefined,
         search: search.value || undefined,
       },
@@ -126,10 +127,19 @@ function fmtDate(s?: string) {
       </table>
 
       <!-- Pagination -->
-      <div v-if="lastPage > 1" class="pagination">
-        <button class="pg-btn" :disabled="page <= 1" @click="page--; load()">‹</button>
-        <span class="pg-info">{{ page }} / {{ lastPage }}</span>
-        <button class="pg-btn" :disabled="page >= lastPage" @click="page++; load()">›</button>
+      <div v-if="total >= 10" class="pagination">
+        <span class="pg-info">{{ total === 0 ? 0 : (page - 1) * perPage + 1 }}–{{ Math.min(page * perPage, total) }} of {{ total }}</span>
+        <div class="pg-nav">
+          <button class="pg-btn" :disabled="page <= 1" @click="page--; load()">‹</button>
+          <span class="pg-pages">{{ page }} / {{ lastPage }}</span>
+          <button class="pg-btn" :disabled="page >= lastPage" @click="page++; load()">›</button>
+        </div>
+        <select class="pg-sel" :value="perPage" @change="perPage = +($event.target as HTMLSelectElement).value; page = 1; load()">
+          <option :value="10">10 / page</option>
+          <option :value="25">25 / page</option>
+          <option :value="50">50 / page</option>
+          <option :value="100">100 / page</option>
+        </select>
       </div>
     </div>
   </div>
@@ -186,16 +196,12 @@ function fmtDate(s?: string) {
 
 .pill { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
 
-.pagination {
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  padding: 12px 18px; border-top: 1px solid rgba(255,255,255,.06);
-}
-.pg-btn {
-  width: 28px; height: 28px; border-radius: 6px; font-size: 15px;
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-  color: #9CA3AF; cursor: pointer; transition: all .15s;
-}
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,.06); }
+.pg-info { font-size: 12px; color: #6B7280; }
+.pg-nav { display: flex; align-items: center; gap: 8px; }
+.pg-btn { width: 28px; height: 28px; border-radius: 6px; font-size: 15px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #9CA3AF; cursor: pointer; transition: all .15s; }
 .pg-btn:not(:disabled):hover { background: rgba(79,126,255,.2); color: #4F7EFF; border-color: rgba(79,126,255,.3); }
 .pg-btn:disabled { opacity: .3; cursor: not-allowed; }
-.pg-info { font-size: 12px; color: #6B7280; }
+.pg-pages { font-size: 12px; color: #6B7280; }
+.pg-sel { background: #0D0F1A; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; color: #9CA3AF; font-size: 12px; font-family: inherit; padding: 5px 8px; cursor: pointer; outline: none; }
 </style>

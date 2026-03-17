@@ -5,7 +5,7 @@ import { useAuth } from '@/composables/useAuth'
 
 const route  = useRoute()
 const router = useRouter()
-const { user, logout, roles } = useAuth()
+const { user, logout } = useAuth()
 
 const time = ref('')
 let timer: ReturnType<typeof setInterval>
@@ -22,10 +22,6 @@ const initials = computed(() => {
   const name = user.value?.name ?? ''
   return name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase() || 'SA'
 })
-
-const isSuperAdmin = computed(() =>
-  roles().map((r: string) => r.toLowerCase()).includes('super admin'),
-)
 
 const isActive = (path: string) =>
   route.path === path || route.path.startsWith(path + '/')
@@ -76,12 +72,6 @@ function handleLogout() {
         </RouterLink>
 
         <div class="sa-sec-label" style="margin-top:8px">Management</div>
-        <RouterLink to="/app/admin/users" class="sa-nav-item" :class="{ active: isActive('/app/admin/users') }">
-          <span>👥</span> Users
-        </RouterLink>
-        <RouterLink to="/app/admin/roles-permissions" class="sa-nav-item" :class="{ active: isActive('/app/admin/roles-permissions') }">
-          <span>🛡️</span> Roles & Permissions
-        </RouterLink>
         <RouterLink to="/super/plans" class="sa-nav-item" :class="{ active: isActive('/super/plans') }">
           <span>🏷️</span> Plans
         </RouterLink>
@@ -90,14 +80,6 @@ function handleLogout() {
         </RouterLink>
         <RouterLink to="/super/domain-requests" class="sa-nav-item" :class="{ active: isActive('/super/domain-requests') }">
           <span>🌐</span> Domain Requests
-        </RouterLink>
-        <RouterLink to="/app/admin/settings" class="sa-nav-item" :class="{ active: isActive('/app/admin/settings') }">
-          <span>⚙️</span> Admin Settings
-        </RouterLink>
-
-        <div class="sa-sec-label" style="margin-top:8px">App</div>
-        <RouterLink to="/app" class="sa-nav-item">
-          <span>↩️</span> Back to App
         </RouterLink>
       </nav>
 
@@ -126,11 +108,7 @@ function handleLogout() {
       </header>
 
       <main class="sa-content">
-        <RouterView v-slot="{ Component }">
-          <Transition name="pg" mode="out-in">
-            <component :is="Component" :key="$route.path" />
-          </Transition>
-        </RouterView>
+        <RouterView :key="$route.path" />
       </main>
     </div>
   </div>

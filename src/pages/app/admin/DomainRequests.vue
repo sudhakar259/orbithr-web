@@ -72,7 +72,7 @@ function mapRow(r: any): DomainRequest {
     plan_name: planName,
     status,
     payment_status: r.payment_status ?? null,
-    selected_modules: r.selected_modules ? JSON.parse(r.selected_modules) : null,
+    selected_modules: (() => { try { return r.selected_modules ? (Array.isArray(r.selected_modules) ? r.selected_modules : JSON.parse(r.selected_modules)) : null } catch { return null } })(),
     created_at: r.created_at,
   }
 }

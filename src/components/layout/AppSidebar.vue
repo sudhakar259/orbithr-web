@@ -91,8 +91,10 @@ interface NavSection {
 }
 
 function canSeeGroup(item: { superAdminOnly?: boolean; roles?: string[]; permissions?: string[] }): boolean {
-  if (item.superAdminOnly) return isSuperAdmin.value
-  if (isSuperAdmin.value || isAdmin.value) return true
+  // Super admin has a dedicated shell at /super — they don't use tenant HR items
+  if (isSuperAdmin.value) return false
+  if (item.superAdminOnly) return false
+  if (isAdmin.value) return true
   const itemRoles = item.roles?.map((x: string) => x.toLowerCase()) ?? []
   const itemPerms = item.permissions ?? []
   const roleDefined = itemRoles.length > 0
@@ -103,7 +105,8 @@ function canSeeGroup(item: { superAdminOnly?: boolean; roles?: string[]; permiss
 }
 
 function canSeeChild(item: NavChild): boolean {
-  if (isSuperAdmin.value || isAdmin.value) return true
+  if (isSuperAdmin.value) return false
+  if (isAdmin.value) return true
   const itemRoles = item.roles?.map((x: string) => x.toLowerCase()) ?? []
   const itemPerms = item.permissions ?? []
   const roleDefined = itemRoles.length > 0

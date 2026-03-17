@@ -454,7 +454,12 @@ router.beforeEach(async (to, from, next) => {
   // if (alwaysAllowed.has(String(to.name))) return next()
 
 
-  // 4. Super admin routes (only allow routes explicitly flagged)
+  // 4a. Super admin guard: redirect super admin away from tenant /app to /super
+  if (userRoles.includes('super admin') && to.path.startsWith('/app')) {
+    return next({ name: 'super-dashboard' })
+  }
+
+  // 4b. Super admin routes (only allow routes explicitly flagged)
   if (to.matched.some(r => r.meta?.superAdminOnly)) {
     if (!userRoles.includes('super admin')) {
       return next({ name: 'dashboard' })

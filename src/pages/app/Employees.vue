@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineOptions } from 'vue'
 import { useRouter } from 'vue-router'
 import { listEmployees, deleteEmployee } from '@/services/employee'
+
+defineOptions({ name: 'EmployeesPage' })
 
 interface Employee {
   id: number
@@ -105,7 +107,7 @@ async function handleDelete(emp: Employee) {
   catch { alert('Failed to delete employee') }
 }
 
-function normalizeEmployee(data: any): Employee {
+function normalizeEmployee(data: Record<string, unknown>): Employee {
   return {
     id: data.id,
     first_name: data.first_name || '',
@@ -145,10 +147,16 @@ onMounted(load)
         <h1 class="emp-title">Employees</h1>
         <p class="emp-subtitle">{{ filteredEmployees.length }} total &nbsp;·&nbsp; {{ employees.filter(e => e.status === 'Active').length }} active</p>
       </div>
-      <router-link to="/app/employees/new" class="btn-accent">
-        <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        Add Employee
-      </router-link>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <router-link to="/app/employees/org-chart" class="btn-secondary">
+          <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM3 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2zm10-3a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          Org Chart
+        </router-link>
+        <router-link to="/app/employees/new" class="btn-accent">
+          <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Employee
+        </router-link>
+      </div>
     </div>
 
     <!-- Filters -->

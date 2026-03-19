@@ -11,7 +11,7 @@ const Attendance = () => import('@/pages/app/Attendance.vue')
 const Leave = () => import('@/pages/app/Leave.vue')
 const Payroll = () => import('@/pages/app/Payroll.vue')
 const Performance = () => import('@/pages/app/Performance.vue')
-const Recruitment = () => import('@/pages/app/Recruitment.vue')
+// Recruitment uses nested routes — see below
 const Reports = () => import('@/pages/app/Reports.vue')
 const Settings = () => import('@/pages/app/Settings.vue')
 const Billing = () => import('@/pages/app/Billing.vue')
@@ -200,9 +200,40 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'recruitment',
-        name: 'recruitment',
-        component: Recruitment,
-        meta: { title: 'Recruitment',  permissions: ['manage-recruitment'], roles: ['admin'] },
+        component: () => import('@/pages/app/recruitment/RecruitmentLayout.vue'),
+        meta: { requiresAuth: true, module: 'recruitment' },
+        children: [
+          {
+            path: '',
+            name: 'recruitment',
+            component: () => import('@/pages/app/recruitment/RecruitmentDashboard.vue'),
+            meta: { title: 'Recruitment', permissions: ['view jobs'] },
+          },
+          {
+            path: 'jobs/new',
+            name: 'recruitment.jobs.create',
+            component: () => import('@/pages/app/recruitment/JobForm.vue'),
+            meta: { title: 'New Job', permissions: ['create jobs'] },
+          },
+          {
+            path: 'jobs/:id/edit',
+            name: 'recruitment.jobs.edit',
+            component: () => import('@/pages/app/recruitment/JobForm.vue'),
+            meta: { title: 'Edit Job', permissions: ['edit jobs'] },
+          },
+          {
+            path: 'jobs/:id',
+            name: 'recruitment.jobs.show',
+            component: () => import('@/pages/app/recruitment/JobDetail.vue'),
+            meta: { title: 'Job Detail', permissions: ['view jobs'] },
+          },
+          {
+            path: 'integrations',
+            name: 'recruitment.integrations',
+            component: () => import('@/pages/app/recruitment/JobBoardIntegrations.vue'),
+            meta: { title: 'Job Board Integrations', permissions: ['manage job-board-integrations'] },
+          },
+        ],
       },
       {
         path: 'reports',

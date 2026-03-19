@@ -20,7 +20,7 @@ async function fetchBadges() {
       .then(r => {
         employeeCount.value = r.data?.meta?.total ?? r.data?.total ?? r.data?.data?.length ?? null
       }),
-    api.get('/leaves', { params: { status: 'pending', per_page: 1 } })
+    api.get('/leave-requests', { params: { status: 'pending', per_page: 1 } })
       .then(r => {
         pendingLeaves.value = r.data?.meta?.total ?? r.data?.total ?? r.data?.data?.length ?? null
       }),

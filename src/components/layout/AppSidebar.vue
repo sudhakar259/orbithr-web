@@ -27,7 +27,12 @@ async function fetchBadges() {
   ])
 }
 
-onMounted(fetchBadges)
+onMounted(() => {
+  fetchBadges()
+  syncExpanded()
+})
+
+watch(() => route.name, syncExpanded)
 
 // ── Collapsible module groups ─────────────────────────
 const expanded = ref<Set<string>>(new Set())
@@ -52,9 +57,11 @@ const initials = computed(() => {
   return name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase() || 'U'
 })
 
+// Match exact route OR any child routes (e.g. 'recruitment' also matches 'recruitment.jobs.show')
 const isActive = (routeName: string) => {
-  if (Array.isArray(routeName)) return routeName.includes(String(route.name))
-  return route.name === routeName
+  const current = String(route.name)
+  if (Array.isArray(routeName)) return routeName.some(n => current === n || current.startsWith(n + '.'))
+  return current === routeName || current.startsWith(routeName + '.')
 }
 
 const rLower = computed(() => roles().map((x: string) => String(x).toLowerCase()))
@@ -428,6 +435,16 @@ const visibleSections = computed(() =>
 function hasActiveChild(group: NavGroup): boolean {
   if (!group.children) return false
   return group.children.some(c => isActive(c.to.name))
+}
+
+// Auto-expand groups that have an active child
+function syncExpanded() {
+  moduleGroups.value.forEach(item => {
+    if (item.children && hasActiveChild(item)) {
+      expanded.value.add(item.key)
+    }
+  })
+  expanded.value = new Set(expanded.value)
 }
 
 function handleLogout() {

@@ -201,37 +201,37 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'recruitment',
         component: () => import('@/pages/app/recruitment/RecruitmentLayout.vue'),
-        meta: { requiresAuth: true, module: 'recruitment' },
+        meta: { requiresAuth: true, module: 'recruitment', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
         children: [
           {
             path: '',
             name: 'recruitment',
             component: () => import('@/pages/app/recruitment/RecruitmentDashboard.vue'),
-            meta: { title: 'Recruitment', permissions: ['view jobs'] },
+            meta: { title: 'Recruitment', permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager', 'employee'] },
           },
           {
             path: 'jobs/new',
             name: 'recruitment.jobs.create',
             component: () => import('@/pages/app/recruitment/JobForm.vue'),
-            meta: { title: 'New Job', permissions: ['create jobs'] },
+            meta: { title: 'New Job', permissions: ['create jobs'], roles: ['admin', 'hr_manager'] },
           },
           {
             path: 'jobs/:id/edit',
             name: 'recruitment.jobs.edit',
             component: () => import('@/pages/app/recruitment/JobForm.vue'),
-            meta: { title: 'Edit Job', permissions: ['edit jobs'] },
+            meta: { title: 'Edit Job', permissions: ['edit jobs'], roles: ['admin', 'hr_manager'] },
           },
           {
             path: 'jobs/:id',
             name: 'recruitment.jobs.show',
             component: () => import('@/pages/app/recruitment/JobDetail.vue'),
-            meta: { title: 'Job Detail', permissions: ['view jobs'] },
+            meta: { title: 'Job Detail', permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager', 'employee'] },
           },
           {
             path: 'integrations',
             name: 'recruitment.integrations',
             component: () => import('@/pages/app/recruitment/JobBoardIntegrations.vue'),
-            meta: { title: 'Job Board Integrations', permissions: ['manage job-board-integrations'] },
+            meta: { title: 'Job Board Integrations', permissions: ['manage job-board-integrations'], roles: ['admin'] },
           },
         ],
       },
@@ -403,8 +403,8 @@ const router = createRouter({
 // route guard
 import { useAuth } from '@/composables/useAuth'
 
-const MAIN_HOST = (import.meta as any).env?.VITE_MAIN_HOST || 'orbithr.test'
-const MAIN_PORT = (import.meta as any).env?.VITE_MAIN_PORT || '5173'
+const MAIN_HOST = (import.meta as unknown as Record<string, Record<string, string>>).env?.VITE_MAIN_HOST || 'orbithr.test'
+const MAIN_PORT = (import.meta as unknown as Record<string, Record<string, string>>).env?.VITE_MAIN_PORT || '5173'
 
 function getBaseHost(host: string) {
   return host.split(':')[0]
@@ -480,9 +480,6 @@ router.beforeEach(async (to, from, next) => {
   // 2. Require login
   if (requiresAuth && !isAuthenticated()) return next({ name: 'login' })
 
-  // 3. Always allowed routes
-  const alwaysAllowed = new Set(['dashboard', 'help'])
-  // if (alwaysAllowed.has(String(to.name))) return next()
 
 
   // 4a. Super admin guard: redirect super admin away from tenant /app to /super

@@ -10,7 +10,7 @@ import { employeeRoutes } from '@/router/employee'
 const Attendance = () => import('@/pages/app/Attendance.vue')
 const Leave = () => import('@/pages/app/Leave.vue')
 const Payroll = () => import('@/pages/app/Payroll.vue')
-const Performance = () => import('@/pages/app/Performance.vue')
+// Performance uses nested routes — see below
 // Recruitment uses nested routes — see below
 const Reports = () => import('@/pages/app/Reports.vue')
 const Settings = () => import('@/pages/app/Settings.vue')
@@ -194,9 +194,76 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'performance',
-        name: 'performance',
-        component: Performance,
-        meta: { title: 'Performance', permissions: ['view performance'], roles: ['admin'] },
+        component: () => import('@/pages/app/performance/PerformanceLayout.vue'),
+        meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+        children: [
+          {
+            path: '',
+            name: 'performance',
+            component: () => import('@/pages/app/performance/PerformanceDashboard.vue'),
+            meta: { title: 'Performance', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'goals',
+            name: 'performance.goals',
+            component: () => import('@/pages/app/performance/Goals.vue'),
+            meta: { title: 'Goals', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'goals/new',
+            name: 'performance.goals.create',
+            component: () => import('@/pages/app/performance/GoalForm.vue'),
+            meta: { title: 'New Goal', roles: ['admin', 'hr_manager', 'manager'] },
+          },
+          {
+            path: 'goals/:id',
+            name: 'performance.goals.show',
+            component: () => import('@/pages/app/performance/GoalDetail.vue'),
+            meta: { title: 'Goal Detail', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'cycles',
+            name: 'performance.cycles',
+            component: () => import('@/pages/app/performance/AppraisalCycles.vue'),
+            meta: { title: 'Appraisal Cycles', roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'cycles/new',
+            name: 'performance.cycles.create',
+            component: () => import('@/pages/app/performance/CycleForm.vue'),
+            meta: { title: 'New Cycle', roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'cycles/:id',
+            name: 'performance.cycles.show',
+            component: () => import('@/pages/app/performance/CycleDetail.vue'),
+            meta: { title: 'Cycle Detail', roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'appraisals',
+            name: 'performance.appraisals',
+            component: () => import('@/pages/app/performance/Appraisals.vue'),
+            meta: { title: 'My Appraisals', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'appraisals/:id',
+            name: 'performance.appraisals.show',
+            component: () => import('@/pages/app/performance/AppraisalDetail.vue'),
+            meta: { title: 'Appraisal Detail', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'feedback',
+            name: 'performance.feedback',
+            component: () => import('@/pages/app/performance/Feedback.vue'),
+            meta: { title: '360° Feedback', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'reports',
+            name: 'performance.reports',
+            component: () => import('@/pages/app/performance/Reports.vue'),
+            meta: { title: 'Performance Reports', roles: ['admin', 'hr_manager', 'manager'] },
+          },
+        ],
       },
       {
         path: 'recruitment',

@@ -266,6 +266,137 @@ const routes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: 'lnd',
+        component: () => import('@/pages/app/lnd/LndLayout.vue'),
+        meta: {
+          requiresAuth: true,
+          module: 'learning-development',
+          roles: ['admin', 'hr_manager', 'manager', 'employee'],
+        },
+        children: [
+          {
+            path: '',
+            name: 'lnd',
+            component: () => import('@/pages/app/lnd/LndDashboard.vue'),
+            meta: {
+              title: 'L&D Dashboard',
+              permissions: ['view courses'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'my-learning',
+            name: 'lnd.my-learning',
+            component: () => import('@/pages/app/lnd/MyLearning.vue'),
+            meta: {
+              title: 'My Learning',
+              permissions: ['view courses'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'courses',
+            name: 'lnd.courses',
+            component: () => import('@/pages/app/lnd/LndCourses.vue'),
+            meta: {
+              title: 'Courses',
+              permissions: ['view courses'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'courses/new',
+            name: 'lnd.courses.create',
+            component: () => import('@/pages/app/lnd/CourseForm.vue'),
+            meta: {
+              title: 'New Course',
+              permissions: ['create courses'],
+              roles: ['admin', 'hr_manager'],
+            },
+          },
+          {
+            path: 'courses/:id/edit',
+            name: 'lnd.courses.edit',
+            component: () => import('@/pages/app/lnd/CourseForm.vue'),
+            meta: {
+              title: 'Edit Course',
+              permissions: ['edit courses'],
+              roles: ['admin', 'hr_manager'],
+            },
+          },
+          {
+            path: 'courses/:id',
+            name: 'lnd.courses.show',
+            component: () => import('@/pages/app/lnd/CourseDetail.vue'),
+            meta: {
+              title: 'Course Detail',
+              permissions: ['view courses'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'programs',
+            name: 'lnd.programs',
+            component: () => import('@/pages/app/lnd/LndPrograms.vue'),
+            meta: {
+              title: 'Training Programs',
+              permissions: ['view training programs'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'programs/new',
+            name: 'lnd.programs.create',
+            component: () => import('@/pages/app/lnd/ProgramForm.vue'),
+            meta: {
+              title: 'New Program',
+              permissions: ['manage training programs'],
+              roles: ['admin', 'hr_manager'],
+            },
+          },
+          {
+            path: 'programs/:id',
+            name: 'lnd.programs.show',
+            component: () => import('@/pages/app/lnd/ProgramDetail.vue'),
+            meta: {
+              title: 'Program Detail',
+              permissions: ['view training programs'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'skills',
+            name: 'lnd.skills',
+            component: () => import('@/pages/app/lnd/LndSkills.vue'),
+            meta: {
+              title: 'Skills',
+              permissions: ['view skills'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'certifications',
+            name: 'lnd.certifications',
+            component: () => import('@/pages/app/lnd/LndCertifications.vue'),
+            meta: {
+              title: 'Certifications',
+              permissions: ['view certifications'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'reports',
+            name: 'lnd.reports',
+            component: () => import('@/pages/app/lnd/LndReports.vue'),
+            meta: {
+              title: 'L&D Reports',
+              permissions: ['view lnd reports'],
+              roles: ['admin', 'hr_manager', 'manager'],
+            },
+          },
+        ],
+      },
+      {
         path: 'recruitment',
         component: () => import('@/pages/app/recruitment/RecruitmentLayout.vue'),
         meta: { requiresAuth: true, module: 'recruitment', roles: ['admin', 'hr_manager', 'manager', 'employee'] },

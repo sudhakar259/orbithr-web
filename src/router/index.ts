@@ -397,6 +397,22 @@ const routes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: 'expenses',
+        component: () => import('@/pages/app/expenses/ExpenseLayout.vue'),
+        meta: { requiresAuth: true, module: 'expense-reimbursement', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+        children: [
+          { path: '', name: 'expenses', component: () => import('@/pages/app/expenses/ExpenseDashboard.vue'), meta: { title: 'Expenses', permissions: ['view expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'my-claims', name: 'expenses.my-claims', component: () => import('@/pages/app/expenses/MyClaims.vue'), meta: { title: 'My Claims', permissions: ['view expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'claims/new', name: 'expenses.claims.create', component: () => import('@/pages/app/expenses/ClaimForm.vue'), meta: { title: 'New Claim', permissions: ['create expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'claims/:id/edit', name: 'expenses.claims.edit', component: () => import('@/pages/app/expenses/ClaimForm.vue'), meta: { title: 'Edit Claim', permissions: ['edit expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'claims/:id', name: 'expenses.claims.show', component: () => import('@/pages/app/expenses/ClaimDetail.vue'), meta: { title: 'Claim Detail', permissions: ['view expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'approvals', name: 'expenses.approvals', component: () => import('@/pages/app/expenses/Approvals.vue'), meta: { title: 'Approvals', permissions: ['approve expenses'], roles: ['admin', 'hr_manager', 'manager'] } },
+          { path: 'reimbursements', name: 'expenses.reimbursements', component: () => import('@/pages/app/expenses/Reimbursements.vue'), meta: { title: 'Reimbursements', permissions: ['process reimbursements'], roles: ['admin', 'hr_manager'] } },
+          { path: 'policies', name: 'expenses.policies', component: () => import('@/pages/app/expenses/ExpensePolicies.vue'), meta: { title: 'Policies', permissions: ['manage expense policies'], roles: ['admin'] } },
+          { path: 'reports', name: 'expenses.reports', component: () => import('@/pages/app/expenses/ExpenseReports.vue'), meta: { title: 'Expense Reports', permissions: ['view expense reports'], roles: ['admin', 'hr_manager'] } },
+        ],
+      },
+      {
         path: 'recruitment',
         component: () => import('@/pages/app/recruitment/RecruitmentLayout.vue'),
         meta: { requiresAuth: true, module: 'recruitment', roles: ['admin', 'hr_manager', 'manager', 'employee'] },

@@ -87,15 +87,15 @@ const handleAcknowledge = async () => {
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
-    not_started: 'bg-gray-100 text-gray-600',
-    in_progress: 'bg-blue-100 text-blue-800',
-    self_review_done: 'bg-indigo-100 text-indigo-800',
-    manager_review_done: 'bg-purple-100 text-purple-800',
-    calibration: 'bg-yellow-100 text-yellow-800',
-    completed: 'bg-green-100 text-green-800',
-    acknowledged: 'bg-teal-100 text-teal-800',
+    not_started: 'bg-gray-700 text-gray-400',
+    in_progress: 'bg-blue-900/50 text-blue-400',
+    self_review_done: 'bg-indigo-900/50 text-indigo-400',
+    manager_review_done: 'bg-purple-900/50 text-purple-400',
+    calibration: 'bg-yellow-900/50 text-yellow-400',
+    completed: 'bg-green-900/50 text-green-400',
+    acknowledged: 'bg-teal-900/50 text-teal-400',
   }
-  return colors[status] || 'bg-gray-100 text-gray-800'
+  return colors[status] || 'bg-gray-700 text-gray-300'
 }
 
 const maxRating = computed(() => appraisal.value?.appraisal_cycle?.rating_scale ?? 5)
@@ -108,110 +108,110 @@ onMounted(() => loadAppraisal())
 <template>
   <div class="space-y-6">
     <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
     </div>
 
-    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 text-sm text-red-800">{{ error }}</div>
+    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ error }}</div>
 
     <template v-else-if="appraisal">
-      <div v-if="actionError" class="bg-red-50 border border-red-200 rounded-md p-4 text-sm text-red-800">{{ actionError }}</div>
+      <div v-if="actionError" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ actionError }}</div>
 
       <!-- Header -->
       <div class="flex items-start justify-between">
         <div>
           <div class="flex items-center gap-3">
-            <button @click="router.push({ name: 'performance.appraisals' })" class="text-gray-400 hover:text-gray-600">
+            <button @click="router.push({ name: 'performance.appraisals' })" class="text-gray-400 hover:text-white transition-colors">
               <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
             <div>
               <div class="flex items-center gap-3">
-                <h2 class="text-xl font-semibold text-gray-900">{{ appraisal.appraisal_cycle?.name ?? 'Appraisal' }}</h2>
+                <h2 class="text-xl font-semibold text-white">{{ appraisal.appraisal_cycle?.name ?? 'Appraisal' }}</h2>
                 <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getStatusColor(appraisal.status)]">{{ appraisal.status.replace(/_/g, ' ') }}</span>
               </div>
-              <p class="text-sm text-gray-500 mt-1">
+              <p class="text-sm text-gray-400 mt-1">
                 Employee: {{ appraisal.employee?.first_name }} {{ appraisal.employee?.last_name }}
-                <span v-if="appraisal.final_score" class="ml-4 font-medium text-gray-700">Score: {{ appraisal.final_score }}</span>
-                <span v-if="appraisal.final_rating" class="ml-2 text-gray-500">({{ appraisal.final_rating }})</span>
+                <span v-if="appraisal.final_score" class="ml-4 font-medium text-gray-300">Score: {{ appraisal.final_score }}</span>
+                <span v-if="appraisal.final_rating" class="ml-2 text-gray-400">({{ appraisal.final_rating }})</span>
               </p>
             </div>
           </div>
         </div>
         <div class="flex gap-2">
-          <button v-if="canSubmitSelfReview" @click="showSelfReviewForm = !showSelfReviewForm" class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md">Submit Self Review</button>
-          <button v-if="canSubmitManagerReview" @click="router.push({ name: 'performance.appraisals.show', params: { id: appraisal.id }, query: { review: 'manager' } })" class="px-3 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md">Manager Review</button>
-          <button v-if="appraisal.status === 'completed' && !appraisal.employee_acknowledged" @click="handleAcknowledge" class="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md">Acknowledge</button>
+          <button v-if="canSubmitSelfReview" @click="showSelfReviewForm = !showSelfReviewForm" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Submit Self Review</button>
+          <button v-if="canSubmitManagerReview" @click="router.push({ name: 'performance.appraisals.show', params: { id: appraisal.id }, query: { review: 'manager' } })" class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors">Manager Review</button>
+          <button v-if="appraisal.status === 'completed' && !appraisal.employee_acknowledged" @click="handleAcknowledge" class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">Acknowledge</button>
         </div>
       </div>
 
       <!-- Self Review Form -->
-      <div v-if="showSelfReviewForm" class="bg-white shadow rounded-lg p-6 space-y-4">
-        <h3 class="text-base font-medium text-gray-900">Self Review</h3>
+      <div v-if="showSelfReviewForm" class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
+        <h3 class="text-base font-medium text-white">Self Review</h3>
         <div class="space-y-4">
-          <div v-for="(rating, idx) in selfReviewForm.ratings" :key="idx" class="border border-gray-100 rounded-md p-4">
+          <div v-for="(rating, idx) in selfReviewForm.ratings" :key="idx" class="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
             <div class="flex items-center justify-between mb-2">
-              <p class="text-sm font-medium text-gray-900">{{ rating.category_label }}</p>
+              <p class="text-sm font-medium text-white">{{ rating.category_label }}</p>
               <div class="flex items-center gap-2">
-                <span class="text-xs text-gray-500">Rating (1–{{ maxRating }})</span>
-                <input v-model.number="rating.rating" type="number" :min="1" :max="maxRating" class="w-16 border-gray-300 rounded text-sm text-center" />
+                <span class="text-xs text-gray-400">Rating (1–{{ maxRating }})</span>
+                <input v-model.number="rating.rating" type="number" :min="1" :max="maxRating" class="w-16 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm text-center focus:border-blue-500 focus:outline-none px-2 py-1" />
               </div>
             </div>
-            <input v-model="rating.comments" type="text" placeholder="Comments (optional)" class="block w-full border-gray-300 rounded-md text-sm" />
+            <input v-model="rating.comments" type="text" placeholder="Comments (optional)" class="block w-full bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none px-3 py-2" />
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700">Strengths</label>
-          <textarea v-model="selfReviewForm.strengths" rows="2" class="mt-1 block w-full border-gray-300 rounded-md text-sm" />
+          <label class="block text-sm font-medium text-gray-300">Strengths</label>
+          <textarea v-model="selfReviewForm.strengths" rows="2" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700">Areas for Improvement</label>
-          <textarea v-model="selfReviewForm.improvement_areas" rows="2" class="mt-1 block w-full border-gray-300 rounded-md text-sm" />
+          <label class="block text-sm font-medium text-gray-300">Areas for Improvement</label>
+          <textarea v-model="selfReviewForm.improvement_areas" rows="2" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700">Overall Comments</label>
-          <textarea v-model="selfReviewForm.overall_comments" rows="2" class="mt-1 block w-full border-gray-300 rounded-md text-sm" />
+          <label class="block text-sm font-medium text-gray-300">Overall Comments</label>
+          <textarea v-model="selfReviewForm.overall_comments" rows="2" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2" />
         </div>
         <div class="flex justify-end gap-3">
-          <button @click="showSelfReviewForm = false" class="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
-          <button @click="handleSubmitSelfReview" :disabled="submitting" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md disabled:opacity-50">{{ submitting ? 'Submitting...' : 'Submit Self Review' }}</button>
+          <button @click="showSelfReviewForm = false" class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors">Cancel</button>
+          <button @click="handleSubmitSelfReview" :disabled="submitting" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50">{{ submitting ? 'Submitting...' : 'Submit Self Review' }}</button>
         </div>
       </div>
 
       <!-- Review Cards -->
       <div v-if="appraisal.reviews && appraisal.reviews.length > 0" class="space-y-4">
-        <div v-for="review in appraisal.reviews" :key="review.id" class="bg-white shadow rounded-lg p-5">
+        <div v-for="review in appraisal.reviews" :key="review.id" class="bg-gray-800 border border-gray-700 rounded-lg p-5">
           <div class="flex items-center justify-between mb-4">
             <div>
-              <h3 class="text-base font-medium text-gray-900 capitalize">{{ review.review_type.replace('_', ' ') }} Review</h3>
-              <p class="text-sm text-gray-500">by {{ review.reviewer?.name ?? 'Unknown' }}</p>
+              <h3 class="text-base font-medium text-white capitalize">{{ review.review_type.replace('_', ' ') }} Review</h3>
+              <p class="text-sm text-gray-400">by {{ review.reviewer?.name ?? 'Unknown' }}</p>
             </div>
             <div class="text-right">
-              <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', review.status === 'submitted' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600']">{{ review.status }}</span>
-              <p v-if="review.overall_rating" class="mt-1 text-sm font-medium text-gray-900">Overall: {{ review.overall_rating }}</p>
+              <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', review.status === 'submitted' ? 'bg-green-900/50 text-green-400' : 'bg-gray-700 text-gray-400']">{{ review.status }}</span>
+              <p v-if="review.overall_rating" class="mt-1 text-sm font-medium text-white">Overall: {{ review.overall_rating }}</p>
             </div>
           </div>
           <div v-if="review.ratings && review.ratings.length > 0" class="space-y-2">
             <div v-for="r in review.ratings" :key="r.id" class="flex items-center justify-between text-sm">
-              <span class="text-gray-700">{{ r.category_label }}</span>
+              <span class="text-gray-300">{{ r.category_label }}</span>
               <div class="flex items-center gap-3">
-                <div class="w-24 bg-gray-200 rounded-full h-1.5">
-                  <div class="bg-blue-600 h-1.5 rounded-full" :style="{ width: (r.rating / r.max_rating * 100) + '%' }"></div>
+                <div class="w-24 bg-gray-700 rounded-full h-1.5">
+                  <div class="bg-blue-500 h-1.5 rounded-full" :style="{ width: (r.rating / r.max_rating * 100) + '%' }"></div>
                 </div>
-                <span class="text-gray-600 w-8 text-right">{{ r.rating }}/{{ r.max_rating }}</span>
+                <span class="text-gray-400 w-8 text-right">{{ r.rating }}/{{ r.max_rating }}</span>
               </div>
             </div>
           </div>
-          <div v-if="review.strengths || review.improvement_areas || review.overall_comments" class="mt-4 space-y-2 pt-3 border-t border-gray-100">
-            <p v-if="review.strengths" class="text-sm"><span class="font-medium text-gray-700">Strengths: </span><span class="text-gray-600">{{ review.strengths }}</span></p>
-            <p v-if="review.improvement_areas" class="text-sm"><span class="font-medium text-gray-700">Improvements: </span><span class="text-gray-600">{{ review.improvement_areas }}</span></p>
-            <p v-if="review.overall_comments" class="text-sm"><span class="font-medium text-gray-700">Comments: </span><span class="text-gray-600">{{ review.overall_comments }}</span></p>
+          <div v-if="review.strengths || review.improvement_areas || review.overall_comments" class="mt-4 space-y-2 pt-3 border-t border-gray-700">
+            <p v-if="review.strengths" class="text-sm"><span class="font-medium text-gray-300">Strengths: </span><span class="text-gray-400">{{ review.strengths }}</span></p>
+            <p v-if="review.improvement_areas" class="text-sm"><span class="font-medium text-gray-300">Improvements: </span><span class="text-gray-400">{{ review.improvement_areas }}</span></p>
+            <p v-if="review.overall_comments" class="text-sm"><span class="font-medium text-gray-300">Comments: </span><span class="text-gray-400">{{ review.overall_comments }}</span></p>
           </div>
         </div>
       </div>
 
       <!-- Acknowledgment -->
-      <div v-if="appraisal.employee_acknowledged" class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-        <svg class="h-5 w-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-        <p class="text-sm text-green-800">Acknowledged on {{ appraisal.acknowledged_at ? formatDate(appraisal.acknowledged_at) : 'N/A' }}</p>
+      <div v-if="appraisal.employee_acknowledged" class="bg-green-900/30 border border-green-700 rounded-lg p-4 flex items-center gap-3">
+        <svg class="h-5 w-5 text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+        <p class="text-sm text-green-400">Acknowledged on {{ appraisal.acknowledged_at ? formatDate(appraisal.acknowledged_at) : 'N/A' }}</p>
       </div>
     </template>
   </div>

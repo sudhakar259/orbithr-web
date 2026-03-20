@@ -39,15 +39,15 @@ const displayedAppraisals = computed(() => activeTab.value === 'team' ? teamAppr
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
-    not_started: 'bg-gray-100 text-gray-600',
-    in_progress: 'bg-blue-100 text-blue-800',
-    self_review_done: 'bg-indigo-100 text-indigo-800',
-    manager_review_done: 'bg-purple-100 text-purple-800',
-    calibration: 'bg-yellow-100 text-yellow-800',
-    completed: 'bg-green-100 text-green-800',
-    acknowledged: 'bg-teal-100 text-teal-800',
+    not_started: 'bg-gray-700 text-gray-400',
+    in_progress: 'bg-blue-900/50 text-blue-400',
+    self_review_done: 'bg-indigo-900/50 text-indigo-400',
+    manager_review_done: 'bg-purple-900/50 text-purple-400',
+    calibration: 'bg-yellow-900/50 text-yellow-400',
+    completed: 'bg-green-900/50 text-green-400',
+    acknowledged: 'bg-teal-900/50 text-teal-400',
   }
-  return colors[status] || 'bg-gray-100 text-gray-800'
+  return colors[status] || 'bg-gray-700 text-gray-300'
 }
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString()
@@ -58,15 +58,15 @@ onMounted(() => loadAppraisals())
 <template>
   <div class="space-y-6">
     <!-- Tabs -->
-    <div v-if="canViewTeam" class="border-b border-gray-200">
+    <div v-if="canViewTeam" class="border-b border-gray-700">
       <nav class="-mb-px flex space-x-6">
-        <button @click="activeTab = 'my'" :class="['py-3 px-1 border-b-2 text-sm font-medium', activeTab === 'my' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700']">My Appraisals</button>
-        <button @click="activeTab = 'team'" :class="['py-3 px-1 border-b-2 text-sm font-medium', activeTab === 'team' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700']">Team Appraisals</button>
+        <button @click="activeTab = 'my'" :class="['py-3 px-1 border-b-2 text-sm font-medium', activeTab === 'my' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']">My Appraisals</button>
+        <button @click="activeTab = 'team'" :class="['py-3 px-1 border-b-2 text-sm font-medium', activeTab === 'team' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']">Team Appraisals</button>
       </nav>
     </div>
 
     <div class="flex items-center gap-3">
-      <select v-model="filterStatus" @change="loadAppraisals()" class="border-gray-300 rounded-md text-sm">
+      <select v-model="filterStatus" @change="loadAppraisals()" class="bg-gray-800 border border-gray-700 text-gray-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none">
         <option value="">All Status</option>
         <option value="not_started">Not Started</option>
         <option value="in_progress">In Progress</option>
@@ -78,42 +78,42 @@ onMounted(() => loadAppraisals())
     </div>
 
     <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
     </div>
 
-    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-4 text-sm text-red-800">{{ error }}</div>
+    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ error }}</div>
 
     <div v-else-if="displayedAppraisals.length === 0" class="text-center py-12 text-gray-500">No appraisals found.</div>
 
-    <div v-else class="bg-white shadow rounded-lg overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-700">
+        <thead class="bg-gray-800/50">
           <tr>
-            <th v-if="activeTab === 'team'" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cycle</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Final Score</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Self Review</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            <th v-if="activeTab === 'team'" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Employee</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Cycle</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Final Score</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Self Review</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200">
-          <tr v-for="appraisal in displayedAppraisals" :key="appraisal.id" class="hover:bg-gray-50">
+        <tbody class="divide-y divide-gray-700">
+          <tr v-for="appraisal in displayedAppraisals" :key="appraisal.id" class="hover:bg-gray-700/30">
             <td v-if="activeTab === 'team'" class="px-6 py-4">
-              <p class="text-sm font-medium text-gray-900">{{ appraisal.employee?.first_name }} {{ appraisal.employee?.last_name }}</p>
-              <p class="text-xs text-gray-500">{{ appraisal.employee?.email }}</p>
+              <p class="text-sm font-medium text-white">{{ appraisal.employee?.first_name }} {{ appraisal.employee?.last_name }}</p>
+              <p class="text-xs text-gray-400">{{ appraisal.employee?.email }}</p>
             </td>
             <td class="px-6 py-4">
-              <p class="text-sm font-medium text-gray-900">{{ appraisal.appraisal_cycle?.name ?? '—' }}</p>
-              <p v-if="appraisal.appraisal_cycle" class="text-xs text-gray-500">{{ formatDate(appraisal.appraisal_cycle.end_date) }}</p>
+              <p class="text-sm font-medium text-white">{{ appraisal.appraisal_cycle?.name ?? '—' }}</p>
+              <p v-if="appraisal.appraisal_cycle" class="text-xs text-gray-400">{{ formatDate(appraisal.appraisal_cycle.end_date) }}</p>
             </td>
             <td class="px-6 py-4">
               <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getStatusColor(appraisal.status)]">{{ appraisal.status.replace(/_/g, ' ') }}</span>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-900">{{ appraisal.final_score ?? '—' }}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">{{ appraisal.self_review_submitted_at ? formatDate(appraisal.self_review_submitted_at) : '—' }}</td>
+            <td class="px-6 py-4 text-sm text-white">{{ appraisal.final_score ?? '—' }}</td>
+            <td class="px-6 py-4 text-sm text-gray-400">{{ appraisal.self_review_submitted_at ? formatDate(appraisal.self_review_submitted_at) : '—' }}</td>
             <td class="px-6 py-4">
-              <button @click="router.push({ name: 'performance.appraisals.show', params: { id: appraisal.id } })" class="text-blue-600 hover:text-blue-900 text-sm font-medium">View</button>
+              <button @click="router.push({ name: 'performance.appraisals.show', params: { id: appraisal.id } })" class="text-blue-400 hover:text-blue-300 text-sm font-medium">View</button>
             </td>
           </tr>
         </tbody>

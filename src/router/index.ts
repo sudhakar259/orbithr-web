@@ -654,7 +654,37 @@ const routes: RouteRecordRaw[] = [
         path: 'onboarding',
         name: 'onboarding',
         component: () => import('@/pages/app/Onboarding.vue'),
-        meta: { title: 'Onboarding', permissions: ['manage-onboarding'], roles: ['admin'] },
+        meta: { title: 'Onboarding', permissions: ['manage-onboarding'], roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'hr-reports',
+        name: 'hr-reports',
+        component: () => import('@/pages/app/Reports.vue'),
+        meta: { title: 'HR Reports', requiresAuth: true, roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'hr-letters',
+        name: 'hr-letters',
+        component: () => import('@/pages/app/employee/HrLetters.vue'),
+        meta: { title: 'HR Letters', requiresAuth: true, roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'exit-management',
+        name: 'exit-management',
+        component: () => import('@/pages/app/employee/ExitManagement.vue'),
+        meta: { title: 'Exit Management', requiresAuth: true, roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'statutory',
+        name: 'payroll.statutory',
+        component: () => import('@/pages/app/payroll/StatutoryCompliance.vue'),
+        meta: { title: 'Statutory Compliance', requiresAuth: true, permissions: ['view payroll'], roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'gratuity',
+        name: 'payroll.gratuity',
+        component: () => import('@/pages/app/payroll/Gratuity.vue'),
+        meta: { title: 'Gratuity', requiresAuth: true, permissions: ['view payroll'], roles: ['admin', 'hr_manager'] },
       },
       {
         path: 'announcements',

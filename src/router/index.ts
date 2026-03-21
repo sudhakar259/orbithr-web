@@ -10,9 +10,9 @@ import { employeeRoutes } from '@/router/employee'
 const Attendance = () => import('@/pages/app/Attendance.vue')
 const Leave = () => import('@/pages/app/Leave.vue')
 const Payroll = () => import('@/pages/app/Payroll.vue')
-const Performance = () => import('@/pages/app/Performance.vue')
-const Recruitment = () => import('@/pages/app/Recruitment.vue')
-const Reports = () => import('@/pages/app/Reports.vue')
+// Performance uses nested routes — see below
+// Recruitment uses nested routes — see below
+// Reports uses nested routes — see below
 const Settings = () => import('@/pages/app/Settings.vue')
 const Billing = () => import('@/pages/app/Billing.vue')
 const Help = () => import('@/pages/app/Help.vue')
@@ -81,10 +81,15 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Roles & Permissions', roles: ['Super Admin', 'Tenant Admin'] },
       },
       {
+        path: 'marketplace',
+        name: 'marketplace',
+        component: () => import('@/pages/app/Marketplace.vue'),
+        meta: { title: 'Module Marketplace', requiresAuth: true },
+      },
+      {
         path: 'admin/modules',
         name: 'modules',
-        component: () => import('@/pages/app/admin/Modules.vue'),
-        meta: { title: 'Modules', superAdminOnly: true },
+        redirect: '/super/modules',
       },
       {
         path: 'admin/tenant-modules',
@@ -101,14 +106,12 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'admin/plans',
         name: 'plans',
-        component: () => import('@/pages/app/admin/Plans.vue'),
-        meta: { title: 'Plans', superAdminOnly: true },
+        redirect: '/super/plans',
       },
       {
         path: 'admin/transactions',
         name: 'transactions',
-        component: () => import('@/pages/app/admin/Transactions.vue'),
-        meta: { title: 'Transactions', superAdminOnly: true },
+        redirect: '/super/transactions',
       },
       {
         path: 'admin/settings',
@@ -191,21 +194,392 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'performance',
-        name: 'performance',
-        component: Performance,
-        meta: { title: 'Performance', permissions: ['view performance'], roles: ['admin'] },
+        component: () => import('@/pages/app/performance/PerformanceLayout.vue'),
+        meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+        children: [
+          {
+            path: '',
+            name: 'performance',
+            component: () => import('@/pages/app/performance/PerformanceDashboard.vue'),
+            meta: { title: 'Performance', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'goals',
+            name: 'performance.goals',
+            component: () => import('@/pages/app/performance/Goals.vue'),
+            meta: { title: 'Goals', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'goals/new',
+            name: 'performance.goals.create',
+            component: () => import('@/pages/app/performance/GoalForm.vue'),
+            meta: { title: 'New Goal', roles: ['admin', 'hr_manager', 'manager'] },
+          },
+          {
+            path: 'goals/:id',
+            name: 'performance.goals.show',
+            component: () => import('@/pages/app/performance/GoalDetail.vue'),
+            meta: { title: 'Goal Detail', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'cycles',
+            name: 'performance.cycles',
+            component: () => import('@/pages/app/performance/AppraisalCycles.vue'),
+            meta: { title: 'Appraisal Cycles', roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'cycles/new',
+            name: 'performance.cycles.create',
+            component: () => import('@/pages/app/performance/CycleForm.vue'),
+            meta: { title: 'New Cycle', roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'cycles/:id',
+            name: 'performance.cycles.show',
+            component: () => import('@/pages/app/performance/CycleDetail.vue'),
+            meta: { title: 'Cycle Detail', roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'appraisals',
+            name: 'performance.appraisals',
+            component: () => import('@/pages/app/performance/Appraisals.vue'),
+            meta: { title: 'My Appraisals', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'appraisals/:id',
+            name: 'performance.appraisals.show',
+            component: () => import('@/pages/app/performance/AppraisalDetail.vue'),
+            meta: { title: 'Appraisal Detail', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'feedback',
+            name: 'performance.feedback',
+            component: () => import('@/pages/app/performance/Feedback.vue'),
+            meta: { title: '360° Feedback', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'reports',
+            name: 'performance.reports',
+            component: () => import('@/pages/app/performance/Reports.vue'),
+            meta: { title: 'Performance Reports', roles: ['admin', 'hr_manager', 'manager'] },
+          },
+        ],
+      },
+      {
+        path: 'lnd',
+        component: () => import('@/pages/app/lnd/LndLayout.vue'),
+        meta: {
+          requiresAuth: true,
+          module: 'learning-development',
+          roles: ['admin', 'hr_manager', 'manager', 'employee'],
+        },
+        children: [
+          {
+            path: '',
+            name: 'lnd',
+            component: () => import('@/pages/app/lnd/LndDashboard.vue'),
+            meta: {
+              title: 'L&D Dashboard',
+              permissions: ['view courses'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'my-learning',
+            name: 'lnd.my-learning',
+            component: () => import('@/pages/app/lnd/MyLearning.vue'),
+            meta: {
+              title: 'My Learning',
+              permissions: ['view courses'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'courses',
+            name: 'lnd.courses',
+            component: () => import('@/pages/app/lnd/LndCourses.vue'),
+            meta: {
+              title: 'Courses',
+              permissions: ['view courses'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'courses/new',
+            name: 'lnd.courses.create',
+            component: () => import('@/pages/app/lnd/CourseForm.vue'),
+            meta: {
+              title: 'New Course',
+              permissions: ['create courses'],
+              roles: ['admin', 'hr_manager'],
+            },
+          },
+          {
+            path: 'courses/:id/edit',
+            name: 'lnd.courses.edit',
+            component: () => import('@/pages/app/lnd/CourseForm.vue'),
+            meta: {
+              title: 'Edit Course',
+              permissions: ['edit courses'],
+              roles: ['admin', 'hr_manager'],
+            },
+          },
+          {
+            path: 'courses/:id',
+            name: 'lnd.courses.show',
+            component: () => import('@/pages/app/lnd/CourseDetail.vue'),
+            meta: {
+              title: 'Course Detail',
+              permissions: ['view courses'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'programs',
+            name: 'lnd.programs',
+            component: () => import('@/pages/app/lnd/LndPrograms.vue'),
+            meta: {
+              title: 'Training Programs',
+              permissions: ['view training programs'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'programs/new',
+            name: 'lnd.programs.create',
+            component: () => import('@/pages/app/lnd/ProgramForm.vue'),
+            meta: {
+              title: 'New Program',
+              permissions: ['manage training programs'],
+              roles: ['admin', 'hr_manager'],
+            },
+          },
+          {
+            path: 'programs/:id',
+            name: 'lnd.programs.show',
+            component: () => import('@/pages/app/lnd/ProgramDetail.vue'),
+            meta: {
+              title: 'Program Detail',
+              permissions: ['view training programs'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'skills',
+            name: 'lnd.skills',
+            component: () => import('@/pages/app/lnd/LndSkills.vue'),
+            meta: {
+              title: 'Skills',
+              permissions: ['view skills'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'certifications',
+            name: 'lnd.certifications',
+            component: () => import('@/pages/app/lnd/LndCertifications.vue'),
+            meta: {
+              title: 'Certifications',
+              permissions: ['view certifications'],
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+            },
+          },
+          {
+            path: 'reports',
+            name: 'lnd.reports',
+            component: () => import('@/pages/app/lnd/LndReports.vue'),
+            meta: {
+              title: 'L&D Reports',
+              permissions: ['view lnd reports'],
+              roles: ['admin', 'hr_manager', 'manager'],
+            },
+          },
+        ],
+      },
+      {
+        path: 'expenses',
+        component: () => import('@/pages/app/expenses/ExpenseLayout.vue'),
+        meta: { requiresAuth: true, module: 'expense-reimbursement', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+        children: [
+          { path: '', name: 'expenses', component: () => import('@/pages/app/expenses/ExpenseDashboard.vue'), meta: { title: 'Expenses', permissions: ['view expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'my-claims', name: 'expenses.my-claims', component: () => import('@/pages/app/expenses/MyClaims.vue'), meta: { title: 'My Claims', permissions: ['view expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'claims/new', name: 'expenses.claims.create', component: () => import('@/pages/app/expenses/ClaimForm.vue'), meta: { title: 'New Claim', permissions: ['create expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'claims/:id/edit', name: 'expenses.claims.edit', component: () => import('@/pages/app/expenses/ClaimForm.vue'), meta: { title: 'Edit Claim', permissions: ['edit expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'claims/:id', name: 'expenses.claims.show', component: () => import('@/pages/app/expenses/ClaimDetail.vue'), meta: { title: 'Claim Detail', permissions: ['view expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'] } },
+          { path: 'approvals', name: 'expenses.approvals', component: () => import('@/pages/app/expenses/Approvals.vue'), meta: { title: 'Approvals', permissions: ['approve expenses'], roles: ['admin', 'hr_manager', 'manager'] } },
+          { path: 'reimbursements', name: 'expenses.reimbursements', component: () => import('@/pages/app/expenses/Reimbursements.vue'), meta: { title: 'Reimbursements', permissions: ['process reimbursements'], roles: ['admin', 'hr_manager'] } },
+          { path: 'policies', name: 'expenses.policies', component: () => import('@/pages/app/expenses/ExpensePolicies.vue'), meta: { title: 'Policies', permissions: ['manage expense policies'], roles: ['admin'] } },
+          { path: 'reports', name: 'expenses.reports', component: () => import('@/pages/app/expenses/ExpenseReports.vue'), meta: { title: 'Expense Reports', permissions: ['view expense reports'], roles: ['admin', 'hr_manager'] } },
+        ],
       },
       {
         path: 'recruitment',
-        name: 'recruitment',
-        component: Recruitment,
-        meta: { title: 'Recruitment',  permissions: ['manage-recruitment'], roles: ['admin'] },
+        component: () => import('@/pages/app/recruitment/RecruitmentLayout.vue'),
+        meta: { requiresAuth: true, module: 'recruitment', roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+        children: [
+          {
+            path: '',
+            name: 'recruitment',
+            component: () => import('@/pages/app/recruitment/RecruitmentDashboard.vue'),
+            meta: { title: 'Recruitment', permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'analytics',
+            name: 'recruitment.analytics',
+            component: () => import('@/pages/app/recruitment/RecruitmentAnalytics.vue'),
+            meta: { title: 'Recruitment Analytics', permissions: ['view-jobs'], roles: ['admin', 'hr_manager', 'manager'] },
+          },
+          {
+            path: 'jobs/new',
+            name: 'recruitment.jobs.create',
+            component: () => import('@/pages/app/recruitment/JobForm.vue'),
+            meta: { title: 'New Job', permissions: ['create jobs'], roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'jobs/:id/edit',
+            name: 'recruitment.jobs.edit',
+            component: () => import('@/pages/app/recruitment/JobForm.vue'),
+            meta: { title: 'Edit Job', permissions: ['edit jobs'], roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'jobs/:id',
+            name: 'recruitment.jobs.show',
+            component: () => import('@/pages/app/recruitment/JobDetail.vue'),
+            meta: { title: 'Job Detail', permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
+            path: 'integrations',
+            name: 'recruitment.integrations',
+            component: () => import('@/pages/app/recruitment/JobBoardIntegrations.vue'),
+            meta: { title: 'Job Board Integrations', permissions: ['manage job-board-integrations'], roles: ['admin'] },
+          },
+          {
+            path: 'pipeline',
+            name: 'recruitment.pipeline',
+            component: () => import('@/pages/app/recruitment/Pipeline.vue'),
+            meta: { title: 'Pipeline', permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager'] },
+          },
+          {
+            path: 'pipeline/settings',
+            name: 'recruitment.pipeline.settings',
+            component: () => import('@/pages/app/recruitment/PipelineSettings.vue'),
+            meta: { title: 'Pipeline Settings', permissions: ['view jobs'], roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'interviews',
+            name: 'recruitment.interviews',
+            component: () => import('@/pages/app/recruitment/Interviews.vue'),
+            meta: { title: 'Interviews', permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager'] },
+          },
+          {
+            path: 'offers',
+            name: 'recruitment.offers',
+            component: () => import('@/pages/app/recruitment/Offers.vue'),
+            meta: { title: 'Offers', permissions: ['view jobs'], roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'offer-templates',
+            name: 'recruitment.offer-templates',
+            component: () => import('@/pages/app/recruitment/OfferTemplates.vue'),
+            meta: { title: 'Offer Templates', permissions: ['view jobs'], roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'candidates',
+            name: 'recruitment.candidates',
+            component: () => import('@/pages/app/recruitment/Candidates.vue'),
+            meta: { title: 'Candidates', permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager'] },
+          },
+          {
+            path: 'candidates/new',
+            name: 'recruitment.candidates.create',
+            component: () => import('@/pages/app/recruitment/CandidateForm.vue'),
+            meta: { title: 'New Candidate', permissions: ['view jobs'], roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'candidates/:id/edit',
+            name: 'recruitment.candidates.edit',
+            component: () => import('@/pages/app/recruitment/CandidateForm.vue'),
+            meta: { title: 'Edit Candidate', permissions: ['view jobs'], roles: ['admin', 'hr_manager'] },
+          },
+          {
+            path: 'candidates/:id',
+            name: 'recruitment.candidates.show',
+            component: () => import('@/pages/app/recruitment/CandidateDetail.vue'),
+            meta: { title: 'Candidate Detail', permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager'] },
+          },
+        ],
       },
       {
         path: 'reports',
-        name: 'reports',
-        component: Reports,
-        meta: { title: 'Reports', permissions: ['manage-reports'], roles: ['admin'] },
+        component: () => import('@/pages/app/reports/ReportsLayout.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin', 'hr_manager', 'manager', 'employee'],
+          permissions: ['view-reports'],
+        },
+        children: [
+          { path: '', redirect: { name: 'reports.attendance' } },
+          {
+            path: 'attendance',
+            name: 'reports.attendance',
+            component: () => import('@/pages/app/reports/AttendanceReport.vue'),
+            meta: {
+              title: 'Attendance Report',
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'payroll',
+            name: 'reports.payroll',
+            component: () => import('@/pages/app/reports/PayrollReport.vue'),
+            meta: {
+              title: 'Payroll Report',
+              roles: ['admin', 'hr_manager'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'headcount',
+            name: 'reports.headcount',
+            component: () => import('@/pages/app/reports/HeadcountReport.vue'),
+            meta: {
+              title: 'Headcount Report',
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'attrition',
+            name: 'reports.attrition',
+            component: () => import('@/pages/app/reports/AttritionReport.vue'),
+            meta: {
+              title: 'Attrition Report',
+              roles: ['admin', 'hr_manager'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'performance',
+            name: 'reports.performance',
+            component: () => import('@/pages/app/reports/PerformanceReport.vue'),
+            meta: {
+              title: 'Performance Report',
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'custom',
+            name: 'reports.custom',
+            component: () => import('@/pages/app/reports/CustomReportBuilder.vue'),
+            meta: {
+              title: 'Custom Report Builder',
+              roles: ['admin', 'hr_manager'],
+              permissions: ['manage-report-templates'],
+            },
+          },
+        ],
       },
       {
         path: 'settings',
@@ -334,6 +708,24 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/super/AuditLogView.vue'),
         meta: { title: 'Audit Log' },
       },
+      {
+        path: 'domain-requests',
+        name: 'super-domain-requests',
+        component: () => import('@/pages/app/admin/DomainRequests.vue'),
+        meta: { title: 'Domain Requests' },
+      },
+      {
+        path: 'transactions',
+        name: 'super-transactions',
+        component: () => import('@/pages/super/TransactionsView.vue'),
+        meta: { title: 'Transactions' },
+      },
+      {
+        path: 'plans',
+        name: 'super-plans',
+        component: () => import('@/pages/super/PlansView.vue'),
+        meta: { title: 'Plans & Pricing' },
+      },
     ],
   },
 
@@ -351,8 +743,8 @@ const router = createRouter({
 // route guard
 import { useAuth } from '@/composables/useAuth'
 
-const MAIN_HOST = (import.meta as any).env?.VITE_MAIN_HOST || 'orbithr.test'
-const MAIN_PORT = (import.meta as any).env?.VITE_MAIN_PORT || '5173'
+const MAIN_HOST = (import.meta as unknown as Record<string, Record<string, string>>).env?.VITE_MAIN_HOST || 'orbithr.test'
+const MAIN_PORT = (import.meta as unknown as Record<string, Record<string, string>>).env?.VITE_MAIN_PORT || '5173'
 
 function getBaseHost(host: string) {
   return host.split(':')[0]
@@ -428,12 +820,14 @@ router.beforeEach(async (to, from, next) => {
   // 2. Require login
   if (requiresAuth && !isAuthenticated()) return next({ name: 'login' })
 
-  // 3. Always allowed routes
-  const alwaysAllowed = new Set(['dashboard', 'help'])
-  // if (alwaysAllowed.has(String(to.name))) return next()
 
 
-  // 4. Super admin routes (only allow routes explicitly flagged)
+  // 4a. Super admin guard: redirect super admin away from tenant /app to /super
+  if (userRoles.includes('super admin') && to.path.startsWith('/app')) {
+    return next({ name: 'super-dashboard' })
+  }
+
+  // 4b. Super admin routes (only allow routes explicitly flagged)
   if (to.matched.some(r => r.meta?.superAdminOnly)) {
     if (!userRoles.includes('super admin')) {
       return next({ name: 'dashboard' })

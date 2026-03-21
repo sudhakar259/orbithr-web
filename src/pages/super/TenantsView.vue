@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import api from '@/services/api'
 
 interface Tenant {
@@ -14,17 +13,22 @@ interface Tenant {
   domain?: string
 }
 
-const router  = useRouter()
-const loading = ref(false)
-const tenants = ref<Tenant[]>([])
-const search  = ref('')
-const statusF = ref('')
+const loading  = ref(false)
+const tenants  = ref<Tenant[]>([])
+const search   = ref('')
+const statusF  = ref('')
+const page     = ref(1)
+const perPage  = ref(25)
+const total    = ref(0)
+const lastPage = ref(1)
 
 async function load() {
   loading.value = true
   try {
-    const { data } = await api.get('/super/tenants', { params: { per_page: 100 } })
-    tenants.value = Array.isArray(data) ? data : (data.data ?? [])
+    const { data } = await api.get('/super/tenants', { params: { page: page.value, per_page: perPage.value } })
+    tenants.value  = Array.isArray(data) ? data : (data.data ?? [])
+    total.value    = data.total ?? tenants.value.length
+    lastPage.value = data.last_page ?? 1
   } finally {
     loading.value = false
   }
@@ -80,7 +84,7 @@ async function toggleStatus(t: Tenant) {
     <!-- Table -->
     <div class="sa-card">
       <div class="sa-card-head">
-        <div class="sa-card-title">All Tenants <span class="ct-count">{{ filtered.length }}</span></div>
+        <div class="sa-card-title">All Tenants <span class="ct-count">{{ total }}</span></div>
       </div>
       <div v-if="loading" class="sa-empty">Loading tenants…</div>
       <div v-else-if="!filtered.length" class="sa-empty">No tenants found.</div>
@@ -131,6 +135,22 @@ async function toggleStatus(t: Tenant) {
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination -->
+      <div v-if="total >= 10" class="pagination">
+        <span class="pg-info">{{ total === 0 ? 0 : (page - 1) * perPage + 1 }}–{{ Math.min(page * perPage, total) }} of {{ total }}</span>
+        <div class="pg-nav">
+          <button class="pg-btn" :disabled="page <= 1" @click="page--; load()">‹</button>
+          <span class="pg-pages">{{ page }} / {{ lastPage }}</span>
+          <button class="pg-btn" :disabled="page >= lastPage" @click="page++; load()">›</button>
+        </div>
+        <select class="pg-sel" :value="perPage" @change="perPage = +($event.target as HTMLSelectElement).value; page = 1; load()">
+          <option :value="10">10 / page</option>
+          <option :value="25">25 / page</option>
+          <option :value="50">50 / page</option>
+          <option :value="100">100 / page</option>
+        </select>
+      </div>
     </div>
   </div>
 </template>
@@ -190,4 +210,13 @@ async function toggleStatus(t: Tenant) {
 .act-btn:hover { background: rgba(79,126,255,.25); }
 .act-btn.danger { background: rgba(255,107,107,.12); color: #FF6B6B; border-color: rgba(255,107,107,.2); }
 .act-btn.danger:hover { background: rgba(255,107,107,.25); }
+
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,.06); }
+.pg-info { font-size: 12px; color: #6B7280; }
+.pg-nav { display: flex; align-items: center; gap: 8px; }
+.pg-btn { width: 28px; height: 28px; border-radius: 6px; font-size: 15px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #9CA3AF; cursor: pointer; transition: all .15s; }
+.pg-btn:not(:disabled):hover { background: rgba(79,126,255,.2); color: #4F7EFF; border-color: rgba(79,126,255,.3); }
+.pg-btn:disabled { opacity: .3; cursor: not-allowed; }
+.pg-pages { font-size: 12px; color: #6B7280; }
+.pg-sel { background: #0D0F1A; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; color: #9CA3AF; font-size: 12px; font-family: inherit; padding: 5px 8px; cursor: pointer; outline: none; }
 </style>

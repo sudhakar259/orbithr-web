@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+
+defineOptions({ name: 'AppDashboard' })
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useLeave } from '@/composables/useLeave'
+import type { LeaveRequest } from '@/services/leave'
 import api from '@/services/api'
 import AdminFirstLoginModal from '@/components/dashboard/AdminFirstLoginModal.vue'
 import StatusPill from '@/components/ui/StatusPill.vue'
@@ -25,9 +28,17 @@ function onFirstLoginDone() {
 }
 
 // ── State ───────────────────────────────────────────
-const employees   = ref<any[]>([])
+interface Employee {
+  id: number; name?: string; full_name?: string; hire_date?: string
+  department?: { name?: string }; position?: { title?: string }
+  job_title?: string; role?: string; employment_status?: string; status?: string
+}
+interface Holiday {
+  id: number; name?: string; title?: string; date?: string; holiday_date?: string; type?: string
+}
+const employees   = ref<Employee[]>([])
 const attStats    = ref({ present: 0, wfh: 0, on_leave: 0, absent: 0, total: 0 })
-const holidays    = ref<any[]>([])
+const holidays    = ref<Holiday[]>([])
 const loadingEmp  = ref(true)
 const loadingAtt  = ref(true)
 const loadingLeave = ref(true)
@@ -44,7 +55,7 @@ async function fetchAll() {
       .finally(() => { loadingEmp.value = false }),
 
     // Attendance stats (today)
-    api.get('/attendance/stats/today')
+    api.get('/attendance/today')
       .then(r => {
         const d = r.data?.data ?? r.data ?? {}
         attStats.value = {
@@ -106,7 +117,7 @@ const GRADIENTS = [
   'linear-gradient(135deg,#4F7EFF,#36D399)',
 ]
 const recentEmps = computed(() =>
-  employees.value.slice(0, 6).map((e: any, i: number) => ({
+  employees.value.slice(0, 6).map((e: Employee, i: number) => ({
     id:       e.id,
     name:     e.name ?? e.full_name ?? '—',
     dept:     e.department?.name ?? e.department ?? '—',
@@ -125,7 +136,7 @@ const chartData = computed(() => {
   const now = new Date()
   return Array.from({ length: 12 }, (_, i) => {
     const m = (now.getMonth() - 11 + i + 12) % 12
-    const hired = employees.value.filter((e: any) => {
+    const hired = employees.value.filter((e) => {
       if (!e.hire_date) return false
       const d = new Date(e.hire_date)
       return d.getMonth() === m && d.getFullYear() === now.getFullYear()
@@ -156,14 +167,14 @@ const ringRows   = computed(() => [
 
 // ── Pending leaves ──────────────────────────────────
 const pendingLeaves = computed(() =>
-  leaveRequests.value
-    .filter((r: any) => r.status === 'pending')
-    .map((r: any) => ({
+  (leaveRequests.value as LeaveRequest[])
+    .filter(r => r.status === 'pending')
+    .map(r => ({
       id:       r.id,
-      name:     r.employee?.name ?? r.employee_name ?? '—',
-      type:     r.leave_type?.name ?? r.type ?? 'Leave',
-      from:     r.start_date ? new Date(r.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—',
-      initials: (r.employee?.name ?? r.employee_name ?? '?').split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase(),
+      name:     r.employee ? `${r.employee.first_name} ${r.employee.last_name ?? ''}`.trim() : '—',
+      type:     r.leaveType?.name ?? String(r.leave_type_id),
+      from:     new Date(r.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+      initials: (r.employee ? `${r.employee.first_name} ${r.employee.last_name ?? ''}`.trim() : '?').split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase(),
       gradient: GRADIENTS[r.id % GRADIENTS.length],
     }))
 )
@@ -171,19 +182,19 @@ const pendingLeaves = computed(() =>
 async function approveLeave(id: number) {
   try {
     await api.patch(`/leaves/${id}`, { status: 'approved' })
-    leaveRequests.value = leaveRequests.value.filter((r: any) => r.id !== id)
-  } catch { leaveRequests.value = leaveRequests.value.filter((r: any) => r.id !== id) }
+    leaveRequests.value = (leaveRequests.value as LeaveRequest[]).filter(r => r.id !== id)
+  } catch { leaveRequests.value = (leaveRequests.value as LeaveRequest[]).filter(r => r.id !== id) }
 }
 async function rejectLeave(id: number) {
   try {
     await api.patch(`/leaves/${id}`, { status: 'rejected' })
-    leaveRequests.value = leaveRequests.value.filter((r: any) => r.id !== id)
-  } catch { leaveRequests.value = leaveRequests.value.filter((r: any) => r.id !== id) }
+    leaveRequests.value = (leaveRequests.value as LeaveRequest[]).filter(r => r.id !== id)
+  } catch { leaveRequests.value = (leaveRequests.value as LeaveRequest[]).filter(r => r.id !== id) }
 }
 
 // ── Upcoming events ─────────────────────────────────
 const upcomingEvents = computed(() =>
-  holidays.value.slice(0, 4).map((h: any) => {
+  holidays.value.slice(0, 4).map((h) => {
     const d = new Date(h.date ?? h.holiday_date ?? Date.now())
     return {
       id:    h.id,

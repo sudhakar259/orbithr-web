@@ -3,8 +3,15 @@ import type { RouteRecordRaw } from 'vue-router'
 const EmployeeNew = () => import('@/pages/app/EmployeeNew.vue')
 const EmployeeEdit = () => import('@/pages/app/EmployeeEdit.vue')
 const EmployeeProfile = () => import('@/pages/app/EmployeeProfile.vue')
+const OrgChart = () => import('@/pages/app/OrgChart.vue')
 
 export const employeeRoutes: RouteRecordRaw[] = [
+  {
+    path: 'employees/org-chart',
+    name: 'org-chart',
+    component: OrgChart,
+    meta: { title: 'Org Chart', permissions: [], roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+  },
   {
     path: 'employees/new',
     name: 'employee-new',

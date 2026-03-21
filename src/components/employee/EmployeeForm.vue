@@ -231,9 +231,40 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { updateEmployee, createEmployee, listEmployees } from '@/services/employee'
 
+interface EmployeeData {
+  id?: number | string
+  first_name?: string
+  last_name?: string
+  email?: string
+  phone?: string
+  employee_id?: string
+  designation?: string
+  department?: string
+  role?: string
+  hire_date?: string
+  employment_type?: string
+  location?: string
+  status?: string
+  manager_id?: number | null
+  team_lead_id?: number | null
+  working_days?: number[]
+  date_of_birth?: string
+  gender?: string
+  address?: string
+  nationality?: string
+  bank_name?: string
+  account_number?: string
+  ifsc_code?: string
+  pan_number?: string
+  emergency_contact_name?: string
+  emergency_contact_phone?: string
+  emergency_contact_relationship?: string
+  [key: string]: unknown
+}
+
 interface Props {
   employeeId?: number | null
-  initialData?: any
+  initialData?: EmployeeData
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -242,14 +273,14 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  (e: 'submit', data: any): void
+  (e: 'submit', data: EmployeeData): void
   (e: 'cancel'): void
 }>()
 
 const workDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const loading = ref(false)
 const generalError = ref('')
-const managers = ref<any[]>([])
+const managers = ref<EmployeeData[]>([])
 const isEdit = computed(() => !!props.employeeId)
 
 const form = reactive({
@@ -267,7 +298,7 @@ const form = reactive({
   status: 'Active',
   manager_id: null as number | null,
   team_lead_id: null as number | null,
-  working_days: [1, 2, 3, 4, 5] as number[],
+  working_days: [0, 1, 2, 3, 4] as number[],
   date_of_birth: '',
   gender: '',
   address: '',
@@ -315,8 +346,8 @@ async function submit() {
       await createEmployee(payload)
     }
     emit('submit', form)
-  } catch (e: any) {
-    const d = e?.response?.data
+  } catch (e) {
+    const d = (e as { response?: { data?: { errors?: Record<string, string>; message?: string } } })?.response?.data
     if (d?.errors) Object.assign(errors, d.errors)
     else generalError.value = d?.message || 'An error occurred'
   } finally {
@@ -324,11 +355,13 @@ async function submit() {
   }
 }
 
+// Apply initialData synchronously so the initial render is already correct
+if (props.initialData && Object.keys(props.initialData).length > 0) {
+  Object.assign(form, props.initialData)
+}
+
 onMounted(() => {
   fetchManagers()
-  if (props.initialData && Object.keys(props.initialData).length > 0) {
-    Object.assign(form, props.initialData)
-  }
 })
 </script>
 

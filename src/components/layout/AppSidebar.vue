@@ -20,14 +20,19 @@ async function fetchBadges() {
       .then(r => {
         employeeCount.value = r.data?.meta?.total ?? r.data?.total ?? r.data?.data?.length ?? null
       }),
-    api.get('/leaves', { params: { status: 'pending', per_page: 1 } })
+    api.get('/leave-requests', { params: { status: 'pending', per_page: 1 } })
       .then(r => {
         pendingLeaves.value = r.data?.meta?.total ?? r.data?.total ?? r.data?.data?.length ?? null
       }),
   ])
 }
 
-onMounted(fetchBadges)
+onMounted(() => {
+  fetchBadges()
+  syncExpanded()
+})
+
+watch(() => route.name, syncExpanded)
 
 // ── Collapsible module groups ─────────────────────────
 const expanded = ref<Set<string>>(new Set())
@@ -52,9 +57,11 @@ const initials = computed(() => {
   return name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase() || 'U'
 })
 
+// Match exact route OR any child routes (e.g. 'recruitment' also matches 'recruitment.jobs.show')
 const isActive = (routeName: string) => {
-  if (Array.isArray(routeName)) return routeName.includes(String(route.name))
-  return route.name === routeName
+  const current = String(route.name)
+  if (Array.isArray(routeName)) return routeName.some(n => current === n || current.startsWith(n + '.'))
+  return current === routeName || current.startsWith(routeName + '.')
 }
 
 const rLower = computed(() => roles().map((x: string) => String(x).toLowerCase()))
@@ -91,8 +98,10 @@ interface NavSection {
 }
 
 function canSeeGroup(item: { superAdminOnly?: boolean; roles?: string[]; permissions?: string[] }): boolean {
-  if (item.superAdminOnly) return isSuperAdmin.value
-  if (isSuperAdmin.value || isAdmin.value) return true
+  // Super admin has a dedicated shell at /super — they don't use tenant HR items
+  if (isSuperAdmin.value) return false
+  if (item.superAdminOnly) return false
+  if (isAdmin.value) return true
   const itemRoles = item.roles?.map((x: string) => x.toLowerCase()) ?? []
   const itemPerms = item.permissions ?? []
   const roleDefined = itemRoles.length > 0
@@ -103,7 +112,8 @@ function canSeeGroup(item: { superAdminOnly?: boolean; roles?: string[]; permiss
 }
 
 function canSeeChild(item: NavChild): boolean {
-  if (isSuperAdmin.value || isAdmin.value) return true
+  if (isSuperAdmin.value) return false
+  if (isAdmin.value) return true
   const itemRoles = item.roles?.map((x: string) => x.toLowerCase()) ?? []
   const itemPerms = item.permissions ?? []
   const roleDefined = itemRoles.length > 0
@@ -232,10 +242,41 @@ const moduleGroups = computed<NavGroup[]>(() => [
   {
     key: 'performance',
     label: 'Performance',
-    to: { name: 'performance' },
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>',
     permissions: ['view performance'],
-    roles: ['admin'],
+    roles: ['admin', 'hr_manager', 'manager', 'employee'],
+    children: [
+      {
+        name: 'Goals',
+        to: { name: 'performance.goals' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+        roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'My Appraisals',
+        to: { name: 'performance.appraisals' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>',
+        roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Appraisal Cycles',
+        to: { name: 'performance.cycles' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>',
+        roles: ['admin', 'hr_manager'],
+      },
+      {
+        name: '360° Feedback',
+        to: { name: 'performance.feedback' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/><path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/></svg>',
+        roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Reports',
+        to: { name: 'performance.reports' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>',
+        roles: ['admin', 'hr_manager', 'manager'],
+      },
+    ],
   },
   {
     key: 'announcements',
@@ -244,12 +285,139 @@ const moduleGroups = computed<NavGroup[]>(() => [
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z" clip-rule="evenodd"/></svg>',
   },
   {
+    key: 'lnd',
+    label: 'Learning & Dev',
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>',
+    permissions: ['view courses'],
+    roles: ['admin', 'hr_manager', 'manager', 'employee'],
+    children: [
+      {
+        name: 'My Learning',
+        to: { name: 'lnd.my-learning' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.547l1.607.688a3 3 0 002.346 0l1.607-.688v3.547a9.026 9.026 0 00-2.3 1.638z"/></svg>',
+        permissions: ['view courses'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Courses',
+        to: { name: 'lnd.courses' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>',
+        permissions: ['view courses'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Programs',
+        to: { name: 'lnd.programs' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg>',
+        permissions: ['view training programs'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Skills',
+        to: { name: 'lnd.skills' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>',
+        permissions: ['view skills'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Certifications',
+        to: { name: 'lnd.certifications' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+        permissions: ['view certifications'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Reports',
+        to: { name: 'lnd.reports' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
+        permissions: ['view lnd reports'], roles: ['admin', 'hr_manager'],
+      },
+    ],
+  },
+  {
+    key: 'expenses',
+    label: 'Expenses',
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>',
+    permissions: ['view expenses'],
+    roles: ['admin', 'hr_manager', 'manager', 'employee'],
+    children: [
+      {
+        name: 'My Claims',
+        to: { name: 'expenses.my-claims' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
+        permissions: ['view expenses'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Approvals',
+        to: { name: 'expenses.approvals' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+        permissions: ['approve expenses'], roles: ['admin', 'hr_manager', 'manager'],
+      },
+      {
+        name: 'Reimbursements',
+        to: { name: 'expenses.reimbursements' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z" clip-rule="evenodd"/></svg>',
+        permissions: ['process reimbursements'], roles: ['admin', 'hr_manager'],
+      },
+      {
+        name: 'Policies',
+        to: { name: 'expenses.policies' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+        permissions: ['manage expense policies'], roles: ['admin'],
+      },
+      {
+        name: 'Reports',
+        to: { name: 'expenses.reports' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>',
+        permissions: ['view expense reports'], roles: ['admin', 'hr_manager'],
+      },
+    ],
+  },
+  {
     key: 'recruitment',
     label: 'Recruitment',
-    to: { name: 'recruitment' },
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>',
-    permissions: ['manage-recruitment'],
+    permissions: ['view jobs'],
     roles: ['admin'],
+    children: [
+      {
+        name: 'Job Postings',
+        to: { name: 'recruitment' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/><path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"/></svg>',
+        permissions: ['view jobs'], roles: ['admin'],
+      },
+      {
+        name: 'Analytics',
+        to: { name: 'recruitment.analytics' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>',
+        permissions: ['view-jobs'], roles: ['admin', 'hr_manager', 'manager'],
+      },
+      {
+        name: 'Pipeline',
+        to: { name: 'recruitment.pipeline' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z"/></svg>',
+        permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager'],
+      },
+      {
+        name: 'Candidates',
+        to: { name: 'recruitment.candidates' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>',
+        permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager'],
+      },
+      {
+        name: 'Interviews',
+        to: { name: 'recruitment.interviews' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>',
+        permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager'],
+      },
+      {
+        name: 'Offers',
+        to: { name: 'recruitment.offers' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
+        permissions: ['view jobs'], roles: ['admin', 'hr_manager'],
+      },
+      {
+        name: 'Integrations',
+        to: { name: 'recruitment.integrations' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"/></svg>',
+        permissions: ['manage job-board-integrations'], roles: ['admin'],
+      },
+    ],
   },
   {
     key: 'reports',
@@ -289,7 +457,7 @@ const navSections = computed<NavSection[]>(() => [
   {
     label: 'Overview',
     items: moduleGroups.value.filter(g =>
-      ['dashboard', 'employee', 'attendance', 'leave', 'payroll', 'performance', 'announcements', 'recruitment'].includes(g.key)
+      ['dashboard', 'employee', 'attendance', 'leave', 'payroll', 'performance', 'announcements', 'lnd', 'expenses', 'recruitment'].includes(g.key)
     ),
   },
   {
@@ -312,9 +480,47 @@ const navSections = computed<NavSection[]>(() => [
       {
         key: 'reports',
         label: 'Reports',
-        to: { name: 'reports' },
         icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
-        permissions: ['manage-reports'], roles: ['admin'],
+        permissions: ['view-reports'],
+        roles: ['admin', 'hr_manager', 'manager', 'employee'],
+        children: [
+          {
+            name: 'Attendance',
+            to: { name: 'reports.attendance' },
+            icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 011 1v3a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd"/></svg>',
+            permissions: ['view-reports'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+          },
+          {
+            name: 'Payroll',
+            to: { name: 'reports.payroll' },
+            icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z" clip-rule="evenodd"/></svg>',
+            permissions: ['view-reports'], roles: ['admin', 'hr_manager'],
+          },
+          {
+            name: 'Headcount',
+            to: { name: 'reports.headcount' },
+            icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07z"/></svg>',
+            permissions: ['view-reports'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+          },
+          {
+            name: 'Attrition',
+            to: { name: 'reports.attrition' },
+            icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>',
+            permissions: ['view-reports'], roles: ['admin', 'hr_manager'],
+          },
+          {
+            name: 'Performance',
+            to: { name: 'reports.performance' },
+            icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd"/></svg>',
+            permissions: ['view-reports'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+          },
+          {
+            name: 'Custom Builder',
+            to: { name: 'reports.custom' },
+            icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>',
+            permissions: ['manage-report-templates'], roles: ['admin', 'hr_manager'],
+          },
+        ],
       },
       {
         key: 'billing',
@@ -412,6 +618,16 @@ const visibleSections = computed(() =>
 function hasActiveChild(group: NavGroup): boolean {
   if (!group.children) return false
   return group.children.some(c => isActive(c.to.name))
+}
+
+// Auto-expand groups that have an active child
+function syncExpanded() {
+  moduleGroups.value.forEach(item => {
+    if (item.children && hasActiveChild(item)) {
+      expanded.value.add(item.key)
+    }
+  })
+  expanded.value = new Set(expanded.value)
 }
 
 function handleLogout() {

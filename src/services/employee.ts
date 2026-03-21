@@ -17,7 +17,7 @@ export interface Employee {
   employee_id?: string
 }
 
-export function listEmployees(params?: any) {
+export function listEmployees(params?: Record<string, string | number | boolean | undefined>) {
   return api.get('/employees', { params })
 }
 
@@ -42,4 +42,16 @@ export function deleteEmployee(id: number) {
 
 export function impersonateEmployee(id: number) {
   return api.post(`/employees/${id}/impersonate`)
+}
+
+export interface OrgChartNode {
+  id: number | string
+  name: string
+  title?: string
+  children?: OrgChartNode[]
+}
+
+export async function getOrgChart(): Promise<OrgChartNode> {
+  const res = await api.get('/employees/org-chart')
+  return res.data
 }

@@ -424,6 +424,12 @@ const routes: RouteRecordRaw[] = [
             meta: { title: 'Recruitment', permissions: ['view jobs'], roles: ['admin', 'hr_manager', 'manager', 'employee'] },
           },
           {
+            path: 'analytics',
+            name: 'recruitment.analytics',
+            component: () => import('@/pages/app/recruitment/RecruitmentAnalytics.vue'),
+            meta: { title: 'Recruitment Analytics', permissions: ['view-jobs'], roles: ['admin', 'hr_manager', 'manager'] },
+          },
+          {
             path: 'jobs/new',
             name: 'recruitment.jobs.create',
             component: () => import('@/pages/app/recruitment/JobForm.vue'),

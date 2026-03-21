@@ -85,6 +85,26 @@ export interface RecruitmentStats {
   hired_this_month: number
 }
 
+export interface RecruitmentAnalytics {
+  funnel: { status: string; count: number }[]
+  sources: { source: string; count: number }[]
+  time_to_hire_days: number
+  monthly_trend: { month: string; count: number }[]
+  top_jobs: {
+    id: number
+    title: string
+    department: string
+    status: string
+    applications_count: number
+  }[]
+  conversion: {
+    total_applications: number
+    shortlist_rate: number
+    offer_rate: number
+    hire_rate: number
+  }
+}
+
 export interface JobBoardIntegration {
   id: number
   platform: string
@@ -252,6 +272,9 @@ export const recruitmentService = {
 
   getStats: () =>
     api.get<{ data: RecruitmentStats }>('/recruitment/stats'),
+
+  getAnalytics: () =>
+    api.get<{ data: RecruitmentAnalytics }>('/recruitment/analytics'),
 
   publishToBoards: (id: number, integrationIds: number[]) =>
     api.post<{ data: PublishResult }>(`/recruitment/jobs/${id}/publish-to-boards`, {

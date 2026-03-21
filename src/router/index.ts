@@ -510,6 +510,56 @@ const routes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: 'ess',
+        component: () => import('@/pages/app/ess/EssLayout.vue'),
+        meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+        children: [
+          { path: '', redirect: { name: 'ess.dashboard' } },
+          {
+            path: 'dashboard',
+            name: 'ess.dashboard',
+            component: () => import('@/pages/app/ess/EssDashboard.vue'),
+            meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'], permissions: ['view-employees'] },
+          },
+          {
+            path: 'profile',
+            name: 'ess.profile',
+            component: () => import('@/pages/app/ess/EssProfile.vue'),
+            meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'], permissions: ['view-employees'] },
+          },
+          {
+            path: 'attendance',
+            name: 'ess.attendance',
+            component: () => import('@/pages/app/ess/EssAttendance.vue'),
+            meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'], permissions: ['view-attendance'] },
+          },
+          {
+            path: 'leave',
+            name: 'ess.leave',
+            component: () => import('@/pages/app/ess/EssLeave.vue'),
+            meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'], permissions: ['apply-leave'] },
+          },
+          {
+            path: 'payslips',
+            name: 'ess.payslips',
+            component: () => import('@/pages/app/ess/EssPayslips.vue'),
+            meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'], permissions: ['view-payslips'] },
+          },
+          {
+            path: 'tickets',
+            name: 'ess.tickets',
+            component: () => import('@/pages/app/ess/EssTickets.vue'),
+            meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'], permissions: ['create-tickets'] },
+          },
+          {
+            path: 'notifications',
+            name: 'ess.notifications',
+            component: () => import('@/pages/app/ess/EssNotifications.vue'),
+            meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'], permissions: ['view-notifications'] },
+          },
+        ],
+      },
+      {
         path: 'reports',
         component: () => import('@/pages/app/reports/ReportsLayout.vue'),
         meta: {

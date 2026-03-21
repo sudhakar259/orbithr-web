@@ -12,7 +12,7 @@ const Leave = () => import('@/pages/app/Leave.vue')
 const Payroll = () => import('@/pages/app/Payroll.vue')
 // Performance uses nested routes — see below
 // Recruitment uses nested routes — see below
-const Reports = () => import('@/pages/app/Reports.vue')
+// Reports uses nested routes — see below
 const Settings = () => import('@/pages/app/Settings.vue')
 const Billing = () => import('@/pages/app/Billing.vue')
 const Help = () => import('@/pages/app/Help.vue')
@@ -505,9 +505,75 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'reports',
-        name: 'reports',
-        component: Reports,
-        meta: { title: 'Reports', permissions: ['manage-reports'], roles: ['admin'] },
+        component: () => import('@/pages/app/reports/ReportsLayout.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin', 'hr_manager', 'manager', 'employee'],
+          permissions: ['view-reports'],
+        },
+        children: [
+          { path: '', redirect: { name: 'reports.attendance' } },
+          {
+            path: 'attendance',
+            name: 'reports.attendance',
+            component: () => import('@/pages/app/reports/AttendanceReport.vue'),
+            meta: {
+              title: 'Attendance Report',
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'payroll',
+            name: 'reports.payroll',
+            component: () => import('@/pages/app/reports/PayrollReport.vue'),
+            meta: {
+              title: 'Payroll Report',
+              roles: ['admin', 'hr_manager'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'headcount',
+            name: 'reports.headcount',
+            component: () => import('@/pages/app/reports/HeadcountReport.vue'),
+            meta: {
+              title: 'Headcount Report',
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'attrition',
+            name: 'reports.attrition',
+            component: () => import('@/pages/app/reports/AttritionReport.vue'),
+            meta: {
+              title: 'Attrition Report',
+              roles: ['admin', 'hr_manager'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'performance',
+            name: 'reports.performance',
+            component: () => import('@/pages/app/reports/PerformanceReport.vue'),
+            meta: {
+              title: 'Performance Report',
+              roles: ['admin', 'hr_manager', 'manager', 'employee'],
+              permissions: ['view-reports'],
+            },
+          },
+          {
+            path: 'custom',
+            name: 'reports.custom',
+            component: () => import('@/pages/app/reports/CustomReportBuilder.vue'),
+            meta: {
+              title: 'Custom Report Builder',
+              roles: ['admin', 'hr_manager'],
+              permissions: ['manage-report-templates'],
+            },
+          },
+        ],
       },
       {
         path: 'settings',

@@ -484,6 +484,12 @@ const routes: RouteRecordRaw[] = [
             meta: { title: 'Offer Templates', permissions: ['view jobs'], roles: ['admin', 'hr_manager'] },
           },
           {
+            path: 'assessments',
+            name: 'recruitment.assessments',
+            component: () => import('@/pages/app/recruitment/Assessments.vue'),
+            meta: { title: 'Assessments', requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+          },
+          {
             path: 'candidates',
             name: 'recruitment.candidates',
             component: () => import('@/pages/app/recruitment/Candidates.vue'),
@@ -655,6 +661,30 @@ const routes: RouteRecordRaw[] = [
         name: 'announcements',
         component: () => import('@/pages/app/Announcements.vue'),
         meta: { title: 'Announcements' },
+      },
+      {
+        path: 'social-wall',
+        name: 'social-wall',
+        component: () => import('@/pages/app/SocialWall.vue'),
+        meta: { title: 'Social Wall', requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+      },
+      {
+        path: 'polls',
+        name: 'polls',
+        component: () => import('@/pages/app/Polls.vue'),
+        meta: { title: 'Polls', requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+      },
+      {
+        path: 'peer-recognition',
+        name: 'peer-recognition',
+        component: () => import('@/pages/app/PeerRecognition.vue'),
+        meta: { title: 'Peer Recognition', requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
+      },
+      {
+        path: 'surveys',
+        name: 'surveys',
+        component: () => import('@/pages/app/Surveys.vue'),
+        meta: { title: 'Surveys', requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
       },
       {
         path: 'payslips',

@@ -420,6 +420,57 @@ const moduleGroups = computed<NavGroup[]>(() => [
     ],
   },
   {
+    key: 'ess',
+    label: 'Self Service',
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>',
+    permissions: ['view-employees'],
+    roles: ['admin', 'hr_manager', 'manager', 'employee'],
+    children: [
+      {
+        name: 'Dashboard',
+        to: { name: 'ess.dashboard' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>',
+        permissions: ['view-employees'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'My Profile',
+        to: { name: 'ess.profile' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>',
+        permissions: ['view-employees'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Attendance',
+        to: { name: 'ess.attendance' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>',
+        permissions: ['view-attendance'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Leave',
+        to: { name: 'ess.leave' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z"/></svg>',
+        permissions: ['apply-leave'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Payslips',
+        to: { name: 'ess.payslips' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z" clip-rule="evenodd"/></svg>',
+        permissions: ['view-payslips'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'HR Tickets',
+        to: { name: 'ess.tickets' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>',
+        permissions: ['create-tickets'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+      {
+        name: 'Notifications',
+        to: { name: 'ess.notifications' },
+        icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>',
+        permissions: ['view-notifications'], roles: ['admin', 'hr_manager', 'manager', 'employee'],
+      },
+    ],
+  },
+  {
     key: 'reports',
     label: 'Reports',
     to: { name: 'reports' },
@@ -457,7 +508,7 @@ const navSections = computed<NavSection[]>(() => [
   {
     label: 'Overview',
     items: moduleGroups.value.filter(g =>
-      ['dashboard', 'employee', 'attendance', 'leave', 'payroll', 'performance', 'announcements', 'lnd', 'expenses', 'recruitment'].includes(g.key)
+      ['dashboard', 'employee', 'attendance', 'leave', 'payroll', 'performance', 'announcements', 'lnd', 'expenses', 'recruitment', 'ess'].includes(g.key)
     ),
   },
   {

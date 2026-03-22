@@ -564,6 +564,18 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/pages/app/recruitment/CandidatePortal.vue'),
             meta: { title: 'Candidate Portals', roles: ['admin', 'hr_manager'], permissions: ['view jobs'] },
           },
+          {
+            path: 'email',
+            name: 'recruitment.email',
+            component: () => import('@/pages/app/recruitment/AtsEmailInbox.vue'),
+            meta: { title: 'Email Inbox', roles: ['admin', 'hr_manager'], permissions: ['view jobs'] },
+          },
+          {
+            path: 'email-settings',
+            name: 'recruitment.email-settings',
+            component: () => import('@/pages/app/recruitment/EmailIntegration.vue'),
+            meta: { title: 'Email Integration', roles: ['admin', 'hr_manager'] },
+          },
         ],
       },
       {

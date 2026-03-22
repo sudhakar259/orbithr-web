@@ -3,6 +3,9 @@ defineOptions({ name: 'RecruitmentCandidateDetail' })
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { recruitmentService, type Candidate } from '@/services/recruitmentService'
+import api from '@/services/api'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import ComposeEmailModal from '@/components/recruitment/ComposeEmailModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -54,6 +57,43 @@ const appStatusClasses = (status: string) => {
 }
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+
+// ── Emails tab ─────────────────────────────────────────
+interface EmailThread {
+  id: number
+  candidate_id: number
+  candidate_name: string
+  subject: string
+  last_message_at: string
+  messages_count: number
+}
+
+const activeTab = ref<'details' | 'emails'>('details')
+const emailThreads = ref<EmailThread[]>([])
+const loadingEmails = ref(false)
+const showCompose = ref(false)
+
+const loadEmails = async () => {
+  loadingEmails.value = true
+  try {
+    const res = await api.get('/email-integration/threads', { params: { candidate_id: route.params.id } })
+    emailThreads.value = res.data?.data ?? res.data ?? []
+  } catch {
+    emailThreads.value = []
+  } finally {
+    loadingEmails.value = false
+  }
+}
+
+const onTabEmails = () => {
+  activeTab.value = 'emails'
+  if (!emailThreads.value.length) loadEmails()
+}
+
+const onComposeSent = () => {
+  showCompose.value = false
+  loadEmails()
+}
 
 onMounted(load)
 </script>
@@ -173,40 +213,99 @@ onMounted(load)
           </div>
         </div>
 
-        <!-- Right: Applications + Notes -->
+        <!-- Right: Applications + Notes + Emails -->
         <div class="lg:col-span-2 space-y-6">
-          <!-- Notes -->
-          <div v-if="candidate.notes" class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-            <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Notes</h3>
-            <p class="text-sm text-gray-400 whitespace-pre-wrap">{{ candidate.notes }}</p>
+          <!-- Tab switcher -->
+          <div class="border-b border-gray-700">
+            <nav class="-mb-px flex space-x-6">
+              <button
+                :class="['whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors', activeTab === 'details' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']"
+                @click="activeTab = 'details'"
+              >Details</button>
+              <button
+                :class="['whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors', activeTab === 'emails' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']"
+                @click="onTabEmails"
+              >Emails</button>
+            </nav>
           </div>
 
-          <!-- Application History -->
-          <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-700">
-              <h3 class="text-base font-semibold text-white">Application History</h3>
+          <template v-if="activeTab === 'details'">
+            <!-- Notes -->
+            <div v-if="candidate.notes" class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+              <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Notes</h3>
+              <p class="text-sm text-gray-400 whitespace-pre-wrap">{{ candidate.notes }}</p>
             </div>
-            <div v-if="!candidate.applications?.length" class="p-6 text-center text-gray-500 text-sm">
-              No applications linked yet.
-            </div>
-            <div v-else class="divide-y divide-gray-700">
-              <div
-                v-for="app in candidate.applications"
-                :key="app.id"
-                class="px-6 py-4 flex items-center justify-between hover:bg-gray-700/30 transition-colors"
-              >
-                <div>
-                  <p class="text-sm font-medium text-white">{{ app.job_posting?.title ?? 'Unknown Position' }}</p>
-                  <p class="text-xs text-gray-400 mt-0.5">Applied {{ formatDate(app.submitted_at) }}</p>
+
+            <!-- Application History -->
+            <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+              <div class="px-6 py-4 border-b border-gray-700">
+                <h3 class="text-base font-semibold text-white">Application History</h3>
+              </div>
+              <div v-if="!candidate.applications?.length" class="p-6 text-center text-gray-500 text-sm">
+                No applications linked yet.
+              </div>
+              <div v-else class="divide-y divide-gray-700">
+                <div
+                  v-for="app in candidate.applications"
+                  :key="app.id"
+                  class="px-6 py-4 flex items-center justify-between hover:bg-gray-700/30 transition-colors"
+                >
+                  <div>
+                    <p class="text-sm font-medium text-white">{{ app.job_posting?.title ?? 'Unknown Position' }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Applied {{ formatDate(app.submitted_at) }}</p>
+                  </div>
+                  <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', appStatusClasses(app.status)]">
+                    {{ app.status.replace(/_/g, ' ') }}
+                  </span>
                 </div>
-                <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', appStatusClasses(app.status)]">
-                  {{ app.status.replace(/_/g, ' ') }}
-                </span>
               </div>
             </div>
-          </div>
+          </template>
+
+          <!-- Emails tab -->
+          <template v-if="activeTab === 'emails'">
+            <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+              <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                <h3 class="text-base font-semibold text-white">Email Conversations</h3>
+                <button
+                  class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
+                  @click="showCompose = true"
+                >+ Compose Email</button>
+              </div>
+              <div v-if="loadingEmails" class="p-6 space-y-3">
+                <div class="h-12 bg-gray-700 rounded animate-pulse" />
+                <div class="h-12 bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div v-else-if="!emailThreads.length">
+                <EmptyState icon="&#x2709;&#xFE0F;" message="No emails yet" sub="Compose the first email to this candidate." />
+              </div>
+              <div v-else class="divide-y divide-gray-700">
+                <div
+                  v-for="thread in emailThreads"
+                  :key="thread.id"
+                  class="px-6 py-4 flex items-center justify-between hover:bg-gray-700/30 transition-colors"
+                >
+                  <div>
+                    <p class="text-sm font-medium text-white">{{ thread.subject }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ formatDate(thread.last_message_at) }}</p>
+                  </div>
+                  <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-700 text-gray-300">
+                    {{ thread.messages_count }} {{ thread.messages_count === 1 ? 'message' : 'messages' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </template>
+
+    <ComposeEmailModal
+      :visible="showCompose"
+      :candidate-id="candidate?.id"
+      :candidate-name="candidate ? `${candidate.first_name} ${candidate.last_name}` : undefined"
+      @close="showCompose = false"
+      @sent="onComposeSent"
+    />
   </div>
 </template>

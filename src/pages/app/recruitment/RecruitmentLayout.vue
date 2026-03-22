@@ -17,11 +17,15 @@ const tabs = computed(() => {
       active: route.name === 'recruitment.integrations',
     })
   }
+  list.push(
+    { label: 'Email', to: { name: 'recruitment.email' }, active: route.name === 'recruitment.email' },
+    { label: 'Email Settings', to: { name: 'recruitment.email-settings' }, active: route.name === 'recruitment.email-settings' },
+  )
   return list
 })
 
 const showTabs = computed(() => {
-  const hiddenOn = ['recruitment.jobs.create', 'recruitment.jobs.edit', 'recruitment.jobs.show']
+  const hiddenOn = ['recruitment.jobs.create', 'recruitment.jobs.edit', 'recruitment.jobs.show', 'recruitment.candidates.show']
   return !hiddenOn.includes(String(route.name))
 })
 </script>

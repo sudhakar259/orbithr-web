@@ -34,6 +34,34 @@
   --rs: 8px;     /* border-radius small */
 }
 
+/* ─── Light theme ─────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:       #F4F6FB;
+  --surface:  #FFFFFF;
+  --surface2: #EEF0F7;
+  --surface3: #E4E7F2;
+  --border:    rgba(0,0,0,0.08);
+  --border-hi: rgba(0,0,0,0.14);
+  --text:  #111827;
+  --muted: #6B7280;
+  --dim:   #9CA3AF;
+}
+
+/* ─── Auto theme (system preference) ─────────────────────────────────── */
+@media (prefers-color-scheme: light) {
+  [data-theme="auto"] {
+    --bg:       #F4F6FB;
+    --surface:  #FFFFFF;
+    --surface2: #EEF0F7;
+    --surface3: #E4E7F2;
+    --border:    rgba(0,0,0,0.08);
+    --border-hi: rgba(0,0,0,0.14);
+    --text:  #111827;
+    --muted: #6B7280;
+    --dim:   #9CA3AF;
+  }
+}
+
 /* ─── Base reset ─────────────────────────────────────────────────────── */
 *,
 *::before,

@@ -34,7 +34,7 @@
   --rs: 8px;     /* border-radius small */
 }
 
-/* ─── Light theme ─────────────────────────────────────────────────────── */
+/* ─── Light theme CSS custom properties ──────────────────────────────── */
 [data-theme="light"] {
   --bg:       #F4F6FB;
   --surface:  #FFFFFF;
@@ -47,20 +47,128 @@
   --dim:   #9CA3AF;
 }
 
-/* ─── Auto theme (system preference) ─────────────────────────────────── */
-@media (prefers-color-scheme: light) {
-  [data-theme="auto"] {
-    --bg:       #F4F6FB;
-    --surface:  #FFFFFF;
-    --surface2: #EEF0F7;
-    --surface3: #E4E7F2;
-    --border:    rgba(0,0,0,0.08);
-    --border-hi: rgba(0,0,0,0.14);
-    --text:  #111827;
-    --muted: #6B7280;
-    --dim:   #9CA3AF;
-  }
+/* ─── Light theme: remap hardcoded Tailwind dark classes ──────────────
+   useTheme resolves 'auto' to 'dark'|'light' before setting the attribute,
+   so [data-theme="light"] covers both "light" and auto-light.
+   ─────────────────────────────────────────────────────────────────── */
+
+/* Backgrounds — gray scale */
+[data-theme="light"] .bg-gray-950  { background-color: #E8EBF5 !important; }
+[data-theme="light"] .bg-gray-900  { background-color: #F0F2F8 !important; }
+[data-theme="light"] .bg-gray-800  { background-color: #FFFFFF !important; }
+[data-theme="light"] .bg-gray-700  { background-color: #F3F4F6 !important; }
+[data-theme="light"] .bg-gray-600  { background-color: #E5E7EB !important; }
+[data-theme="light"] .bg-gray-500  { background-color: #D1D5DB !important; }
+
+/* Backgrounds — opacity variants */
+[data-theme="light"] .bg-gray-900\/75 { background-color: rgba(240,242,248,.95) !important; }
+[data-theme="light"] .bg-gray-900\/50 { background-color: rgba(240,242,248,.9)  !important; }
+[data-theme="light"] .bg-gray-900\/40 { background-color: rgba(240,242,248,.8)  !important; }
+[data-theme="light"] .bg-gray-800\/80 { background-color: rgba(255,255,255,.92) !important; }
+[data-theme="light"] .bg-gray-800\/50 { background-color: rgba(255,255,255,.88) !important; }
+[data-theme="light"] .bg-gray-700\/50 { background-color: rgba(243,244,246,.8)  !important; }
+[data-theme="light"] .bg-gray-700\/40 { background-color: rgba(243,244,246,.7)  !important; }
+[data-theme="light"] .bg-gray-700\/30 { background-color: rgba(243,244,246,.6)  !important; }
+[data-theme="light"] .bg-gray-700\/20 { background-color: rgba(243,244,246,.5)  !important; }
+[data-theme="light"] .bg-gray-500\/20 { background-color: rgba(209,213,219,.4)  !important; }
+
+/* Text — gray scale */
+[data-theme="light"] .text-white    { color: #111827 !important; }
+[data-theme="light"] .text-gray-100 { color: #1F2937 !important; }
+[data-theme="light"] .text-gray-200 { color: #374151 !important; }
+[data-theme="light"] .text-gray-300 { color: #4B5563 !important; }
+[data-theme="light"] .text-gray-400 { color: #6B7280 !important; }
+[data-theme="light"] .text-gray-500 { color: #9CA3AF !important; }
+[data-theme="light"] .text-gray-600 { color: #6B7280 !important; }
+
+/* Borders */
+[data-theme="light"] .border-gray-800 { border-color: #D1D5DB !important; }
+[data-theme="light"] .border-gray-700 { border-color: #D1D5DB !important; }
+[data-theme="light"] .border-gray-600 { border-color: #E5E7EB !important; }
+[data-theme="light"] .border-gray-500 { border-color: #D1D5DB !important; }
+
+/* Dividers */
+[data-theme="light"] .divide-gray-800 > :not([hidden]) ~ :not([hidden]) { border-color: #D1D5DB !important; }
+[data-theme="light"] .divide-gray-700 > :not([hidden]) ~ :not([hidden]) { border-color: #D1D5DB !important; }
+
+/* Hover backgrounds */
+[data-theme="light"] .hover\:bg-gray-750:hover  { background-color: #EAEDF4 !important; }
+[data-theme="light"] .hover\:bg-gray-700:hover  { background-color: #E5E7EB !important; }
+[data-theme="light"] .hover\:bg-gray-600:hover  { background-color: #D1D5DB !important; }
+[data-theme="light"] .hover\:bg-gray-500:hover  { background-color: #9CA3AF !important; }
+[data-theme="light"] .hover\:bg-gray-700\/50:hover { background-color: rgba(229,231,235,.6) !important; }
+[data-theme="light"] .hover\:bg-gray-700\/30:hover { background-color: rgba(229,231,235,.4) !important; }
+
+/* Hover text / borders */
+[data-theme="light"] .hover\:text-gray-200:hover    { color: #1F2937 !important; }
+[data-theme="light"] .hover\:text-gray-300:hover    { color: #374151 !important; }
+[data-theme="light"] .hover\:border-gray-600:hover  { border-color: #D1D5DB !important; }
+[data-theme="light"] .hover\:border-gray-500:hover  { border-color: #E5E7EB !important; }
+
+/* Placeholder text */
+[data-theme="light"] .placeholder\:text-gray-400::placeholder { color: #9CA3AF !important; }
+[data-theme="light"] .placeholder\:text-gray-500::placeholder { color: #9CA3AF !important; }
+
+/* Semantic / coloured badge classes — dark 900 variants → light equivalents */
+[data-theme="light"] .bg-green-900\/50,
+[data-theme="light"] .bg-green-900\/40 { background-color: #D1FAE5 !important; }
+[data-theme="light"] .bg-green-900\/30 { background-color: #ECFDF5 !important; }
+[data-theme="light"] .text-green-400   { color: #16A34A !important; }
+[data-theme="light"] .text-green-300   { color: #15803D !important; }
+
+[data-theme="light"] .bg-red-900\/50,
+[data-theme="light"] .bg-red-900\/40  { background-color: #FEE2E2 !important; }
+[data-theme="light"] .bg-red-900\/30  { background-color: #FEF2F2 !important; }
+[data-theme="light"] .text-red-400    { color: #DC2626 !important; }
+[data-theme="light"] .text-red-300    { color: #B91C1C !important; }
+[data-theme="light"] .border-red-700  { border-color: #FCA5A5 !important; }
+
+[data-theme="light"] .bg-blue-900\/50,
+[data-theme="light"] .bg-blue-900\/40 { background-color: #DBEAFE !important; }
+[data-theme="light"] .text-blue-400   { color: #2563EB !important; }
+[data-theme="light"] .text-blue-300   { color: #1D4ED8 !important; }
+
+[data-theme="light"] .bg-yellow-900\/50,
+[data-theme="light"] .bg-yellow-900\/40 { background-color: #FEF3C7 !important; }
+[data-theme="light"] .text-yellow-400   { color: #B45309 !important; }
+[data-theme="light"] .text-yellow-300   { color: #92400E !important; }
+
+[data-theme="light"] .bg-purple-900\/50,
+[data-theme="light"] .bg-purple-900\/40 { background-color: #EDE9FE !important; }
+[data-theme="light"] .text-purple-400   { color: #7C3AED !important; }
+
+[data-theme="light"] .bg-orange-900\/50,
+[data-theme="light"] .bg-orange-900\/40 { background-color: #FFEDD5 !important; }
+[data-theme="light"] .text-orange-400   { color: #C2410C !important; }
+
+[data-theme="light"] .bg-emerald-900\/50,
+[data-theme="light"] .bg-emerald-900\/40 { background-color: #D1FAE5 !important; }
+[data-theme="light"] .text-emerald-400   { color: #059669 !important; }
+
+[data-theme="light"] .bg-indigo-900\/50,
+[data-theme="light"] .bg-indigo-900\/40 { background-color: #E0E7FF !important; }
+[data-theme="light"] .text-indigo-400   { color: #4338CA !important; }
+
+[data-theme="light"] .bg-pink-900\/50,
+[data-theme="light"] .bg-pink-900\/40  { background-color: #FCE7F3 !important; }
+[data-theme="light"] .text-pink-400    { color: #BE185D !important; }
+
+[data-theme="light"] .bg-rose-900\/50  { background-color: #FFE4E6 !important; }
+[data-theme="light"] .text-rose-400    { color: #E11D48 !important; }
+
+[data-theme="light"] .bg-cyan-900\/50  { background-color: #CFFAFE !important; }
+[data-theme="light"] .text-cyan-400    { color: #0E7490 !important; }
+
+/* Form inputs — force white background and dark text */
+[data-theme="light"] input:not([type=range]):not([type=checkbox]):not([type=radio]),
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  border-color: #D1D5DB !important;
 }
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder { color: #9CA3AF !important; }
 
 /* ─── Base reset ─────────────────────────────────────────────────────── */
 *,

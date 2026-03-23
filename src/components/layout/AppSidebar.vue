@@ -1033,7 +1033,7 @@ function handleLogout() {
 .nav-item {
   display: flex; align-items: center; gap: 11px;
   padding: 9px 10px; border-radius: var(--rs);
-  color: var(--dim); font-size: 13px; font-weight: 400;
+  color: var(--dim); font-size: 13.5px; font-weight: 500;
   transition: all .14s; position: relative;
   text-decoration: none; width: 100%;
   background: none; border: none; cursor: pointer; text-align: left;
@@ -1076,7 +1076,7 @@ function handleLogout() {
 }
 .nav-child {
   padding: 7px 10px 7px 8px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .nav-child::before { display: none; }
 .nav-child.active {

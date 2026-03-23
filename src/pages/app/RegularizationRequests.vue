@@ -3,7 +3,6 @@
     <!-- Header -->
     <div class="page-header">
       <div>
-        <h1 class="page-title">Regularization Requests</h1>
         <p class="page-sub">Review and approve pending attendance regularization requests</p>
       </div>
     </div>

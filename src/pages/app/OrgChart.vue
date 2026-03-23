@@ -35,7 +35,6 @@ onMounted(fetchChart)
           </svg>
           Back
         </button>
-        <h1 class="org-title">Organisation Chart</h1>
         <p class="org-subtitle">Visual hierarchy of your team</p>
       </div>
       <div class="org-actions">

@@ -121,7 +121,6 @@ onMounted(load)
   <div class="page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">Knowledge Base</h1>
         <p class="page-sub">HR policies, FAQs and company guides</p>
       </div>
       <button v-if="isAdmin" class="btn-primary" @click="newArticle">+ New Article</button>

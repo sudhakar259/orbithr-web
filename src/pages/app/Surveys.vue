@@ -193,7 +193,6 @@ onMounted(fetchSurveys)
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">Surveys</h1>
         <p class="mt-1 text-sm text-gray-400">Create and manage employee surveys</p>
       </div>
       <button

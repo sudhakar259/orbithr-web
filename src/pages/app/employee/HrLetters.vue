@@ -148,7 +148,6 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">HR Letters</h1>
         <p class="mt-1 text-sm text-gray-400">Manage letter templates and generate employee letters</p>
       </div>
     </div>

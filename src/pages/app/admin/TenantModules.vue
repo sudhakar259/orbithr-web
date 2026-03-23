@@ -53,7 +53,6 @@ onMounted(load)
   <section class="space-y-6 p-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-semibold text-slate-900">Tenant Modules</h1>
         <p class="mt-1 text-slate-600">Enable or disable modules for your tenant. Core modules cannot be disabled.</p>
       </div>
     </div>

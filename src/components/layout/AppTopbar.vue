@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
-const route = useRoute()
+const route  = useRoute()
+const router = useRouter()
 
-// Page title from route meta or name
-const title = computed(() => {
+// Page title: prefer route.meta.title, fallback to route name
+const pageTitle = computed(() => {
+  if (route.meta?.title) return route.meta.title as string
   const name = route.name as string ?? ''
   return name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 })
@@ -16,11 +18,17 @@ const today = computed(() =>
   })
 )
 
-// Search
+// ── Search ──────────────────────────────────────────────────────────────────
 const q  = ref('')
 const sf = ref(false)
+function onSearchEnter() {
+  if (!q.value.trim()) return
+  router.push({ name: 'employees', query: { search: q.value.trim() } })
+  q.value = ''
+  sf.value = false
+}
 
-// Notifications
+// ── Notifications ───────────────────────────────────────────────────────────
 const sn = ref(false)
 const nb = ref<HTMLElement | null>(null)
 
@@ -29,16 +37,16 @@ const notifs = ref([
   { id: 2, emoji: '💰', bg: 'rgba(54,211,153,.15)',  text: 'Payroll processed successfully',    time: '1 hr ago',   unread: true  },
   { id: 3, emoji: '📅', bg: 'rgba(155,110,255,.15)', text: 'Q1 Performance reviews due soon',  time: 'Yesterday',  unread: false },
 ])
-const unread   = computed(() => notifs.value.filter(n => n.unread).length)
-const markAll  = () => notifs.value.forEach(n => (n.unread = false))
+const unread  = computed(() => notifs.value.filter(n => n.unread).length)
+const markAll = () => notifs.value.forEach(n => (n.unread = false))
 
 function onOutside(e: MouseEvent) {
   if (nb.value && !nb.value.contains(e.target as Node)) sn.value = false
 }
-onMounted(() => document.addEventListener('click', onOutside))
+onMounted(()  => document.addEventListener('click', onOutside))
 onUnmounted(() => document.removeEventListener('click', onOutside))
 
-// Impersonation
+// ── Impersonation ────────────────────────────────────────────────────────────
 const hasImpersonation = ref(!!localStorage.getItem('orbithr_impersonate_backup'))
 function stopImpersonation() {
   const backup = localStorage.getItem('orbithr_impersonate_backup')
@@ -49,13 +57,33 @@ function stopImpersonation() {
   }
 }
 
+// ── Context-aware CTA ────────────────────────────────────────────────────────
+interface CtaConfig { label: string; to?: string; action?: () => void }
+
+const ctaMap: Record<string, CtaConfig> = {
+  employees:             { label: 'Add Employee',    to: '/app/employees/new' },
+  'employee-new':        { label: 'Add Employee',    to: '/app/employees/new' },
+  recruitment:           { label: 'Post Job',        to: '/app/recruitment/jobs/new' },
+  'recruitment-jobs':    { label: 'Post Job',        to: '/app/recruitment/jobs/new' },
+  candidates:            { label: 'Add Candidate',   to: '/app/recruitment/candidates/new' },
+  'leave-requests':      { label: 'Request Leave',   to: '/app/leave' },
+  'holiday-calendar':    { label: 'Add Holiday',     to: '/app/holiday-calendar' },
+  'hr-letters':          { label: 'New Template',    to: '/app/hr-letters' },
+  'knowledge-base':      { label: 'New Article',     to: '/app/knowledge-base' },
+  'events':              { label: 'Add Event',       to: '/app/events' },
+}
+
+const cta = computed<CtaConfig | null>(() => {
+  const name = route.name as string ?? ''
+  return ctaMap[name] ?? null
+})
 </script>
 
 <template>
   <header class="topbar">
-    <!-- Left: title -->
+    <!-- Left: title + date -->
     <div class="title-group">
-      <h1 class="title">{{ title }}</h1>
+      <h1 class="title">{{ pageTitle }}</h1>
       <p class="date">{{ today }}</p>
     </div>
 
@@ -64,7 +92,13 @@ function stopImpersonation() {
       <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
       </svg>
-      <input v-model="q" placeholder="Search…" @focus="sf = true" @blur="sf = false" />
+      <input
+        v-model="q"
+        placeholder="Search employees…"
+        @focus="sf = true"
+        @blur="sf = false"
+        @keydown.enter="onSearchEnter"
+      />
       <kbd v-if="!sf">⌘K</kbd>
     </div>
 
@@ -99,12 +133,12 @@ function stopImpersonation() {
         </Transition>
       </div>
 
-      <!-- Add Employee -->
-      <RouterLink :to="{ name: 'employee-new' }" class="btn-add">
+      <!-- Context-aware CTA -->
+      <RouterLink v-if="cta && cta.to" :to="cta.to" class="btn-add">
         <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
         </svg>
-        Add Employee
+        {{ cta.label }}
       </RouterLink>
     </div>
   </header>

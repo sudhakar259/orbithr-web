@@ -197,7 +197,6 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
     <!-- Header -->
     <div class="rp-header">
       <div>
-        <h1 class="rp-title">Roles & Permissions</h1>
         <p class="rp-sub">Manage roles and control what each role can access.</p>
       </div>
       <div class="rp-header-right">

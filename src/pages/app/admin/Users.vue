@@ -81,7 +81,6 @@ onMounted(load)
     <!-- Header -->
     <div class="ul-header">
       <div>
-        <h1 class="ul-title">Users</h1>
         <p class="ul-sub">All registered users across the platform.</p>
       </div>
       <div class="ul-search-wrap">

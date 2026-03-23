@@ -144,7 +144,6 @@ onMounted(load)
     <!-- Header -->
     <div class="emp-header">
       <div>
-        <h1 class="emp-title">Employees</h1>
         <p class="emp-subtitle">{{ filteredEmployees.length }} total &nbsp;·&nbsp; {{ employees.filter(e => e.status === 'Active').length }} active</p>
       </div>
       <div style="display:flex;gap:0.5rem;align-items:center;">

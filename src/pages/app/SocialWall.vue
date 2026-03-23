@@ -126,7 +126,6 @@ onMounted(() => fetchPosts())
   <div class="mx-auto max-w-2xl space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">Social Wall</h1>
       <p class="mt-1 text-sm text-gray-400">Share updates and connect with your team</p>
     </div>
 

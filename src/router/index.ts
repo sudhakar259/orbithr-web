@@ -196,13 +196,13 @@ const routes: RouteRecordRaw[] = [
         path: 'leave',
         name: 'leave',
         component: Leave,
-        meta: { title: 'Leave', permissions: ['view leaves'], roles: ['admin']},
+        meta: { title: 'Leave Management', permissions: ['view leaves'], roles: ['admin']},
       },
       {
         path: 'payroll',
         name: 'payroll',
         component: Payroll,
-        meta: { title: 'Payroll', permissions: ['view payroll'], roles: ['admin'] },
+        meta: { title: 'Payroll Management', permissions: ['view payroll'], roles: ['admin'] },
       },
       {
         path: 'performance',

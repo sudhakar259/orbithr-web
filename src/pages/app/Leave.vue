@@ -184,7 +184,6 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-white">Leave Management</h1>
         <p class="text-gray-400">Manage leave requests, balances, and approvals.</p>
       </div>
       <div class="flex items-center gap-3">

@@ -3,7 +3,6 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-slate-900">Plans & Pricing</h1>
         <p class="mt-2 text-slate-600">Create and manage subscription plans for your tenants</p>
       </div>
       <button

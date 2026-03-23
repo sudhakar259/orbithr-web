@@ -162,7 +162,6 @@ onMounted(() => {
   <div class="page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">Events</h1>
         <p class="page-sub">Company events, celebrations and milestones</p>
       </div>
       <button v-if="isAdmin" class="btn-primary" @click="showCreate = true">+ Create Event</button>

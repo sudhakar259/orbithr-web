@@ -2,7 +2,6 @@
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold">Billing</h1>
-    <p class="text-slate-600">Invoices, payment methods and billing contacts.</p>
+    <p class="text-gray-400">Invoices, payment methods and billing contacts.</p>
   </div>
 </template>

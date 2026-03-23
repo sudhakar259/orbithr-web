@@ -197,7 +197,6 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-white">Payroll Management</h1>
         <p class="text-gray-400">Run payroll, manage advances, and generate payslips.</p>
       </div>
 

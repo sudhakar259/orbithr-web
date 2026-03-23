@@ -196,7 +196,6 @@ onMounted(() => { if (isAuthenticated()) load() })
     <!-- ── Header ───────────────────────────────────────────── -->
     <div class="dr-header">
       <div>
-        <h1 class="dr-title">Domain Requests</h1>
         <p class="dr-sub">Review and approve incoming tenant workspace requests.</p>
       </div>
       <div class="dr-header-right">

@@ -315,7 +315,6 @@ onMounted(() => {
 <template>
   <div class="page">
     <div class="page-header">
-      <h1 class="page-title">System Configuration</h1>
       <p class="page-sub">Manage notifications, workflows, integrations and settings</p>
     </div>
 

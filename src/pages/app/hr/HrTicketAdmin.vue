@@ -134,7 +134,6 @@ onMounted(() => {
 <template>
   <div class="page">
     <div class="page-header">
-      <h1 class="page-title">Ticket Management</h1>
       <p class="page-sub">SLA tracking and ticket administration</p>
     </div>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'PayrollManagement' })
 import { ref, onMounted, computed } from 'vue'
 import { usePayroll } from '@/composables/usePayroll'
 import { useAuth } from '@/composables/useAuth'
@@ -7,7 +8,7 @@ import StatCard from '@/components/dashboard/StatCard.vue'
 import ActivityTimeline from '@/components/dashboard/ActivityTimeline.vue'
 import QuickActions from '@/components/dashboard/QuickActions.vue'
 
-const { user, hasRole } = useAuth()
+const { hasRole } = useAuth()
 const {
   state,
   hasAdminAccess,
@@ -149,17 +150,17 @@ const formatDate = (date: string) => {
 
 const getStatusColor = (status: string) => {
   const colors = {
-    draft: 'bg-gray-100 text-gray-800',
-    processing: 'bg-yellow-100 text-yellow-800',
-    completed: 'bg-green-100 text-green-800',
-    paid: 'bg-green-100 text-green-800',
-    pending: 'bg-yellow-100 text-yellow-800',
-    approved: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
-    disbursed: 'bg-blue-100 text-blue-800',
-    repaying: 'bg-purple-100 text-purple-800'
+    draft: 'bg-gray-900/40 text-gray-400',
+    processing: 'bg-yellow-900/40 text-yellow-400',
+    completed: 'bg-green-900/40 text-green-400',
+    paid: 'bg-green-900/40 text-green-400',
+    pending: 'bg-yellow-900/40 text-yellow-400',
+    approved: 'bg-green-900/40 text-green-400',
+    rejected: 'bg-red-900/40 text-red-400',
+    disbursed: 'bg-blue-900/40 text-blue-400',
+    repaying: 'bg-purple-900/40 text-purple-400'
   }
-  return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'
+  return colors[status as keyof typeof colors] || 'bg-gray-900/40 text-gray-400'
 }
 
 const getCycleStatusText = (status: string) => {
@@ -196,8 +197,8 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Payroll Management</h1>
-        <p class="text-slate-600">Run payroll, manage advances, and generate payslips.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-white">Payroll Management</h1>
+        <p class="text-gray-400">Run payroll, manage advances, and generate payslips.</p>
       </div>
 
       <div class="flex space-x-3" v-if="hasAdminAccess">
@@ -231,37 +232,37 @@ onMounted(() => {
 
     <!-- Advance Stats (for managers/admins) -->
     <div v-if="hasManagerAccess && advanceStats.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="bg-white rounded-lg border border-slate-200 p-6">
+      <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
         <div class="flex items-center">
           <div class="flex-shrink-0">
-            <svg class="h-8 w-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-8 w-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
           <div class="ml-4">
-            <h3 class="text-lg font-medium text-slate-900">{{ advanceStats[0].title }}</h3>
-            <p class="text-2xl font-bold text-slate-900">{{ advanceStats[0].value }}</p>
-            <p class="text-sm text-slate-600">{{ advanceStats[0].change }}</p>
+            <h3 class="text-lg font-medium text-white">{{ advanceStats[0].title }}</h3>
+            <p class="text-2xl font-bold text-white">{{ advanceStats[0].value }}</p>
+            <p class="text-sm text-gray-400">{{ advanceStats[0].change }}</p>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg border border-slate-200 p-6">
+      <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
         <div class="flex items-center">
           <div class="flex-shrink-0">
-            <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-8 w-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
             </svg>
           </div>
           <div class="ml-4">
-            <h3 class="text-lg font-medium text-slate-900">{{ advanceStats[1].title }}</h3>
-            <p class="text-2xl font-bold text-slate-900">{{ advanceStats[1].value }}</p>
-            <p class="text-sm text-slate-600">{{ advanceStats[1].change }}</p>
+            <h3 class="text-lg font-medium text-white">{{ advanceStats[1].title }}</h3>
+            <p class="text-2xl font-bold text-white">{{ advanceStats[1].value }}</p>
+            <p class="text-sm text-gray-400">{{ advanceStats[1].change }}</p>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg border border-slate-200 p-6">
+      <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <svg class="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,17 +270,17 @@ onMounted(() => {
             </svg>
           </div>
           <div class="ml-4">
-            <h3 class="text-lg font-medium text-slate-900">{{ advanceStats[2].title }}</h3>
-            <p class="text-2xl font-bold text-slate-900">{{ advanceStats[2].value }}</p>
-            <p class="text-sm text-slate-600">{{ advanceStats[2].change }}</p>
+            <h3 class="text-lg font-medium text-white">{{ advanceStats[2].title }}</h3>
+            <p class="text-2xl font-bold text-white">{{ advanceStats[2].value }}</p>
+            <p class="text-sm text-gray-400">{{ advanceStats[2].change }}</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Tabs -->
-    <div class="bg-white rounded-lg border border-slate-200">
-      <div class="border-b border-slate-200">
+    <div class="bg-gray-800 rounded-lg border border-gray-700">
+      <div class="border-b border-gray-700">
         <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
           <button
             v-for="tab in [
@@ -293,7 +294,7 @@ onMounted(() => {
             :class="[
               activeTab === tab.id
                 ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300',
+                : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600',
               'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center'
             ]"
           >
@@ -307,27 +308,27 @@ onMounted(() => {
         <!-- Overview Tab -->
         <div v-if="activeTab === 'overview'" class="space-y-6">
           <!-- Recent Payroll Cycles -->
-          <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-200">
-              <h3 class="text-lg font-medium text-slate-900">Recent Payroll Cycles</h3>
+          <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-700">
+              <h3 class="text-lg font-medium text-white">Recent Payroll Cycles</h3>
             </div>
             <div v-if="state.loading.cycles" class="p-6">
               <div class="animate-pulse space-y-4">
-                <div v-for="n in 3" :key="n" class="h-16 bg-slate-200 rounded"></div>
+                <div v-for="n in 3" :key="n" class="h-16 bg-gray-700 rounded"></div>
               </div>
             </div>
-            <div v-else-if="recentCycles.length === 0" class="p-6 text-center text-slate-500">
+            <div v-else-if="recentCycles.length === 0" class="p-6 text-center text-gray-400">
               No payroll cycles found. Create your first payroll cycle to get started.
             </div>
-            <ul v-else class="divide-y divide-slate-200">
-              <li v-for="cycle in recentCycles" :key="cycle.id" class="px-6 py-4 hover:bg-slate-50">
+            <ul v-else class="divide-y divide-gray-700">
+              <li v-for="cycle in recentCycles" :key="cycle.id" class="px-6 py-4 hover:bg-gray-700/30">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center space-x-4">
                     <div>
-                      <p class="text-sm font-medium text-slate-900">
+                      <p class="text-sm font-medium text-white">
                         {{ cycle.frequency.charAt(0).toUpperCase() + cycle.frequency.slice(1) }} Payroll
                       </p>
-                      <p class="text-sm text-slate-500">
+                      <p class="text-sm text-gray-400">
                         {{ formatDate(cycle.period_start) }} - {{ formatDate(cycle.period_end) }}
                       </p>
                     </div>
@@ -338,10 +339,10 @@ onMounted(() => {
                       {{ getCycleStatusText(cycle.status) }}
                     </span>
                     <div class="text-right">
-                      <p class="text-sm font-medium text-slate-900">
+                      <p class="text-sm font-medium text-white">
                         {{ formatCurrency(cycle.total_net_amount) }}
                       </p>
-                      <p class="text-xs text-slate-500">
+                      <p class="text-xs text-gray-400">
                         {{ cycle.total_employees }} employees
                       </p>
                     </div>
@@ -352,25 +353,25 @@ onMounted(() => {
           </div>
 
           <!-- Recent Advances -->
-          <div v-if="hasManagerAccess" class="bg-white rounded-lg border border-slate-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-200">
-              <h3 class="text-lg font-medium text-slate-900">Recent Advance Requests</h3>
+          <div v-if="hasManagerAccess" class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-700">
+              <h3 class="text-lg font-medium text-white">Recent Advance Requests</h3>
             </div>
             <div v-if="state.loading.advances" class="p-6">
               <div class="animate-pulse space-y-4">
-                <div v-for="n in 3" :key="n" class="h-16 bg-slate-200 rounded"></div>
+                <div v-for="n in 3" :key="n" class="h-16 bg-gray-700 rounded"></div>
               </div>
             </div>
-            <div v-else-if="recentAdvances.length === 0" class="p-6 text-center text-slate-500">
+            <div v-else-if="recentAdvances.length === 0" class="p-6 text-center text-gray-400">
               No advance requests found.
             </div>
-            <ul v-else class="divide-y divide-slate-200">
-              <li v-for="advance in recentAdvances" :key="advance.id" class="px-6 py-4 hover:bg-slate-50">
+            <ul v-else class="divide-y divide-gray-700">
+              <li v-for="advance in recentAdvances" :key="advance.id" class="px-6 py-4 hover:bg-gray-700/30">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center space-x-4">
                     <div>
-                      <p class="text-sm font-medium text-slate-900">{{ advance.employee_name }}</p>
-                      <p class="text-sm text-slate-500">{{ advance.employee_code }}</p>
+                      <p class="text-sm font-medium text-white">{{ advance.employee_name }}</p>
+                      <p class="text-sm text-gray-400">{{ advance.employee_code }}</p>
                     </div>
                   </div>
                   <div class="flex items-center space-x-4">
@@ -379,10 +380,10 @@ onMounted(() => {
                       {{ getAdvanceStatusText(advance.status) }}
                     </span>
                     <div class="text-right">
-                      <p class="text-sm font-medium text-slate-900">
+                      <p class="text-sm font-medium text-white">
                         {{ formatCurrency(advance.amount) }}
                       </p>
-                      <p class="text-xs text-slate-500">
+                      <p class="text-xs text-gray-400">
                         {{ formatDate(advance.request_date) }}
                       </p>
                     </div>
@@ -396,33 +397,33 @@ onMounted(() => {
         <!-- Cycles Tab -->
         <div v-else-if="activeTab === 'cycles'">
           <div class="text-center py-12">
-            <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-slate-900">Payroll Cycles</h3>
-            <p class="mt-1 text-sm text-slate-500">Detailed payroll cycle management coming soon.</p>
+            <h3 class="mt-2 text-sm font-medium text-white">Payroll Cycles</h3>
+            <p class="mt-1 text-sm text-gray-400">Detailed payroll cycle management coming soon.</p>
           </div>
         </div>
 
         <!-- Advances Tab -->
         <div v-else-if="activeTab === 'advances'">
           <div class="text-center py-12">
-            <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-slate-900">Salary Advances</h3>
-            <p class="mt-1 text-sm text-slate-500">Advance request management coming soon.</p>
+            <h3 class="mt-2 text-sm font-medium text-white">Salary Advances</h3>
+            <p class="mt-1 text-sm text-gray-400">Advance request management coming soon.</p>
           </div>
         </div>
 
         <!-- Structures Tab -->
         <div v-else-if="activeTab === 'structures'">
           <div class="text-center py-12">
-            <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-slate-900">Salary Structures</h3>
-            <p class="mt-1 text-sm text-slate-500">Employee salary structure management coming soon.</p>
+            <h3 class="mt-2 text-sm font-medium text-white">Salary Structures</h3>
+            <p class="mt-1 text-sm text-gray-400">Employee salary structure management coming soon.</p>
           </div>
         </div>
       </div>

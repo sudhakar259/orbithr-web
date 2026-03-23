@@ -192,7 +192,7 @@ onMounted(() => {
           </div>
           <div>
             <label class="block text-sm text-gray-400 mb-1">Body</label>
-            <p class="text-xs text-gray-500 mb-1">Use placeholders: {{ '{{employee_name}}' }} {{ '{{designation}}' }} {{ '{{department}}' }} {{ '{{date_of_joining}}' }} {{ '{{last_working_date}}' }}</p>
+            <p class="text-xs text-gray-500 mb-1">Use placeholders: <span v-pre>{{employee_name}} {{designation}} {{department}} {{date_of_joining}} {{last_working_date}}</span></p>
             <textarea v-model="templateForm.body" rows="10" class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2 font-mono" />
           </div>
           <div>

@@ -58,6 +58,65 @@ const appStatusClasses = (status: string) => {
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 
+// ── Assessments tab ────────────────────────────────────
+interface Assessment {
+  id: number
+  platform: string
+  assessment_title: string
+  status: string
+  score: number | null
+  max_score: number | null
+  result_data: Record<string, unknown> | null
+  completed_at: string | null
+  expires_at: string | null
+  invite_email_sent: boolean
+}
+
+const assessments = ref<Assessment[]>([])
+const loadingAssessments = ref(false)
+
+const loadAssessments = async () => {
+  loadingAssessments.value = true
+  try {
+    const res = await api.get(`/assessments/candidate/${route.params.id}`)
+    assessments.value = res.data?.data ?? res.data ?? []
+  } catch {
+    assessments.value = []
+  } finally {
+    loadingAssessments.value = false
+  }
+}
+
+const scorePercent = (a: Assessment) =>
+  a.score != null && a.max_score ? Math.round((a.score / a.max_score) * 100) : null
+
+const passFail = (a: Assessment) => {
+  const pct = scorePercent(a)
+  if (pct == null) return null
+  return pct >= 70 ? 'pass' : 'fail'
+}
+
+const assessmentStatusClass = (status: string) => {
+  const map: Record<string, string> = {
+    pending: 'bg-gray-700 text-gray-300',
+    sent: 'bg-blue-900/50 text-blue-400',
+    in_progress: 'bg-yellow-900/50 text-yellow-400',
+    completed: 'bg-green-900/50 text-green-400',
+    expired: 'bg-red-900/50 text-red-400',
+  }
+  return map[status] ?? 'bg-gray-700 text-gray-300'
+}
+
+const platformLabel: Record<string, string> = {
+  hackerrank: 'HackerRank', testgorilla: 'TestGorilla',
+  codility: 'Codility', mettl: 'Mettl', custom: 'Custom',
+}
+
+const onTabAssessments = () => {
+  activeTab.value = 'assessments'
+  if (!assessments.value.length) loadAssessments()
+}
+
 // ── Emails tab ─────────────────────────────────────────
 interface EmailThread {
   id: number
@@ -68,7 +127,7 @@ interface EmailThread {
   messages_count: number
 }
 
-const activeTab = ref<'details' | 'emails'>('details')
+const activeTab = ref<'details' | 'assessments' | 'emails'>('details')
 const emailThreads = ref<EmailThread[]>([])
 const loadingEmails = ref(false)
 const showCompose = ref(false)
@@ -223,6 +282,10 @@ onMounted(load)
                 @click="activeTab = 'details'"
               >Details</button>
               <button
+                :class="['whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors', activeTab === 'assessments' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']"
+                @click="onTabAssessments"
+              >Assessments</button>
+              <button
                 :class="['whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors', activeTab === 'emails' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']"
                 @click="onTabEmails"
               >Emails</button>
@@ -258,6 +321,68 @@ onMounted(load)
                     {{ app.status.replace(/_/g, ' ') }}
                   </span>
                 </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Assessments tab -->
+          <template v-if="activeTab === 'assessments'">
+            <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+              <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                <h3 class="text-base font-semibold text-white">Assessments</h3>
+                <span class="text-xs text-gray-400">{{ assessments.length }} assigned</span>
+              </div>
+              <div v-if="loadingAssessments" class="p-6 space-y-3">
+                <div class="h-14 bg-gray-700 rounded animate-pulse" />
+                <div class="h-14 bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div v-else-if="!assessments.length" class="p-8 text-center text-gray-500 text-sm">
+                No assessments assigned to this candidate yet.
+              </div>
+              <div v-else class="divide-y divide-gray-700">
+                <div v-for="a in assessments" :key="a.id" class="px-6 py-4 flex items-center justify-between">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <p class="text-sm font-medium text-white truncate">{{ a.assessment_title }}</p>
+                      <span class="text-xs text-gray-500 bg-gray-700 px-2 py-0.5 rounded">
+                        {{ platformLabel[a.platform] ?? a.platform }}
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-3 mt-1">
+                      <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', assessmentStatusClass(a.status)]">
+                        {{ a.status.replace(/_/g, ' ') }}
+                      </span>
+                      <span v-if="a.completed_at" class="text-xs text-gray-400">
+                        Completed {{ formatDate(a.completed_at) }}
+                      </span>
+                      <span v-else-if="a.expires_at" class="text-xs text-gray-400">
+                        Expires {{ formatDate(a.expires_at) }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="ml-4 text-right shrink-0">
+                    <template v-if="scorePercent(a) !== null">
+                      <p class="text-lg font-bold" :class="passFail(a) === 'pass' ? 'text-green-400' : 'text-red-400'">
+                        {{ scorePercent(a) }}%
+                      </p>
+                      <span :class="['text-xs font-semibold', passFail(a) === 'pass' ? 'text-green-400' : 'text-red-400']">
+                        {{ passFail(a) === 'pass' ? '✓ Pass' : '✗ Fail' }}
+                      </span>
+                    </template>
+                    <span v-else class="text-xs text-gray-500">—</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Summary row -->
+              <div v-if="assessments.length" class="px-6 py-3 bg-gray-700/40 border-t border-gray-700 flex gap-6 text-xs text-gray-400">
+                <span>Completed: <strong class="text-white">{{ assessments.filter(a => a.status === 'completed').length }}</strong></span>
+                <span>Passed: <strong class="text-green-400">{{ assessments.filter(a => passFail(a) === 'pass').length }}</strong></span>
+                <span>Failed: <strong class="text-red-400">{{ assessments.filter(a => passFail(a) === 'fail').length }}</strong></span>
+                <span v-if="assessments.filter(a => scorePercent(a) !== null).length">
+                  Avg Score: <strong class="text-white">
+                    {{ Math.round(assessments.filter(a => scorePercent(a) !== null).reduce((s, a) => s + scorePercent(a)!, 0) / assessments.filter(a => scorePercent(a) !== null).length) }}%
+                  </strong>
+                </span>
               </div>
             </div>
           </template>

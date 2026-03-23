@@ -827,6 +827,30 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/app/AssetManagement.vue'),
         meta: { title: 'Asset Management', roles: ['admin', 'hr_manager'] },
       },
+      {
+        path: 'hr/tickets/admin',
+        name: 'hr.tickets.admin',
+        component: () => import('@/pages/app/hr/HrTicketAdmin.vue'),
+        meta: { title: 'Ticket Management', roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'hr/knowledge-base',
+        name: 'hr.knowledge-base',
+        component: () => import('@/pages/app/hr/KnowledgeBase.vue'),
+        meta: { title: 'Knowledge Base', requiresAuth: true },
+      },
+      {
+        path: 'events',
+        name: 'events',
+        component: () => import('@/pages/app/Events.vue'),
+        meta: { title: 'Events', requiresAuth: true },
+      },
+      {
+        path: 'system-config',
+        name: 'system.config',
+        component: () => import('@/pages/app/SystemConfig.vue'),
+        meta: { title: 'System Configuration', roles: ['admin'] },
+      },
     ],
   },
   // API docs — full-screen dark layout, outside AppShell

@@ -576,6 +576,12 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/pages/app/recruitment/EmailIntegration.vue'),
             meta: { title: 'Email Integration', roles: ['admin', 'hr_manager'] },
           },
+          {
+            path: 'calendar-settings',
+            name: 'recruitment.calendar-settings',
+            component: () => import('@/pages/app/recruitment/CalendarSettings.vue'),
+            meta: { title: 'Calendar Settings', roles: ['admin', 'hr_manager'] },
+          },
         ],
       },
       {

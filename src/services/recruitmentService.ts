@@ -176,6 +176,7 @@ export interface Interview {
   meeting_link?: string
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show'
   notes?: string
+  calendar_synced?: boolean
   created_by?: number
   created_at: string
   updated_at: string
@@ -452,4 +453,64 @@ export const recruitmentService = {
     api.post<{ data: { name?: string; email?: string; phone?: string; skills?: string[]; raw_text?: string } }>(
       `/recruitment/applications/${appId}/parse-resume`,
     ),
+}
+
+// ── Calendar Integration Service ─────────────────────
+
+export interface CalendarIntegration {
+  id: number
+  provider: 'google_calendar' | 'outlook'
+  calendar_id?: string
+  email?: string
+  is_active: boolean
+  last_sync_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TimeSlot {
+  start: string
+  end: string
+}
+
+export interface UserAvailability {
+  user_id: number
+  user_name?: string
+  busy_slots: TimeSlot[]
+}
+
+export const calendarService = {
+  // Integrations
+  getIntegrations: () => api.get<{ data: CalendarIntegration[] }>('/calendar/integrations'),
+  connectGoogle: (data: { access_token: string; refresh_token?: string; calendar_id?: string }) =>
+    api.post<{ data: CalendarIntegration }>('/calendar/integrations/google', data),
+  connectOutlook: (data: { access_token: string; refresh_token?: string; calendar_id?: string }) =>
+    api.post<{ data: CalendarIntegration }>('/calendar/integrations/outlook', data),
+  updateIntegration: (id: number, data: object) =>
+    api.put<{ data: CalendarIntegration }>(`/calendar/integrations/${id}`, data),
+  disconnectIntegration: (id: number) => api.delete(`/calendar/integrations/${id}`),
+
+  // Availability
+  getAvailability: (userId: number, date: string) =>
+    api.get<{ data: UserAvailability }>('/calendar/availability', {
+      params: { user_id: userId, date },
+    }),
+  getTeamAvailability: (userIds: number[], date: string) =>
+    api.get<{ data: UserAvailability[] }>('/calendar/team-availability', {
+      params: { user_ids: userIds.join(','), date },
+    }),
+  checkSlot: (userId: number, startDatetime: string, durationMinutes: number) =>
+    api.get<{ data: { available: boolean } }>('/calendar/check-slot', {
+      params: { user_id: userId, start_datetime: startDatetime, duration_minutes: durationMinutes },
+    }),
+
+  // Events
+  createEvent: (interviewId: number) =>
+    api.post<{ data: { synced: boolean } }>('/calendar/events', { interview_id: interviewId }),
+  updateEvent: (interviewId: number) =>
+    api.put<{ data: { synced: boolean } }>(`/calendar/events/${interviewId}`, {}),
+  deleteEvent: (interviewId: number) => api.delete(`/calendar/events/${interviewId}`),
+
+  // ICS download URL
+  icsUrl: (interviewId: number) => `/api/calendar/ics/${interviewId}`,
 }

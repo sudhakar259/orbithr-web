@@ -20,6 +20,7 @@ const tabs = computed(() => {
   list.push(
     { label: 'Email', to: { name: 'recruitment.email' }, active: route.name === 'recruitment.email' },
     { label: 'Email Settings', to: { name: 'recruitment.email-settings' }, active: route.name === 'recruitment.email-settings' },
+    { label: 'Calendar', to: { name: 'recruitment.calendar-settings' }, active: route.name === 'recruitment.calendar-settings' },
   )
   return list
 })

@@ -5,8 +5,8 @@
         <li v-for="item in items" :key="item.id" class="flex items-start gap-3">
           <span class="mt-0.5 inline-flex h-2.5 w-2.5 rounded-full" :class="item.color"></span>
           <div>
-            <p class="text-sm text-slate-800">{{ item.text }}</p>
-            <p class="text-xs text-slate-500">{{ item.time }}</p>
+            <p class="text-sm text-gray-300">{{ item.text }}</p>
+            <p class="text-xs text-gray-500">{{ item.time }}</p>
           </div>
         </li>
       </ul>

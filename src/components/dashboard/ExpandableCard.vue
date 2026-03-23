@@ -1,17 +1,17 @@
 <template>
-  <div :class="['rounded-2xl bg-white shadow-md border border-gray-100', isExpanded ? 'lg:col-span-2 xl:col-span-2' : '']">
+  <div :class="['rounded-2xl bg-gray-800 border border-gray-700', isExpanded ? 'lg:col-span-2 xl:col-span-2' : '']">
     <!-- Header -->
-    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-700">
       <div>
-        <h3 class="text-base font-semibold text-slate-800">{{ title }}</h3>
-        <p v-if="description" class="text-xs text-slate-500 mt-0.5">{{ description }}</p>
+        <h3 class="text-base font-semibold text-white">{{ title }}</h3>
+        <p v-if="description" class="text-xs text-gray-400 mt-0.5">{{ description }}</p>
       </div>
       <div class="flex items-center gap-2">
         <NestedMenu v-if="menuItems && menuItems.length" :items="menuItems" />
         <button
           v-if="expandable"
           type="button"
-          class="rounded-md p-1.5 text-slate-600 hover:bg-gray-50 border border-gray-200"
+          class="rounded-md p-1.5 text-gray-400 hover:bg-gray-700 border border-gray-600"
           :aria-pressed="isExpanded"
           :title="isExpanded ? 'Collapse' : 'Expand width'"
           @click="isExpanded = !isExpanded"
@@ -29,7 +29,7 @@
     <!-- Content -->
     <div class="p-5">
       <slot />
-      <div v-if="$slots.expanded && isExpanded" class="mt-5 border-t border-gray-100 pt-5">
+      <div v-if="$slots.expanded && isExpanded" class="mt-5 border-t border-gray-700 pt-5">
         <slot name="expanded" />
       </div>
     </div>
@@ -54,6 +54,6 @@ interface Props {
   expandable?: boolean
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const isExpanded = ref(false)
 </script>

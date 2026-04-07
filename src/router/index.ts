@@ -851,6 +851,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/app/SystemConfig.vue'),
         meta: { title: 'System Configuration', roles: ['admin'] },
       },
+      {
+        path: 'workflow-automation',
+        name: 'workflow-automation',
+        component: () => import('@/pages/app/WorkflowAutomation.vue'),
+        meta: { title: 'Workflow Automation', roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'ai-features',
+        name: 'ai-features',
+        component: () => import('@/pages/app/AiFeatures.vue'),
+        meta: { title: 'AI Features', roles: ['admin', 'hr_manager'] },
+      },
     ],
   },
   // API docs — full-screen dark layout, outside AppShell

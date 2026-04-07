@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppSidebar from './AppSidebar.vue'
 import AppTopbar from './AppTopbar.vue'
+import AiChatbot from './AiChatbot.vue'
 import { RouterView } from 'vue-router'
 </script>
 
@@ -13,6 +14,7 @@ import { RouterView } from 'vue-router'
         <RouterView />
       </main>
     </div>
+    <AiChatbot />
   </div>
 </template>
 

@@ -45,11 +45,11 @@ const computeSummary = (records: AttendanceRecord[]): AttendanceSummary => {
   let employeeId = 1
   try {
     // dynamic import useAuth to avoid circular deps at module load
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useAuth } = require('@/composables/useAuth')
     const auth = useAuth()
     employeeId = auth.user?.value?.employee_id || 1
-  } catch (e) {
+  } catch {
     // ignore and use default
   }
 
@@ -108,7 +108,7 @@ const computeSummary = (records: AttendanceRecord[]): AttendanceSummary => {
 
 const extractErrorMessage = (error: unknown): string => {
   if (error && typeof error === 'object' && 'response' in error) {
-    const response = (error as { response?: any }).response
+    const response = (error as { response?: { data?: unknown } }).response
     const data = response?.data
     if (data) {
       if (typeof data === 'string') return data
@@ -233,8 +233,18 @@ export function useAttendance() {
   }
 
   const fetchTodayAttendance = async (employeeId?: number) => {
-    if (!employeeId) return;
-    const record = await runRequest(() => attendanceService.getTodayAttendance(employeeId))
+    let id = employeeId
+    if (!id) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { useAuth } = require('@/composables/useAuth')
+        id = useAuth().user?.value?.employee_id
+      } catch {
+        // ignore
+      }
+    }
+    if (!id) return
+    const record = await runRequest(() => attendanceService.getTodayAttendance(id!))
     todaysRecord.value = record
     return record
   }

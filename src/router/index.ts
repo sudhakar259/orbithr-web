@@ -78,7 +78,7 @@ const routes: RouteRecordRaw[] = [
         path: 'admin/roles-permissions',
         name: 'roles-permissions',
         component: () => import('@/pages/app/admin/RolesPermissions.vue'),
-        meta: { title: 'Roles & Permissions', roles: ['Super Admin', 'Tenant Admin'] },
+        meta: { title: 'Roles & Permissions', roles: ['super admin', 'tenant admin'] },
       },
       {
         path: 'marketplace',

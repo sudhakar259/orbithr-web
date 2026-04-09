@@ -55,13 +55,11 @@ const requestForm = ref({
 
 // Computed properties
 const isAdminOrHR = computed(() => {
-  return authStore.user?.roles?.some(role =>
-    ['admin', 'hr_manager', 'manager'].includes(role.name)
-  ) || false;
+  return ['admin', 'hr_manager', 'manager'].some(role => authStore.hasRole(role));
 });
 
 const isEmployee = computed(() => {
-  return authStore.user?.roles?.some(role => role.name === 'employee') || false;
+  return authStore.hasRole('employee');
 });
 
 // Methods

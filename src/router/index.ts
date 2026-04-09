@@ -87,6 +87,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Module Marketplace', requiresAuth: true },
       },
       {
+        path: 'integrations',
+        name: 'integrations',
+        component: () => import('@/pages/app/Integrations.vue'),
+        meta: { title: 'Integrations', roles: ['admin', 'hr_manager'], permissions: ['manage integrations'] },
+      },
+      {
         path: 'admin/modules',
         name: 'modules',
         redirect: '/super/modules',
@@ -130,6 +136,12 @@ const routes: RouteRecordRaw[] = [
         name: 'manage-languages',
         component: () => import('@/pages/app/admin/ManageLanguages.vue'),
         meta: { title: 'Manage Languages', superAdminOnly: true },
+      },
+      {
+        path: 'admin/integrations',
+        name: 'admin-integrations',
+        component: () => import('@/pages/app/admin/IntegrationProviders.vue'),
+        meta: { title: 'Integration Providers', superAdminOnly: true },
       },
       {
         path: 'admin/leave-types',

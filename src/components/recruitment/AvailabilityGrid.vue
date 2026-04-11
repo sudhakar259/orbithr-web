@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'AvailabilityGrid' })
-import { ref, computed, watch, onMounted, type PropType } from 'vue'
+import { ref, computed, watch, onMounted, type PropType, type ComputedRef } from 'vue'
 import { calendarService, type UserAvailability } from '@/services/recruitmentService'
 
 const props = defineProps({
@@ -28,7 +28,7 @@ interface SlotInfo {
   totalCount: number
 }
 
-const timeSlots = computed<SlotInfo[]>(() => {
+const timeSlots: ComputedRef<SlotInfo[]> = computed(() => {
   const slots: SlotInfo[] = []
   const interviewerCount = props.interviewerIds.length || 1
 
@@ -75,7 +75,6 @@ const timeSlots = computed<SlotInfo[]>(() => {
     if (isBusy) busyCount1730++
   }
   let status1730: 'free' | 'partial' | 'busy' = 'free'
-  const interviewerCount = props.interviewerIds.length || 1
   if (busyCount1730 > 0 && busyCount1730 < interviewerCount) status1730 = 'partial'
   else if (busyCount1730 >= interviewerCount && interviewerCount > 0) status1730 = 'busy'
   slots.push({

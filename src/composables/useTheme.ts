@@ -9,10 +9,17 @@ const sysDark = window.matchMedia('(prefers-color-scheme: dark)')
 
 /** Resolves 'auto' to the actual system preference before setting the attribute.
  *  data-theme on <html> will always be 'dark' or 'light' — never 'auto' —
- *  so CSS overrides only need one selector set. */
+ *  so CSS overrides only need one selector set.
+ *  Also toggles the `.dark` class so Tailwind dark-mode and --ds-* variables
+ *  (defined under html.dark) react immediately without a page refresh. */
 function applyTheme(t: Theme) {
   const resolved = t === 'auto' ? (sysDark.matches ? 'dark' : 'light') : t
   document.documentElement.setAttribute('data-theme', resolved)
+  if (resolved === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
 }
 
 applyTheme(theme.value)

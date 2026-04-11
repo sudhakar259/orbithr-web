@@ -9,6 +9,7 @@ import type { LeaveRequest } from '@/services/leave'
 import api from '@/services/api'
 import AdminFirstLoginModal from '@/components/dashboard/AdminFirstLoginModal.vue'
 import StatusPill from '@/components/ui/StatusPill.vue'
+import BaseStat from '@/components/ui/BaseStat.vue'
 
 const router = useRouter()
 const { isAuthenticated, hasRole, user } = useAuth()
@@ -237,17 +238,27 @@ const greeting = computed(() => {
     </div>
 
     <!-- KPI Cards -->
-    <div class="kpi-grid">
-      <div class="kpi" v-for="(k, i) in kpiStats" :key="k.id" :style="{ '--i': i }">
-        <div class="kpi-head">
-          <div class="kpi-icon" :class="k.color">{{ k.icon }}</div>
-          <span v-if="k.change" class="kpi-chg" :class="k.up ? 'up' : 'down'">
-            {{ k.up ? '↑' : '↓' }} {{ k.change }}
-          </span>
-        </div>
-        <div class="kpi-val">{{ k.value }}</div>
-        <div class="kpi-lbl">{{ k.label }}</div>
-      </div>
+    <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <BaseStat
+        v-for="k in kpiStats"
+        :key="k.id"
+        :label="k.label"
+        :value="k.value"
+        :trend="k.change ? (k.up ? '+' : '-') + k.change : null"
+        :variant="
+          k.color === 'green'
+            ? 'success'
+            : k.color === 'yellow'
+              ? 'warning'
+              : k.color === 'red'
+                ? 'danger'
+                : 'primary'
+        "
+      >
+        <template #icon>
+          <span class="text-lg">{{ k.icon }}</span>
+        </template>
+      </BaseStat>
     </div>
 
     <!-- Main grid -->

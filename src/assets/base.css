@@ -2,7 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Template design tokens ────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════════════
+   OrbitHR Design System — Tokens
+   Default values below target LIGHT mode. When `.dark` class is applied
+   to <html>, the overrides in the `.dark` block take effect.
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  /* Brand */
+  --ds-primary-50:  #EEF2FF;
+  --ds-primary-100: #E0E7FF;
+  --ds-primary-200: #C7D2FE;
+  --ds-primary-300: #A5B4FC;
+  --ds-primary-400: #818CF8;
+  --ds-primary-500: #6366F1;
+  --ds-primary-600: #4F46E5;
+  --ds-primary-700: #4338CA;
+  --ds-primary-800: #3730A3;
+  --ds-primary-900: #312E81;
+
+  --ds-accent-400: #A78BFA;
+  --ds-accent-500: #8B5CF6;
+  --ds-accent-600: #7C3AED;
+
+  /* Semantic */
+  --ds-success: #10B981;
+  --ds-warning: #F59E0B;
+  --ds-danger:  #F43F5E;
+  --ds-info:    #0EA5E9;
+
+  /* Light mode surfaces */
+  --ds-bg:            #F8FAFC;
+  --ds-card:          #FFFFFF;
+  --ds-topbar:        #FFFFFF;
+  --ds-sidebar:       #1E293B;   /* sidebar is always dark */
+  --ds-sidebar-text:  #CBD5E1;
+  --ds-sidebar-active-bg: #334155;
+  --ds-sidebar-active-text: #FFFFFF;
+
+  /* Text */
+  --ds-text:       #0F172A;
+  --ds-text-muted: #374151;
+  --ds-text-dim:   #6B7280;
+
+  /* Borders */
+  --ds-border:        #E2E8F0;
+  --ds-border-strong: #CBD5E1;
+  --ds-border-focus:  #6366F1;
+
+  /* Inputs */
+  --ds-input-bg:     #FFFFFF;
+  --ds-input-border: #CBD5E1;
+
+  /* Shadows */
+  --ds-shadow-card:       0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --ds-shadow-card-hover: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --ds-focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.25);
+
+  /* Radii */
+  --ds-radius-sm: 0.375rem;
+  --ds-radius-md: 0.5rem;
+  --ds-radius-lg: 0.75rem;
+  --ds-radius-xl: 1rem;
+}
+
+/* ── Dark mode overrides (Tailwind `dark` class on <html>) ────────── */
+html.dark {
+  --ds-bg:            #0C0E14;
+  --ds-card:          #1C2030;
+  --ds-topbar:        #141720;
+  --ds-sidebar:       #0A0C12;
+  --ds-sidebar-text:  #8892A4;
+  --ds-sidebar-active-bg: #1C2030;
+  --ds-sidebar-active-text: #E8EAF0;
+
+  --ds-text:       #E8EAF0;
+  --ds-text-muted: #A0AABA;
+  --ds-text-dim:   #6B7280;
+
+  --ds-border:        #1C2030;
+  --ds-border-strong: #2A3045;
+  --ds-border-focus:  #6366F1;
+
+  --ds-input-bg:     #1C2030;
+  --ds-input-border: #2A3045;
+
+  --ds-shadow-card:       0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --ds-shadow-card-hover: 0 4px 14px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Legacy template tokens (kept for existing pages) ───────────── */
 :root {
   /* Backgrounds */
   --bg:       #0C0E14;
@@ -43,8 +131,8 @@
   --border:    rgba(0,0,0,0.08);
   --border-hi: rgba(0,0,0,0.14);
   --text:  #111827;
-  --muted: #6B7280;
-  --dim:   #9CA3AF;
+  --muted: #4B5563;
+  --dim:   #6B7280;
 }
 
 /* ─── Light theme: remap hardcoded Tailwind dark classes ──────────────
@@ -180,7 +268,7 @@
 }
 
 body {
-  font-family: 'DM Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -188,6 +276,16 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+code, kbd, pre, samp, .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 a { text-decoration: none; color: inherit; }

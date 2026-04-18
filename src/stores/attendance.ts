@@ -1,15 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import axios from 'axios'
+import { attendanceService, type AttendanceRecord, type PunchPayload, type RegularizationPayload } from '@/services/attendance'
 
 export const useAttendanceStore = defineStore('attendance', () => {
   // State
-  const monthlyAttendance = ref([])
-  const todaysAttendance = ref(null)
-  const devices = ref([])
-  const shifts = ref([])
+  const monthlyAttendance = ref<AttendanceRecord[]>([])
+  const todaysAttendance = ref<AttendanceRecord | null>(null)
+  const devices = ref<unknown[]>([])
+  const shifts = ref<unknown[]>([])
   const loading = ref(false)
-  const error = ref(null)
+  const error = ref<string | null>(null)
 
   // Getters
   const monthlyStats = computed(() => {
@@ -44,8 +44,8 @@ export const useAttendanceStore = defineStore('attendance', () => {
       if (attendance.is_early_leave) stats.early_leave_days++
       if (attendance.is_regularized) stats.regularized_count++
 
-      stats.total_working_hours += parseFloat(attendance.working_hours || 0)
-      stats.total_overtime_hours += parseFloat(attendance.overtime_hours || 0)
+      stats.total_working_hours += parseFloat(String(attendance.working_hours || 0))
+      stats.total_overtime_hours += parseFloat(String(attendance.overtime_hours || 0))
     })
 
     return stats
@@ -57,12 +57,11 @@ export const useAttendanceStore = defineStore('attendance', () => {
     error.value = null
 
     try {
-      const response = await axios.get(`/api/attendance/records`, {
-        params: { year, month }
-      })
-      monthlyAttendance.value = response.data.data
-    } catch (err) {
-      error.value = err.response?.data?.message || 'Failed to load attendance data'
+      const result = await attendanceService.getMonthlyAttendance(year, month)
+      monthlyAttendance.value = result.records
+    } catch (err: unknown) {
+      error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? 'Failed to load attendance data'
       console.error('Load monthly attendance error:', err)
     } finally {
       loading.value = false
@@ -71,55 +70,52 @@ export const useAttendanceStore = defineStore('attendance', () => {
 
   const loadTodaysAttendance = async () => {
     try {
-      const response = await axios.get('/api/attendance/today')
-      todaysAttendance.value = response.data.data
-    } catch (err) {
-      console.error('Load today\'s attendance error:', err)
+      todaysAttendance.value = await attendanceService.getTodayAttendance()
+    } catch (err: unknown) {
+      console.error("Load today's attendance error:", err)
     }
   }
 
   const loadDevices = async () => {
     try {
-      const response = await axios.get('/api/attendance/devices')
-      devices.value = response.data.data
-    } catch (err) {
+      devices.value = await attendanceService.getDevices()
+    } catch (err: unknown) {
       console.error('Load devices error:', err)
     }
   }
 
   const loadShifts = async () => {
     try {
-      const response = await axios.get('/api/attendance/shifts')
-      shifts.value = response.data.data
-    } catch (err) {
+      shifts.value = await attendanceService.getShifts()
+    } catch (err: unknown) {
       console.error('Load shifts error:', err)
     }
   }
 
-  const recordPunch = async (punchData: any) => {
+  const recordPunch = async (punchData: PunchPayload) => {
     loading.value = true
     error.value = null
 
     try {
-      const response = await axios.post('/api/attendance/punch', punchData)
-      return response.data
-    } catch (err) {
-      error.value = err.response?.data?.message || 'Failed to record punch'
+      return await attendanceService.recordPunch(punchData)
+    } catch (err: unknown) {
+      error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? 'Failed to record punch'
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  const requestRegularization = async (regularizationData: any) => {
+  const requestRegularization = async (regularizationData: RegularizationPayload) => {
     loading.value = true
     error.value = null
 
     try {
-      const response = await axios.post('/api/attendance/regularize', regularizationData)
-      return response.data
-    } catch (err) {
-      error.value = err.response?.data?.message || 'Failed to request regularization'
+      return await attendanceService.requestRegularization(regularizationData)
+    } catch (err: unknown) {
+      error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? 'Failed to request regularization'
       throw err
     } finally {
       loading.value = false
@@ -128,9 +124,8 @@ export const useAttendanceStore = defineStore('attendance', () => {
 
   const syncDevice = async (deviceId: string) => {
     try {
-      const response = await axios.post(`/api/attendance/devices/${deviceId}/sync`)
-      return response.data
-    } catch (err) {
+      return await attendanceService.syncDevice(deviceId)
+    } catch (err: unknown) {
       console.error('Device sync error:', err)
       throw err
     }

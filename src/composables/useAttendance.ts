@@ -41,16 +41,16 @@ const computeSummary = (records: AttendanceRecord[]): AttendanceSummary => {
     return createEmptySummary()
   }
 
-  // Determine employee id if available from local auth (fall back to 1)
-  let employeeId = 1
+  // Determine employee id if available from local auth (no fallback — undefined means unknown)
+  let employeeId: number | undefined
   try {
     // dynamic import useAuth to avoid circular deps at module load
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useAuth } = require('@/composables/useAuth')
     const auth = useAuth()
-    employeeId = auth.user?.value?.employee_id || 1
+    employeeId = auth.user?.value?.employee_id || undefined
   } catch {
-    // ignore and use default
+    // ignore — employeeId stays undefined
   }
 
   const today = new Date()
@@ -71,7 +71,7 @@ const computeSummary = (records: AttendanceRecord[]): AttendanceSummary => {
     attendanceDate.setHours(0, 0, 0, 0)
 
     const isHoliday = isCompanyHoliday(attendanceDate) && isCompanyHoliday(attendanceDate).length > 0
-    const isWeekOff = isEmployeeWeekOff(attendanceDate, employeeId)
+    const isWeekOff = employeeId !== undefined ? isEmployeeWeekOff(attendanceDate, employeeId) : false
 
     // If record is for a non-working day (holiday/week off), skip counting it as absent
     const isFuture = attendanceDate >= today

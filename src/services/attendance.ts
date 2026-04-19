@@ -179,7 +179,7 @@ export interface WorkStatusOption {
 class AttendanceService {
   private readonly basePath = '/attendance'
 
-  private unwrapPayload<T>(response: any): T {
+  private unwrapPayload<T>(response: unknown): T {
     if (response && typeof response === 'object' && 'data' in response) {
       const payload = (response as { data: unknown }).data
       if (payload && typeof payload === 'object' && 'data' in (payload as Record<string, unknown>)) {
@@ -190,41 +190,46 @@ class AttendanceService {
     return response as T
   }
 
-  private toCollection(payload: any): AttendanceCollectionResult {
+  private toCollection(payload: unknown): AttendanceCollectionResult {
     if (!payload) {
       return { records: [], meta: null }
     }
 
     if (Array.isArray(payload)) {
-      return { records: payload, meta: null }
+      return { records: payload as AttendanceRecord[], meta: null }
     }
 
-    if (payload.records && Array.isArray(payload.records)) {
+    const p = payload as Record<string, unknown>
+
+    if (p['records'] && Array.isArray(p['records'])) {
+      const meta = p['meta'] as Record<string, unknown> | undefined
       return {
-        records: payload.records,
-        summary: payload.summary ?? payload.meta?.summary,
-        meta: payload.meta ?? null,
+        records: p['records'] as AttendanceRecord[],
+        summary: (p['summary'] ?? meta?.['summary']) as AttendanceSummary | undefined,
+        meta: (p['meta'] as AttendanceMeta) ?? null,
       }
     }
 
-    if (payload.data && Array.isArray(payload.data)) {
+    if (p['data'] && Array.isArray(p['data'])) {
+      const meta = p['meta'] as Record<string, unknown> | undefined
       return {
-        records: payload.data,
-        summary: payload.summary ?? payload.meta?.summary,
-        meta: payload.meta ?? null,
+        records: p['data'] as AttendanceRecord[],
+        summary: (p['summary'] ?? meta?.['summary']) as AttendanceSummary | undefined,
+        meta: (p['meta'] as AttendanceMeta) ?? null,
       }
     }
 
+    const meta = p['meta'] as Record<string, unknown> | undefined
     return {
       records: [],
-      summary: payload.summary ?? payload.meta?.summary,
-      meta: payload.meta ?? null,
+      summary: (p['summary'] ?? meta?.['summary']) as AttendanceSummary | undefined,
+      meta: (p['meta'] as AttendanceMeta) ?? null,
     }
   }
 
   async getAttendanceRecords(params: AttendanceRecordsQuery = {}): Promise<AttendanceCollectionResult> {
     const response = await api.get(`${this.basePath}/records`, { params })
-    const payload = this.unwrapPayload<any>(response)
+    const payload = this.unwrapPayload<Record<string, unknown>>(response)
     return this.toCollection(payload)
   }
 
@@ -240,25 +245,25 @@ class AttendanceService {
 
   async getCalendarData(year: number, month: number, employeeId?: number): Promise<CalendarDataResult> {
     const params: Record<string, unknown> = { year, month }
-    if (employeeId) params.employee_id = employeeId
+    if (employeeId) params['employee_id'] = employeeId
     const response = await api.get(`${this.basePath}/calendar`, { params })
-    const payload = this.unwrapPayload<any>(response)
+    const payload = this.unwrapPayload<Record<string, unknown>>(response)
     return {
-      records: payload?.records ?? [],
-      leaves: payload?.leaves ?? [],
-      summary: payload?.summary ?? {
+      records: (payload?.['records'] ?? []) as AttendanceRecord[],
+      leaves: (payload?.['leaves'] ?? []) as AttendanceRecord[],
+      summary: (payload?.['summary'] ?? {
         total_days: 0, present_days: 0, absent_days: 0, half_days: 0,
         late_days: 0, early_leave_days: 0, total_working_hours: 0,
         total_overtime_hours: 0, regularized_count: 0,
-      },
+      }) as AttendanceSummary,
     }
   }
 
   async getAttendanceSummary(params: AttendanceRecordsQuery = {}): Promise<AttendanceSummary> {
     const response = await api.get(`${this.basePath}/summary`, { params })
-    const payload = this.unwrapPayload<any>(response)
+    const payload = this.unwrapPayload<Record<string, unknown>>(response)
     if (payload && typeof payload === 'object' && 'total_days' in payload) {
-      return payload as AttendanceSummary
+      return payload as unknown as AttendanceSummary
     }
     return {
       total_days: 0,
@@ -277,7 +282,7 @@ class AttendanceService {
     const response = await api.get(`${this.basePath}/today`, {
       params: employeeId ? { employee_id: employeeId } : undefined,
     })
-    const payload = this.unwrapPayload<any>(response)
+    const payload = this.unwrapPayload<AttendanceRecord | null>(response)
     return payload ?? null
   }
 
@@ -300,8 +305,8 @@ class AttendanceService {
     try {
       const response = await api.get(`${this.basePath}/work-statuses`)
       return this.unwrapPayload<WorkStatusOption[]>(response)
-    } catch (error: any) {
-      if (error?.response?.status === 404) {
+    } catch (error: unknown) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         const fallback = await api.get(`${this.basePath}/statuses`)
         return this.unwrapPayload<WorkStatusOption[]>(fallback)
       }
@@ -313,8 +318,10 @@ class AttendanceService {
     try {
       const response = await api.post(`${this.basePath}/punches`, payload)
       return this.unwrapPayload<AttendanceRecord>(response)
-    } catch (error: any) {
-      if (error?.response?.status === 404) {
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status
+      if (status === 404) {
+        console.warn('AttendanceService: /punches endpoint not found, falling back to /punch. Update API to use /punches.')
         const fallback = await api.post(`${this.basePath}/punch`, payload)
         return this.unwrapPayload<AttendanceRecord>(fallback)
       }
@@ -326,8 +333,8 @@ class AttendanceService {
     try {
       const response = await api.post(`${this.basePath}/regularizations`, payload)
       return this.unwrapPayload<AttendanceRecord>(response)
-    } catch (error: any) {
-      if (error?.response?.status === 404) {
+    } catch (error: unknown) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         const fallback = await api.post(`${this.basePath}/regularize`, payload)
         return this.unwrapPayload<AttendanceRecord>(fallback)
       }

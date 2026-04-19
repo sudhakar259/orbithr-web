@@ -1,10 +1,14 @@
 <script setup lang="ts">
+defineOptions({ name: 'AnnouncementsPage' })
 import { ref, computed, reactive, onMounted } from 'vue'
 import api from '@/services/api'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Modal      from '@/components/ui/Modal.vue'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 interface Announcement {
   id: number | string
@@ -90,7 +94,7 @@ async function togglePin(ann: Announcement) {
 }
 
 async function deleteAnn(id: number | string) {
-  if (!confirm('Delete this announcement?')) return
+  if (!await dialog('Delete', 'Delete this announcement?')) return
   try {
     await api.delete(`/announcements/${id}`)
   } catch {}

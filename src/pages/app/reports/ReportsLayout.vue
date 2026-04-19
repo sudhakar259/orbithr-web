@@ -11,6 +11,7 @@ const tabs = [
   { name: 'Attrition', to: { name: 'reports.attrition' } },
   { name: 'Performance', to: { name: 'reports.performance' } },
   { name: 'Custom Builder', to: { name: 'reports.custom' } },
+  { name: 'Scheduled', to: { name: 'reports.scheduled' } },
 ]
 
 const isActive = (name: string) => route.name === name

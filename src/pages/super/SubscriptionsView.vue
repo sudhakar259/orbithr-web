@@ -9,6 +9,7 @@ interface Plan {
   description?: string
   max_employees?: number
   tenant_count?: number
+  employee_count?: number
   color?: string
 }
 
@@ -74,8 +75,8 @@ const statusColor = (s?: string) => ({
         <div class="plan-price">₹{{ Number(plan.price ?? 0).toLocaleString() }}<span>/mo</span></div>
         <div class="plan-desc">{{ plan.description ?? '' }}</div>
         <div class="plan-meta">
-          <span>Up to {{ plan.max_employees ?? '∞' }} employees</span>
-          <span class="plan-count" :style="{ color: planColor(plan.name) }">{{ plan.tenant_count ?? 0 }} tenants</span>
+          <span>{{ plan.tenant_count ?? 0 }} active tenants</span>
+          <span class="plan-count" :style="{ color: planColor(plan.name) }">{{ plan.employee_count ?? 0 }} employees</span>
         </div>
       </div>
     </div>

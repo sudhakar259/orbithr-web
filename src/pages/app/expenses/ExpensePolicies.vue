@@ -3,6 +3,9 @@ defineOptions({ name: 'ExpensePolicies' })
 
 import { ref, onMounted } from 'vue'
 import expenseService, { type ExpenseCategory, type ExpensePolicy } from '@/services/expenseService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 const loading = ref(true)
 const error = ref('')
@@ -63,7 +66,7 @@ async function toggleCatActive(cat: ExpenseCategory) {
 }
 
 async function removeCat(id: number) {
-  if (!confirm('Delete this category?')) return
+  if (!await dialog('Delete', 'Delete this category?')) return
   try {
     await expenseService.deleteCategory(id)
     categories.value = categories.value.filter(c => c.id !== id)
@@ -93,7 +96,7 @@ async function addPolicy() {
 }
 
 async function removePolicy(id: number) {
-  if (!confirm('Delete this policy?')) return
+  if (!await dialog('Delete', 'Delete this policy?')) return
   try {
     await expenseService.deletePolicy(id)
     policies.value = policies.value.filter(p => p.id !== id)

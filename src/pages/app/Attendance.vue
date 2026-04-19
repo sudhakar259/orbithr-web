@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'AttendancePage' })
 import { ref, onMounted, computed } from 'vue'
 import { formatDateTime } from '@/utils/formatDateTime'
 import { useAttendance } from '@/composables/useAttendance'
@@ -12,8 +13,11 @@ import RegularizationModal from '@/components/attendance/RegularizationModal.vue
 import TimesheetExportModal from '@/components/attendance/TimesheetExportModal.vue'
 import type { PunchPayload, AttendanceRecord } from '@/services/attendance'
 import { regularizationService } from '@/services/regularization'
+import { useToast } from '@/composables/useToast'
 
-const { fetchCalendarData, fetchTodayAttendance, fetchWorkStatuses, recordPunch, records, leaves, summary, loading, error, todaysRecord, workStatuses } = useAttendance()
+const toast = useToast()
+
+const { fetchCalendarData, fetchTodayAttendance, fetchWorkStatuses, recordPunch, records, leaves, summary, loading, error, todaysRecord } = useAttendance()
 const { user } = useAuth()
 
 const currentDate = ref(new Date())
@@ -36,9 +40,6 @@ const isCurrentlyLoggedIn = computed(() => {
   return lastPunch.type === 'check_in'
 })
 
-const canCheckIn = computed(() => !isCurrentlyLoggedIn.value)
-const canCheckOut = computed(() => isCurrentlyLoggedIn.value)
-
 const previousMonth = () => {
   currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1)
   loadAttendance()
@@ -59,7 +60,7 @@ const loadTodayAttendance = async () => {
   await fetchTodayAttendance(user.value?.employee_id)
 }
 
-const handlePunch = async (punchData: any) => {
+const handlePunch = async (punchData: PunchPayload) => {
   punchLoading.value = true
   try {
     const payload: PunchPayload = {
@@ -85,7 +86,7 @@ const handlePunch = async (punchData: any) => {
   }
 }
 
-const handleWorkStatus = async (punchData: any) => {
+const handleWorkStatus = async (punchData: PunchPayload) => {
   punchLoading.value = true
   try {
     const payload: PunchPayload = {
@@ -133,7 +134,16 @@ const openRegularizationModal = (attendance: AttendanceRecord) => {
   showRegularizationModal.value = true
 }
 
-const handleRegularizationSubmit = async (data: any) => {
+const handleRegularizationSubmit = async (data: {
+  attendance_id: number
+  regularization_type: string
+  reason: string
+  notes?: string | null
+  check_in?: string | null
+  check_out?: string | null
+  working_hours?: number | null
+  overtime_hours?: number | null
+}) => {
   regularizationLoading.value = true
 
   try {
@@ -152,10 +162,11 @@ const handleRegularizationSubmit = async (data: any) => {
     selectedAttendanceForRegularization.value = null
 
     // Show success message
-    alert('Regularization request submitted successfully! Your manager and team lead will review it.')
-  } catch (err: any) {
+    toast.success('Regularization request submitted successfully! Your manager and team lead will review it.')
+  } catch (err: unknown) {
     console.error('Regularization submission error:', err)
-    alert(err.response?.data?.error || 'Failed to submit regularization request')
+    const axiosErr = err as { response?: { data?: { error?: string } } }
+    toast.error(axiosErr.response?.data?.error || 'Failed to submit regularization request')
   } finally {
     regularizationLoading.value = false
   }
@@ -172,14 +183,13 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Attendance</h1>
-        <p class="text-slate-600">Track daily presence, shifts and approvals.</p>
+        <p class="text-gray-400">Track daily presence, shifts and approvals.</p>
       </div>
       <div class="flex gap-3">
         <button
           @click="showTimesheetModal = true"
           :disabled="loading"
-          class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="rounded-lg border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Download Timesheet
         </button>
@@ -205,27 +215,27 @@ onMounted(() => {
     </div>
 
     <!-- Today's Status Card -->
-    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-soft">
-      <h3 class="mb-4 text-lg font-semibold text-slate-900">Today's Status</h3>
+    <div class="rounded-xl border border-gray-700 bg-gray-800 p-6">
+      <h3 class="mb-4 text-lg font-semibold text-white">Today's Status</h3>
       <div v-if="todaysRecord" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <!-- Check In Time -->
-        <div class="rounded-lg bg-slate-50 p-4">
-          <div class="text-xs font-medium uppercase tracking-wide text-slate-600">Check In</div>
-          <div class="mt-2 text-2xl font-bold text-slate-900">
+        <div class="rounded-lg bg-gray-700/50 p-4">
+          <div class="text-xs font-medium uppercase tracking-wide text-gray-400">Check In</div>
+          <div class="mt-2 text-2xl font-bold text-white">
             {{ todaysRecord.check_in ? formatDateTime(todaysRecord.attendance_date, todaysRecord.check_in) : '—' }}
           </div>
-          <div class="mt-1 text-xs text-slate-500">
+          <div class="mt-1 text-xs text-gray-400">
             {{ todaysRecord.check_in ? formatDateTime(todaysRecord.attendance_date) : 'Not checked in' }}
           </div>
         </div>
 
         <!-- Check Out Time -->
-        <div class="rounded-lg bg-slate-50 p-4">
-          <div class="text-xs font-medium uppercase tracking-wide text-slate-600">Check Out</div>
-          <div class="mt-2 text-2xl font-bold text-slate-900">
+        <div class="rounded-lg bg-gray-700/50 p-4">
+          <div class="text-xs font-medium uppercase tracking-wide text-gray-400">Check Out</div>
+          <div class="mt-2 text-2xl font-bold text-white">
             {{ todaysRecord.check_out ? formatDateTime(todaysRecord.attendance_date, todaysRecord.check_out) : '—' }}
           </div>
-          <div class="mt-1 text-xs text-slate-500">
+          <div class="mt-1 text-xs text-gray-400">
             {{ todaysRecord.check_out ? formatDateTime(todaysRecord.attendance_date) : 'Not checked out' }}
           </div>
         </div>
@@ -252,38 +262,38 @@ onMounted(() => {
           </div>
         </div>
       </div>
-      <div v-else class="text-center py-8 text-slate-500">
+      <div v-else class="text-center py-8 text-gray-400">
         <p>No attendance record for today. Click "Check In" to get started.</p>
       </div>
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading && !todaysRecord" class="rounded-lg border border-slate-200 bg-white p-6 text-center">
-      <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-blue-600"></div>
-      <p class="mt-2 text-slate-600">Loading attendance data...</p>
+    <div v-if="loading && !todaysRecord" class="rounded-lg border border-gray-700 bg-gray-800 p-6 text-center">
+      <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-600 border-t-blue-600"></div>
+      <p class="mt-2 text-gray-400">Loading attendance data...</p>
     </div>
 
     <!-- Attendance Summary -->
     <AttendanceSummary :stats="summary" />
 
     <!-- Calendar Section -->
-    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-soft">
+    <div class="rounded-xl border border-gray-700 bg-gray-800 p-6">
       <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-slate-900">
+        <h2 class="text-lg font-semibold text-white">
           {{ currentDate.toLocaleString('default', { month: 'long', year: 'numeric' }) }}
         </h2>
         <div class="flex gap-2">
           <button
             @click="previousMonth"
             :disabled="loading"
-            class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ← Previous
           </button>
           <button
             @click="nextMonth"
             :disabled="loading"
-            class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next →
           </button>

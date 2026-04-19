@@ -41,16 +41,16 @@ const computeSummary = (records: AttendanceRecord[]): AttendanceSummary => {
     return createEmptySummary()
   }
 
-  // Determine employee id if available from local auth (fall back to 1)
-  let employeeId = 1
+  // Determine employee id if available from local auth (no fallback — undefined means unknown)
+  let employeeId: number | undefined
   try {
     // dynamic import useAuth to avoid circular deps at module load
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useAuth } = require('@/composables/useAuth')
     const auth = useAuth()
-    employeeId = auth.user?.value?.employee_id || 1
-  } catch (e) {
-    // ignore and use default
+    employeeId = auth.user?.value?.employee_id || undefined
+  } catch {
+    // ignore — employeeId stays undefined
   }
 
   const today = new Date()
@@ -71,7 +71,7 @@ const computeSummary = (records: AttendanceRecord[]): AttendanceSummary => {
     attendanceDate.setHours(0, 0, 0, 0)
 
     const isHoliday = isCompanyHoliday(attendanceDate) && isCompanyHoliday(attendanceDate).length > 0
-    const isWeekOff = isEmployeeWeekOff(attendanceDate, employeeId)
+    const isWeekOff = employeeId !== undefined ? isEmployeeWeekOff(attendanceDate, employeeId) : false
 
     // If record is for a non-working day (holiday/week off), skip counting it as absent
     const isFuture = attendanceDate >= today
@@ -108,7 +108,7 @@ const computeSummary = (records: AttendanceRecord[]): AttendanceSummary => {
 
 const extractErrorMessage = (error: unknown): string => {
   if (error && typeof error === 'object' && 'response' in error) {
-    const response = (error as { response?: any }).response
+    const response = (error as { response?: { data?: unknown } }).response
     const data = response?.data
     if (data) {
       if (typeof data === 'string') return data
@@ -233,8 +233,18 @@ export function useAttendance() {
   }
 
   const fetchTodayAttendance = async (employeeId?: number) => {
-    if (!employeeId) return;
-    const record = await runRequest(() => attendanceService.getTodayAttendance(employeeId))
+    let id = employeeId
+    if (!id) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { useAuth } = require('@/composables/useAuth')
+        id = useAuth().user?.value?.employee_id
+      } catch {
+        // ignore
+      }
+    }
+    if (!id) return
+    const record = await runRequest(() => attendanceService.getTodayAttendance(id!))
     todaysRecord.value = record
     return record
   }

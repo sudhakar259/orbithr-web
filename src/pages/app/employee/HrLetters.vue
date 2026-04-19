@@ -3,6 +3,9 @@ defineOptions({ name: 'HrLetters' })
 
 import { ref, onMounted } from 'vue'
 import api from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 type Tab = 'templates' | 'generated'
 const activeTab = ref<Tab>('templates')
@@ -61,7 +64,7 @@ async function saveTemplate() {
 }
 
 async function deleteTemplate(id: number) {
-  if (!confirm('Delete this template?')) return
+  if (!await dialog('Delete', 'Delete this template?')) return
   try {
     await api.delete(`/hr-letters/templates/${id}`)
     await fetchTemplates()
@@ -148,7 +151,6 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">HR Letters</h1>
         <p class="mt-1 text-sm text-gray-400">Manage letter templates and generate employee letters</p>
       </div>
     </div>
@@ -192,7 +194,7 @@ onMounted(() => {
           </div>
           <div>
             <label class="block text-sm text-gray-400 mb-1">Body</label>
-            <p class="text-xs text-gray-500 mb-1">Use placeholders: {{ '{{employee_name}}' }} {{ '{{designation}}' }} {{ '{{department}}' }} {{ '{{date_of_joining}}' }} {{ '{{last_working_date}}' }}</p>
+            <p class="text-xs text-gray-500 mb-1">Use placeholders: <span v-pre>{{employee_name}} {{designation}} {{department}} {{date_of_joining}} {{last_working_date}}</span></p>
             <textarea v-model="templateForm.body" rows="10" class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2 font-mono" />
           </div>
           <div>

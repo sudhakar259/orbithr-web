@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ref, onMounted } from 'vue'
 import api from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
+
+const { confirm: dialog } = useConfirm()
+const toast = useToast()
 
 const loading = ref(false)
 const formLoading = ref(false)
@@ -35,9 +41,6 @@ const createForm = ref({
   trial_days: 0, max_users: 10, is_active: true, is_popular: false,
 })
 
-const totalTenants = computed(() =>
-  plans.value.reduce((sum, p) => sum + (p.subscriptions_count ?? 0), 0)
-)
 
 onMounted(async () => {
   await Promise.all([fetchPlans(), fetchAvailableModules(), fetchFeatureTemplates()])
@@ -122,7 +125,7 @@ async function saveDetails() {
     const idx = plans.value.findIndex(p => p.id === activePlan.value.id)
     if (idx > -1) plans.value[idx] = { ...plans.value[idx], ...updated }
   } catch (e: any) {
-    alert(e?.response?.data?.message ?? 'Failed to save plan')
+    toast.error(e?.response?.data?.message ?? 'Failed to save plan')
   } finally {
     formLoading.value = false
   }
@@ -154,8 +157,8 @@ async function saveModules() {
       activePlan.value = detail
       selectedModules.value = (detail.plan_modules ?? []).map((pm: any) => pm.module_id)
     }
-  } catch (e) {
-    alert('Failed to save modules')
+  } catch {
+    toast.error('Failed to save modules')
   } finally {
     formLoading.value = false
   }
@@ -193,7 +196,7 @@ async function saveFeature(feature: any) {
       Object.assign(feature, res.data.feature ?? {}, { _editing: false })
     }
   } catch (e: any) {
-    alert(e?.response?.data?.message ?? 'Failed to save feature')
+    toast.error(e?.response?.data?.message ?? 'Failed to save feature')
   } finally {
     featureLoading.value = false
   }
@@ -201,13 +204,13 @@ async function saveFeature(feature: any) {
 
 async function deleteFeature(feature: any, idx: number) {
   if (!feature.id) { features.value.splice(idx, 1); return }
-  if (!confirm(`Delete feature "${feature.name}"?`)) return
+  if (!await dialog('Delete', `Delete feature "${feature.name}"?`)) return
   featureLoading.value = true
   try {
     await api.delete(`/admin/plans/${activePlan.value.id}/features/${feature.id}`)
     features.value.splice(idx, 1)
-  } catch (e) {
-    alert('Failed to delete feature')
+  } catch {
+    toast.error('Failed to delete feature')
   } finally {
     featureLoading.value = false
   }
@@ -222,20 +225,20 @@ async function createPlan() {
     if (res.data.plan) openPlan(res.data.plan)
     createForm.value = { name: '', description: '', price: 0, duration: 1, durationtype: 'month', billing_cycle: 'monthly', trial_days: 0, max_users: 10, is_active: true, is_popular: false }
   } catch (e: any) {
-    alert(e?.response?.data?.message ?? 'Failed to create plan')
+    toast.error(e?.response?.data?.message ?? 'Failed to create plan')
   } finally {
     formLoading.value = false
   }
 }
 
 async function deletePlan(planId: number) {
-  if (!confirm('Delete this plan? This cannot be undone.')) return
+  if (!await dialog('Delete', 'Delete this plan? This cannot be undone.')) return
   try {
     await api.delete(`/admin/plans/${planId}`)
     if (activePlan.value?.id === planId) activePlan.value = null
     await fetchPlans()
   } catch (e: any) {
-    alert(e?.response?.data?.message ?? 'Failed to delete plan')
+    toast.error(e?.response?.data?.message ?? 'Failed to delete plan')
   }
 }
 </script>

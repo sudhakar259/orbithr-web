@@ -1,10 +1,41 @@
 <template>
   <div class="ef-wrap">
-    <form @submit.prevent="submit" class="ef-form">
 
-      <!-- Basic Information -->
-      <div class="ef-section">
-        <h2 class="ef-section-title">Basic Information</h2>
+    <!-- Step tabs -->
+    <div class="ef-tabs">
+      <button
+        v-for="(tab, i) in tabs"
+        :key="i"
+        type="button"
+        class="ef-tab"
+        :class="{ 'ef-tab--active': activeTab === i, 'ef-tab--done': i < activeTab }"
+        @click="goTo(i)"
+      >
+        <span class="ef-tab-num">
+          <svg v-if="i < activeTab" width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <template v-else>{{ i + 1 }}</template>
+        </span>
+        <span class="ef-tab-label">{{ tab }}</span>
+      </button>
+    </div>
+
+    <form @submit.prevent="submit" class="ef-form" novalidate>
+
+      <!-- ── Step 0: Basic Information ───────────────────────────────── -->
+      <div v-show="activeTab === 0" class="ef-panel">
+        <div class="ef-panel-head">
+          <div class="ef-panel-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ef-panel-title">Basic Information</div>
+            <div class="ef-panel-sub">Name, contact details and account email</div>
+          </div>
+        </div>
         <div class="ef-grid">
           <div class="ef-field">
             <label class="ef-label">First Name <span class="req">*</span></label>
@@ -36,23 +67,33 @@
         </div>
       </div>
 
-      <!-- Employment Details -->
-      <div class="ef-section">
-        <h2 class="ef-section-title">Employment Details</h2>
+      <!-- ── Step 1: Employment Details ─────────────────────────────── -->
+      <div v-show="activeTab === 1" class="ef-panel">
+        <div class="ef-panel-head">
+          <div class="ef-panel-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M6 6V5a3 3 0 016 0v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 012 0v1H8V5zm1 5a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1z" clip-rule="evenodd"/>
+              <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ef-panel-title">Employment Details</div>
+            <div class="ef-panel-sub">Role, department, schedule and reporting structure</div>
+          </div>
+        </div>
         <div class="ef-grid">
           <div class="ef-field">
-            <label class="ef-label">Employee Code <span class="req">*</span></label>
-            <input
-              v-model="form.employee_id"
-              type="text"
-              required
-              class="ef-input"
-              :class="{ 'ef-input--locked': isEdit }"
-              placeholder="EMP001"
-              :disabled="isEdit"
-            />
-            <p v-if="isEdit" class="ef-hint">Employee code is immutable.</p>
-            <p v-if="errors.employee_id" class="ef-err">{{ errors.employee_id }}</p>
+            <label class="ef-label">Employee Code</label>
+            <div v-if="isEdit" class="ef-code-badge ef-code-badge--locked">
+              {{ form.employee_id || '—' }}
+            </div>
+            <div v-else class="ef-code-badge ef-code-badge--auto">
+              <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0">
+                <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+              </svg>
+              <span>Auto-generated on save<template v-if="employeePrefix"> — preview: <strong>{{ employeePrefix }}0001</strong></template></span>
+            </div>
+            <p class="ef-hint">Employee code is auto-generated and cannot be edited.</p>
           </div>
           <div class="ef-field">
             <label class="ef-label">Designation</label>
@@ -100,52 +141,55 @@
               <option value="Inactive">Inactive</option>
             </select>
           </div>
+          <div class="ef-field">
+            <label class="ef-label">Reporting Manager</label>
+            <select v-model="form.manager_id" class="ef-input">
+              <option :value="null">No Manager</option>
+              <option v-for="emp in managers" :key="emp.id" :value="emp.id">
+                {{ emp.first_name }} {{ emp.last_name }}<template v-if="emp.designation"> — {{ emp.designation }}</template>
+              </option>
+            </select>
+          </div>
+          <div class="ef-field">
+            <label class="ef-label">Team Lead</label>
+            <select v-model="form.team_lead_id" class="ef-input">
+              <option :value="null">No Team Lead</option>
+              <option v-for="emp in teamLeads" :key="emp.id" :value="emp.id">
+                {{ emp.first_name }} {{ emp.last_name }}<template v-if="emp.designation"> — {{ emp.designation }}</template>
+              </option>
+            </select>
+          </div>
         </div>
-
-        <!-- Manager -->
-        <div class="ef-field ef-field--full">
-          <label class="ef-label">Reporting Manager</label>
-          <select v-model="form.manager_id" class="ef-input">
-            <option :value="null">No Manager</option>
-            <option v-for="emp in managers" :key="emp.id" :value="emp.id">
-              {{ emp.first_name }} {{ emp.last_name }}
-              <template v-if="emp.designation"> — {{ emp.designation }}</template>
-            </option>
-          </select>
-        </div>
-
-        <!-- Team Lead -->
-        <div class="ef-field ef-field--full">
-          <label class="ef-label">Team Lead</label>
-          <select v-model="form.team_lead_id" class="ef-input">
-            <option :value="null">No Team Lead</option>
-            <option v-for="emp in teamLeads" :key="emp.id" :value="emp.id">
-              {{ emp.first_name }} {{ emp.last_name }}
-              <template v-if="emp.designation"> — {{ emp.designation }}</template>
-            </option>
-          </select>
-        </div>
-
         <!-- Working Days -->
-        <div class="ef-field ef-field--full">
+        <div class="ef-field" style="margin-top:4px">
           <label class="ef-label">Working Days</label>
           <div class="days-grid">
-            <label v-for="(day, idx) in workDays" :key="idx" class="day-chip" :class="{ 'day-chip--on': form.working_days.includes(idx) }">
-              <input
-                type="checkbox"
-                class="day-chk"
-                :checked="form.working_days.includes(idx)"
-                @change="toggleWorkingDay(idx)"
-              />
+            <label
+              v-for="(day, idx) in workDays"
+              :key="idx"
+              class="day-chip"
+              :class="{ 'day-chip--on': form.working_days.includes(idx) }"
+            >
+              <input type="checkbox" class="day-chk" :checked="form.working_days.includes(idx)" @change="toggleWorkingDay(idx)" />
               {{ day.slice(0, 3) }}
             </label>
           </div>
         </div>
       </div>
 
-      <!-- Personal Information -->
-      <div class="ef-section">
-        <h2 class="ef-section-title">Personal Information</h2>
+      <!-- ── Step 2: Personal Information ───────────────────────────── -->
+      <div v-show="activeTab === 2" class="ef-panel">
+        <div class="ef-panel-head">
+          <div class="ef-panel-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ef-panel-title">Personal Information</div>
+            <div class="ef-panel-sub">Date of birth, gender, address and nationality</div>
+          </div>
+        </div>
         <div class="ef-grid">
           <div class="ef-field">
             <label class="ef-label">Date of Birth</label>
@@ -160,20 +204,33 @@
               <option>Other</option>
             </select>
           </div>
-          <div class="ef-field ef-field--full">
-            <label class="ef-label">Address</label>
-            <textarea v-model="form.address" class="ef-input ef-textarea" rows="2" placeholder="Street address"></textarea>
-          </div>
           <div class="ef-field">
             <label class="ef-label">Nationality</label>
             <input v-model="form.nationality" type="text" class="ef-input" placeholder="Indian" />
           </div>
+          <div class="ef-field ef-field--full">
+            <label class="ef-label">Address</label>
+            <textarea v-model="form.address" class="ef-input ef-textarea" rows="2" placeholder="Street address"></textarea>
+          </div>
         </div>
       </div>
 
-      <!-- Banking Information -->
-      <div class="ef-section">
-        <h2 class="ef-section-title">Banking Information</h2>
+      <!-- ── Step 3: Banking & Emergency ────────────────────────────── -->
+      <div v-show="activeTab === 3" class="ef-panel">
+        <div class="ef-panel-head">
+          <div class="ef-panel-icon">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
+              <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ef-panel-title">Banking & Emergency</div>
+            <div class="ef-panel-sub">Bank account details and emergency contact</div>
+          </div>
+        </div>
+
+        <div class="ef-subsection-label">Bank Details</div>
         <div class="ef-grid">
           <div class="ef-field">
             <label class="ef-label">Bank Name</label>
@@ -192,11 +249,9 @@
             <input v-model="form.pan_number" type="text" class="ef-input" placeholder="AAAPA1234A" />
           </div>
         </div>
-      </div>
 
-      <!-- Emergency Contact -->
-      <div class="ef-section">
-        <h2 class="ef-section-title">Emergency Contact</h2>
+        <div class="ef-divider"></div>
+        <div class="ef-subsection-label">Emergency Contact</div>
         <div class="ef-grid">
           <div class="ef-field">
             <label class="ef-label">Name</label>
@@ -218,18 +273,27 @@
 
       <!-- Actions -->
       <div class="ef-actions">
-        <button type="button" class="ef-btn ef-btn--ghost" @click="$emit('cancel')">Cancel</button>
-        <button type="submit" class="ef-btn ef-btn--primary" :disabled="loading">
-          {{ loading ? 'Saving…' : isEdit ? 'Update Employee' : 'Create Employee' }}
+        <button type="button" class="ef-btn ef-btn--ghost" @click="activeTab > 0 ? activeTab-- : $emit('cancel')">
+          {{ activeTab > 0 ? '← Back' : 'Cancel' }}
         </button>
+        <div class="ef-actions-right">
+          <button type="submit" class="ef-btn ef-btn--save" :disabled="loading">
+            {{ loading ? 'Saving…' : isEdit ? 'Update Employee' : 'Save Employee' }}
+          </button>
+          <button v-if="activeTab < tabs.length - 1" type="button" class="ef-btn ef-btn--primary" @click="goTo(activeTab + 1)">
+            Next →
+          </button>
+        </div>
       </div>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { reactive, ref, computed, onMounted } from 'vue'
 import { updateEmployee, createEmployee, listEmployees } from '@/services/employee'
+import api from '@/services/api'
 
 interface EmployeeData {
   id?: number | string
@@ -277,10 +341,18 @@ const emit = defineEmits<{
   (e: 'cancel'): void
 }>()
 
+const tabs = ['Basic Info', 'Employment', 'Personal', 'Banking & Emergency']
+const activeTab = ref(0)
+
+function goTo(i: number) {
+  activeTab.value = i
+}
+
 const workDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const loading = ref(false)
 const generalError = ref('')
 const managers = ref<EmployeeData[]>([])
+const employeePrefix = ref('EMP')
 const isEdit = computed(() => !!props.employeeId)
 
 const form = reactive({
@@ -314,7 +386,6 @@ const form = reactive({
 
 const errors = reactive<Record<string, string>>({})
 
-// Team leads are employees with role team_lead or manager
 const teamLeads = computed(() =>
   managers.value.filter(e =>
     ['team_lead', 'manager', 'admin', 'hr_manager'].includes((e.role || '').toLowerCase())
@@ -334,10 +405,26 @@ async function fetchManagers() {
   } catch { /* ignore */ }
 }
 
+async function fetchPrefix() {
+  try {
+    const { data } = await api.get('/system/settings')
+    const settings: Record<string, string> = Array.isArray(data)
+      ? Object.fromEntries(data.map((s: { key: string; value: string }) => [s.key, s.value]))
+      : data
+    employeePrefix.value = settings['employee_id_prefix'] || 'EMP'
+  } catch { /* ignore */ }
+}
+
 async function submit() {
-  loading.value = true
   generalError.value = ''
   Object.keys(errors).forEach(k => delete errors[k])
+
+  // Manual validation for required fields (native validation disabled via novalidate)
+  if (!form.first_name?.trim()) { errors.first_name = 'First name is required'; activeTab.value = 0; return }
+  if (!form.email?.trim())      { errors.email = 'Email is required'; activeTab.value = 0; return }
+  if (!form.phone?.trim())      { errors.phone = 'Phone is required'; activeTab.value = 0; return }
+
+  loading.value = true
   try {
     const payload = { ...form }
     if (isEdit.value && props.employeeId) {
@@ -346,96 +433,157 @@ async function submit() {
       await createEmployee(payload)
     }
     emit('submit', form)
-  } catch (e) {
-    const d = (e as { response?: { data?: { errors?: Record<string, string>; message?: string } } })?.response?.data
-    if (d?.errors) Object.assign(errors, d.errors)
-    else generalError.value = d?.message || 'An error occurred'
+  } catch (e: any) {
+    const d = e?.response?.data
+    if (d?.errors) {
+      Object.assign(errors, d.errors)
+      // Jump to first tab that has an error
+      const errorKey = Object.keys(d.errors)[0]
+      const tabMap: Record<string, number> = {
+        first_name: 0, last_name: 0, email: 0, phone: 0,
+        employee_id: 1, designation: 1, department: 1, role: 1, hire_date: 1, employment_type: 1, location: 1, status: 1,
+        date_of_birth: 2, gender: 2, address: 2, nationality: 2,
+        bank_name: 3, account_number: 3, ifsc_code: 3, pan_number: 3,
+        emergency_contact_name: 3, emergency_contact_phone: 3, emergency_contact_relationship: 3,
+      }
+      if (errorKey && tabMap[errorKey] !== undefined) activeTab.value = tabMap[errorKey]
+    } else {
+      generalError.value = d?.message || 'An error occurred'
+    }
   } finally {
     loading.value = false
   }
 }
 
-// Apply initialData synchronously so the initial render is already correct
 if (props.initialData && Object.keys(props.initialData).length > 0) {
   Object.assign(form, props.initialData)
 }
 
 onMounted(() => {
   fetchManagers()
+  fetchPrefix()
 })
 </script>
 
 <style scoped>
-.ef-wrap  { color: var(--text); }
-.ef-form  { display: flex; flex-direction: column; gap: 20px; }
+.ef-wrap { color: var(--text); display: flex; flex-direction: column; gap: 0; }
 
-.ef-section {
-  background: var(--surface);
+/* ── Tabs ── */
+.ef-tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border, rgba(255,255,255,.08));
+  margin-bottom: 20px; overflow-x: auto;
+}
+.ef-tab {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 18px; font-size: 13px; font-weight: 500;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); cursor: pointer; white-space: nowrap;
+  transition: all .15s; margin-bottom: -1px;
+}
+.ef-tab:hover { color: var(--text); }
+.ef-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
+.ef-tab--done { color: var(--green, #36D399); }
+.ef-tab-num {
+  width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 700;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  flex-shrink: 0;
+}
+.ef-tab--active .ef-tab-num { background: rgba(79,126,255,.18); border-color: var(--accent); color: var(--accent); }
+.ef-tab--done  .ef-tab-num { background: rgba(54,211,153,.18); border-color: var(--green, #36D399); color: var(--green, #36D399); }
+.ef-tab-label { }
+
+/* ── Form ── */
+.ef-form { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Panel ── */
+.ef-panel {
+  background: var(--surface, #141720);
   border: 1px solid rgba(255,255,255,.06);
   border-radius: 12px;
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
-.ef-section-title { font-size: 0.95rem; font-weight: 600; color: var(--text); padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.ef-panel-head { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.ef-panel-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  background: rgba(79,126,255,.12); border: 1px solid rgba(79,126,255,.2);
+  display: grid; place-items: center; color: var(--accent);
+}
+.ef-panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.ef-panel-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
-.ef-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-@media (max-width: 640px) { .ef-grid { grid-template-columns: 1fr; } }
+.ef-subsection-label {
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .6px;
+}
+.ef-divider { height: 1px; background: rgba(255,255,255,.06); margin: 4px 0; }
+
+/* ── Grid ── */
+.ef-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+@media (max-width: 600px) { .ef-grid { grid-template-columns: 1fr; } }
 
 .ef-field { display: flex; flex-direction: column; gap: 5px; }
 .ef-field--full { grid-column: 1 / -1; }
 
-.ef-label { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
-.req { color: var(--red); }
+/* ── Labels / inputs ── */
+.ef-label { font-size: 12px; font-weight: 500; color: var(--muted); }
+.req { color: var(--red, #FF6B6B); }
 
 .ef-input {
-  background: var(--surface2);
+  background: var(--surface2, #1C2030);
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 7px;
-  padding: 8px 12px;
-  font-size: 0.875rem;
-  color: var(--text);
-  outline: none;
-  transition: border-color .15s;
-  width: 100%;
-  box-sizing: border-box;
+  border-radius: 7px; padding: 8px 12px;
+  font-size: 13px; color: var(--text);
+  outline: none; transition: border-color .15s;
+  width: 100%; box-sizing: border-box;
 }
-.ef-input:focus { border-color: var(--accent); }
-.ef-input--locked { opacity: .5; cursor: not-allowed; }
-.ef-input:disabled { opacity: .5; cursor: not-allowed; }
+.ef-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,126,255,.1); }
+.ef-input--locked, .ef-input:disabled { opacity: .5; cursor: not-allowed; }
 .ef-textarea { resize: vertical; min-height: 64px; }
 
-.ef-hint { font-size: 0.75rem; color: var(--muted); }
-.ef-err  { font-size: 0.75rem; color: var(--red); }
+.ef-hint { font-size: 12px; color: var(--muted); }
+.ef-err  { font-size: 12px; color: var(--red, #FF6B6B); }
 
-/* Working days */
-.days-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+/* ── Working days ── */
+.days-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .day-chip {
   display: flex; align-items: center; gap: 4px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  background: var(--surface2);
-  border: 1px solid rgba(255,255,255,.08);
-  color: var(--muted);
-  user-select: none;
-  transition: all .12s;
+  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  cursor: pointer; user-select: none; transition: all .12s;
+  background: var(--surface2, #1C2030); border: 1px solid rgba(255,255,255,.08); color: var(--muted);
 }
 .day-chip--on { background: rgba(79,126,255,.18); border-color: var(--accent); color: var(--accent); }
 .day-chk { display: none; }
 
-/* Error box */
-.ef-error-box { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.25); border-radius: 8px; padding: 12px 16px; font-size: 0.875rem; color: var(--red); }
+/* ── Error box ── */
+.ef-error-box {
+  background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.25);
+  border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--red, #FF6B6B);
+}
 
-/* Actions */
-.ef-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.ef-btn { display: inline-flex; align-items: center; border-radius: 8px; padding: 9px 20px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; }
+/* ── Actions ── */
+.ef-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ef-actions-right { display: flex; gap: 8px; }
+.ef-btn {
+  display: inline-flex; align-items: center; border-radius: 8px;
+  padding: 9px 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: none;
+}
 .ef-btn:disabled { opacity: .5; cursor: not-allowed; }
 .ef-btn--primary { background: var(--accent); color: #fff; }
 .ef-btn--primary:not(:disabled):hover { opacity: .88; }
-.ef-btn--ghost { background: var(--surface2); border: 1px solid rgba(255,255,255,.1); color: var(--text); }
-.ef-btn--ghost:hover { background: var(--surface3); }
+.ef-btn--save {
+  background: var(--surface2, #1C2030);
+  border: 1px solid rgba(79,126,255,.35);
+  color: var(--accent);
+}
+.ef-btn--save:not(:disabled):hover { background: rgba(79,126,255,.12); }
+.ef-btn--ghost {
+  background: var(--surface2, #1C2030);
+  border: 1px solid rgba(255,255,255,.1);
+  color: var(--text);
+}
+.ef-btn--ghost:hover { background: var(--surface3, #222840); }
 </style>

@@ -2,6 +2,11 @@
 import { ref, computed, onMounted, defineOptions } from 'vue'
 import { useRouter } from 'vue-router'
 import { listEmployees, deleteEmployee } from '@/services/employee'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
+
+const { confirm: dialog } = useConfirm()
+const toast = useToast()
 
 defineOptions({ name: 'EmployeesPage' })
 
@@ -92,19 +97,19 @@ function clearSelection() { selected.value = {}; selectAll.value = false }
 
 async function bulkDelete() {
   if (!selectedCount.value) return
-  if (!confirm(`Delete ${selectedCount.value} selected employees? This cannot be undone.`)) return
+  if (!await dialog('Delete', `Delete ${selectedCount.value} selected employees? This cannot be undone.`)) return
   loading.value = true
   try {
     for (const id of selectedIds.value) await deleteEmployee(id)
     await load(); clearSelection()
-  } catch { alert('Failed to delete selected employees') }
+  } catch { toast.error('Failed to delete selected employees') }
   finally { loading.value = false }
 }
 
 async function handleDelete(emp: Employee) {
-  if (!confirm(`Delete ${emp.first_name} ${emp.last_name}?`)) return
+  if (!await dialog('Delete', `Delete ${emp.first_name} ${emp.last_name}?`)) return
   try { await deleteEmployee(emp.id); await load() }
-  catch { alert('Failed to delete employee') }
+  catch { toast.error('Failed to delete employee') }
 }
 
 function normalizeEmployee(data: Record<string, unknown>): Employee {
@@ -144,7 +149,6 @@ onMounted(load)
     <!-- Header -->
     <div class="emp-header">
       <div>
-        <h1 class="emp-title">Employees</h1>
         <p class="emp-subtitle">{{ filteredEmployees.length }} total &nbsp;·&nbsp; {{ employees.filter(e => e.status === 'Active').length }} active</p>
       </div>
       <div style="display:flex;gap:0.5rem;align-items:center;">
@@ -323,7 +327,15 @@ onMounted(load)
   text-decoration: none;
 }
 .btn-accent:hover { opacity: 0.88; }
-.btn-icon { width: 16px; height: 16px; }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  background: var(--surface2); color: var(--dim);
+  border: 1px solid var(--border-hi); border-radius: 8px; padding: 8px 16px;
+  font-size: 0.875rem; font-weight: 500; cursor: pointer;
+  text-decoration: none;
+}
+.btn-secondary:hover { background: var(--surface3); color: var(--text); }
+.btn-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
 /* Filters */
 .filters-bar { background: var(--surface); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }

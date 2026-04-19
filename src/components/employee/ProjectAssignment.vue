@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, reactive, computed } from 'vue'
 import api from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 const props = defineProps<{ employeeId: number }>()
 
@@ -33,7 +36,7 @@ async function assignProject() {
   } finally { assignLoading.value = false }
 }
 async function removeProject(projectId: number) {
-  if (!confirm('Remove this project assignment?')) return
+  if (!await dialog('Remove', 'Remove this project assignment?')) return
   removeLoading.value = true
   try { await api.delete(`/employees/${props.employeeId}/remove-project/${projectId}`); await loadAssigned() } catch {}
   finally { removeLoading.value = false }

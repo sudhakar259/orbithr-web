@@ -2,6 +2,9 @@
 defineOptions({ name: 'RecruitmentPipelineSettings' })
 import { ref, onMounted } from 'vue'
 import { recruitmentService, type CandidatePipeline } from '@/services/recruitmentService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 const loading = ref(true)
 const pipelines = ref<CandidatePipeline[]>([])
@@ -58,7 +61,7 @@ const savePipeline = async () => {
 }
 
 const deletePipeline = async (id: number) => {
-  if (!confirm('Delete this pipeline?')) return
+  if (!await dialog('Delete', 'Delete this pipeline?')) return
   try {
     await recruitmentService.deletePipeline(id)
     await load()
@@ -83,7 +86,7 @@ const addStage = async (pipelineId: number) => {
 }
 
 const deleteStage = async (pipelineId: number, stageId: number) => {
-  if (!confirm('Remove this stage?')) return
+  if (!await dialog('Remove', 'Remove this stage?')) return
   try {
     await recruitmentService.deletePipelineStage(pipelineId, stageId)
     await load()

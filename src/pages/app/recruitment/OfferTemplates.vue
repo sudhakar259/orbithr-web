@@ -3,6 +3,9 @@ defineOptions({ name: 'RecruitmentOfferTemplates' })
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { recruitmentService, type OfferTemplate } from '@/services/recruitmentService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 const router = useRouter()
 const loading = ref(true)
@@ -69,7 +72,7 @@ const save = async () => {
 }
 
 const deleteTemplate = async (id: number) => {
-  if (!confirm('Delete this template?')) return
+  if (!await dialog('Delete', 'Delete this template?')) return
   try {
     await recruitmentService.deleteOfferTemplate(id)
     await load()

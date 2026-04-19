@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import api from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 interface DomainRequest {
   id: number
@@ -102,7 +105,7 @@ async function load() {
 }
 
 async function approve(row: DomainRequest) {
-  if (!confirm(`Approve workspace for "${row.name}" (${row.domain_name})?`)) return
+  if (!await dialog('Approve', `Approve workspace for "${row.name}" (${row.domain_name})?`)) return
   actionId.value = row.id
   try {
     const { data } = await api.post(`requested-domain/${row.id}/approve`)
@@ -133,7 +136,7 @@ async function confirmReject() {
 }
 
 async function destroy(row: DomainRequest) {
-  if (!confirm(`Permanently delete request from "${row.name}"? This cannot be undone.`)) return
+  if (!await dialog('Delete', `Permanently delete request from "${row.name}"? This cannot be undone.`)) return
   actionId.value = row.id
   try {
     await api.delete(`requested-domain/${row.id}`)
@@ -143,7 +146,7 @@ async function destroy(row: DomainRequest) {
 
 async function bulkApprove() {
   if (selectedIds.value.size === 0) return
-  if (!confirm(`Approve ${selectedIds.value.size} selected request(s)?`)) return
+  if (!await dialog('Approve', `Approve ${selectedIds.value.size} selected request(s)?`)) return
   await Promise.all(Array.from(selectedIds.value).map(id => api.post(`requested-domain/${id}/approve`)))
   await load()
 }
@@ -159,7 +162,7 @@ async function bulkReject() {
 
 async function bulkDelete() {
   if (selectedIds.value.size === 0) return
-  if (!confirm(`Delete ${selectedIds.value.size} selected request(s)?`)) return
+  if (!await dialog('Delete', `Delete ${selectedIds.value.size} selected request(s)?`)) return
   await Promise.all(Array.from(selectedIds.value).map(id => api.delete(`requested-domain/${id}`)))
   await load()
 }
@@ -196,7 +199,6 @@ onMounted(() => { if (isAuthenticated()) load() })
     <!-- ── Header ───────────────────────────────────────────── -->
     <div class="dr-header">
       <div>
-        <h1 class="dr-title">Domain Requests</h1>
         <p class="dr-sub">Review and approve incoming tenant workspace requests.</p>
       </div>
       <div class="dr-header-right">

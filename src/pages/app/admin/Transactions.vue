@@ -83,7 +83,6 @@ const columns = [
   <section class="space-y-6 p-6">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-semibold text-slate-900">Transactions</h1>
         <p class="mt-1 text-slate-600">View platform transactions.</p>
       </div>
       <div class="flex items-center gap-3">

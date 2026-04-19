@@ -4,6 +4,9 @@ defineOptions({ name: 'ClaimDetail' })
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import expenseService, { type ExpenseClaim } from '@/services/expenseService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 const route = useRoute()
 const router = useRouter()
@@ -70,7 +73,7 @@ async function loadClaim() {
 }
 
 async function handleSubmit() {
-  if (!confirm('Submit this claim for approval?')) return
+  if (!await dialog('Confirm', 'Submit this claim for approval?')) return
   actionLoading.value = true
   try {
     await expenseService.submitClaim(claimId.value)

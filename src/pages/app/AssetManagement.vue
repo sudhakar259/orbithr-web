@@ -7,6 +7,9 @@ import SearchInput   from '@/components/ui/SearchInput.vue'
 import EmptyState    from '@/components/ui/EmptyState.vue'
 import Modal         from '@/components/ui/Modal.vue'
 import { useToast }  from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 interface Asset {
   id: number | string
@@ -105,7 +108,7 @@ async function returnAsset(id: number | string) {
 }
 
 async function deleteAsset(id: number | string) {
-  if (!confirm('Delete this asset record?')) return
+  if (!await dialog('Delete', 'Delete this asset record?')) return
   try { await api.delete(`/assets/${id}`) } catch {}
   assets.value = assets.value.filter(a => a.id !== id)
   toast.success('Asset deleted.')
@@ -115,6 +118,7 @@ const na = reactive({ name: '', type: 'Laptop', brand: '', serial: '', value: 0,
 
 async function addAsset() {
   if (!na.name || !na.serial) return
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payload: any = {
     name: na.name, type: na.type, brand: na.brand,
     serial_number: na.serial, value: na.value,

@@ -65,7 +65,6 @@ watch([activeTab, filters], fetchData, { deep: true, immediate: true })
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">Statutory Compliance</h1>
         <p class="mt-1 text-sm text-gray-400">PF, ESI, Professional Tax, and TDS reports</p>
       </div>
       <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg inline-flex items-center gap-2" @click="download">

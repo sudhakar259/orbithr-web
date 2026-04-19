@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppSidebar from './AppSidebar.vue'
 import AppTopbar from './AppTopbar.vue'
+import AiChatbot from './AiChatbot.vue'
 import { RouterView } from 'vue-router'
 </script>
 
@@ -13,6 +14,7 @@ import { RouterView } from 'vue-router'
         <RouterView />
       </main>
     </div>
+    <AiChatbot />
   </div>
 </template>
 
@@ -20,7 +22,7 @@ import { RouterView } from 'vue-router'
 .shell {
   display: flex;
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--ds-bg, var(--bg));
 }
 .shell-main {
   flex: 1;
@@ -34,5 +36,7 @@ import { RouterView } from 'vue-router'
   flex: 1;
   padding: 28px 32px;
   overflow-y: auto;
+  background: var(--ds-bg, var(--bg));
+  color: var(--ds-text, var(--text));
 }
 </style>

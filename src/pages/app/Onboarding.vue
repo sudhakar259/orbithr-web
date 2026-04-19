@@ -1,8 +1,11 @@
 <script setup lang="ts">
-defineOptions({ name: 'Onboarding' })
+defineOptions({ name: 'OnboardingPage' })
 
 import { ref, onMounted } from 'vue'
 import api from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 type Tab = 'checklist' | 'employees'
 const activeTab = ref<Tab>('checklist')
@@ -63,7 +66,7 @@ async function saveTask() {
 }
 
 async function deleteTask(id: number) {
-  if (!confirm('Delete this task?')) return
+  if (!await dialog('Delete', 'Delete this task?')) return
   try {
     await api.delete(`/onboarding/tasks/${id}`)
     await fetchTasks()
@@ -174,7 +177,6 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">Onboarding</h1>
         <p class="mt-1 text-sm text-gray-400">Manage onboarding checklists and track employee progress</p>
       </div>
     </div>

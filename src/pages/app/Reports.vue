@@ -68,7 +68,6 @@ watch([activeTab, filters], fetchReport, { deep: true, immediate: true })
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">HR Reports</h1>
         <p class="mt-1 text-sm text-gray-400">View and export reports across departments</p>
       </div>
       <button

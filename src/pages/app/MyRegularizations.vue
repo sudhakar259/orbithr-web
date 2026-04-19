@@ -4,7 +4,6 @@
     <!-- Header -->
     <div class="page-header">
       <div>
-        <h1 class="page-title">My Regularization Requests</h1>
         <p class="page-sub">Track the status of your attendance regularization requests</p>
       </div>
     </div>

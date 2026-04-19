@@ -1,6 +1,14 @@
 import { ref, computed } from 'vue';
 import { leaveService, type LeaveRequest, type LeaveBalance, type LeaveType, type Holiday, type LeaveDashboard } from '@/services/leave';
 
+function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const response = (err as { response?: { data?: { message?: string } } }).response;
+    return response?.data?.message || fallback;
+  }
+  return fallback;
+}
+
 export function useLeave() {
   const leaveRequests = ref<LeaveRequest[]>([]);
   const leaveBalances = ref<LeaveBalance[]>([]);
@@ -43,8 +51,8 @@ export function useLeave() {
       const response = await leaveService.getLeaveRequests(params);
       leaveRequests.value = response.data;
       return response;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to fetch leave requests';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to fetch leave requests');
       throw err;
     } finally {
       loading.value = false;
@@ -62,6 +70,11 @@ export function useLeave() {
     emergency_leave?: boolean;
     document?: File;
   }) => {
+    if (new Date(data.start_date) > new Date(data.end_date)) {
+      error.value = 'Start date must be on or before end date';
+      throw new Error(error.value);
+    }
+
     loading.value = true;
     error.value = null;
 
@@ -69,8 +82,8 @@ export function useLeave() {
       const newRequest = await leaveService.createLeaveRequest(data);
       leaveRequests.value.unshift(newRequest);
       return newRequest;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to create leave request';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to create leave request');
       throw err;
     } finally {
       loading.value = false;
@@ -88,8 +101,8 @@ export function useLeave() {
         leaveRequests.value[index] = updatedRequest;
       }
       return updatedRequest;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to update leave request';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to update leave request');
       throw err;
     } finally {
       loading.value = false;
@@ -107,8 +120,8 @@ export function useLeave() {
         leaveRequests.value[index].status = 'cancelled';
         leaveRequests.value[index].rejection_reason = reason;
       }
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to cancel leave request';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to cancel leave request');
       throw err;
     } finally {
       loading.value = false;
@@ -126,8 +139,8 @@ export function useLeave() {
         leaveRequests.value[index] = updatedRequest;
       }
       return updatedRequest;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to approve leave request';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to approve leave request');
       throw err;
     } finally {
       loading.value = false;
@@ -145,8 +158,8 @@ export function useLeave() {
         leaveRequests.value[index] = updatedRequest;
       }
       return updatedRequest;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to reject leave request';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to reject leave request');
       throw err;
     } finally {
       loading.value = false;
@@ -164,8 +177,8 @@ export function useLeave() {
       } else {
         leaveBalances.value = await leaveService.getMyLeaveBalances();
       }
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to fetch leave balances';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to fetch leave balances');
       throw err;
     } finally {
       loading.value = false;
@@ -179,8 +192,8 @@ export function useLeave() {
 
     try {
       leaveTypes.value = await leaveService.getLeaveTypes({ active_only: activeOnly });
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to fetch leave types';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to fetch leave types');
       throw err;
     } finally {
       loading.value = false;
@@ -198,8 +211,8 @@ export function useLeave() {
 
     try {
       holidays.value = await leaveService.getHolidays(params);
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to fetch holidays';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to fetch holidays');
       throw err;
     } finally {
       loading.value = false;
@@ -213,8 +226,8 @@ export function useLeave() {
 
     try {
       dashboard.value = await leaveService.getDashboard();
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to fetch dashboard data';
+    } catch (err: unknown) {
+      error.value = getApiErrorMessage(err, 'Failed to fetch dashboard data');
       throw err;
     } finally {
       loading.value = false;

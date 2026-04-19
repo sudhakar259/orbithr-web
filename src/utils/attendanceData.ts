@@ -15,8 +15,10 @@ export interface WeekOff {
   name: string
 }
 
-// Company-wide holidays (static data)
+// Company-wide holidays (static fallback — loaded from API via Holiday Calendar module)
+// HRMS-263: extended to cover 2025 and 2026; replace with API data when available
 export const COMPANY_HOLIDAYS: Holiday[] = [
+  // 2025
   { date: '2025-01-26', name: 'Republic Day', type: 'national' },
   { date: '2025-03-08', name: 'Maha Shivaratri', type: 'national' },
   { date: '2025-03-25', name: 'Holi', type: 'national' },
@@ -33,8 +35,21 @@ export const COMPANY_HOLIDAYS: Holiday[] = [
   { date: '2025-10-02', name: 'Dussehra', type: 'national' },
   { date: '2025-10-20', name: 'Diwali', type: 'national' },
   { date: '2025-10-21', name: 'Diwali (Day 2)', type: 'national' },
-  { date: '2025-11-11', name: 'Guru Nanak Jayanti', type: 'optional' },
+  { date: '2025-11-05', name: 'Guru Nanak Jayanti', type: 'optional' },
   { date: '2025-12-25', name: 'Christmas', type: 'national' },
+  // 2026
+  { date: '2026-01-26', name: 'Republic Day', type: 'national' },
+  { date: '2026-02-26', name: 'Maha Shivaratri', type: 'national' },
+  { date: '2026-03-20', name: 'Holi', type: 'national' },
+  { date: '2026-04-03', name: 'Good Friday', type: 'national' },
+  { date: '2026-04-14', name: 'Ambedkar Jayanti', type: 'national' },
+  { date: '2026-05-01', name: 'May Day', type: 'national' },
+  { date: '2026-08-15', name: 'Independence Day', type: 'national' },
+  { date: '2026-10-02', name: 'Gandhi Jayanti', type: 'national' },
+  { date: '2026-10-19', name: 'Dussehra', type: 'national' },
+  { date: '2026-11-08', name: 'Diwali', type: 'national' },
+  { date: '2026-11-24', name: 'Guru Nanak Jayanti', type: 'optional' },
+  { date: '2026-12-25', name: 'Christmas', type: 'national' },
 ]
 
 // Employee-specific week-offs (static data)
@@ -141,7 +156,7 @@ export function isAttendanceLocked(attendanceDate: Date, employeeId: number = 1)
   attendanceDate.setHours(0, 0, 0, 0)
 
   let workingDaysDiff = 0
-  let currentDate = new Date(attendanceDate)
+  const currentDate = new Date(attendanceDate)
 
   while (currentDate < today) {
     const dayOfWeek = currentDate.getDay()
@@ -161,7 +176,7 @@ export function isAttendanceLocked(attendanceDate: Date, employeeId: number = 1)
 // Calculate working days between two dates
 export function countWorkingDays(startDate: Date, endDate: Date, employeeId: number = 1): number {
   let count = 0
-  let currentDate = new Date(startDate)
+  const currentDate = new Date(startDate)
   currentDate.setHours(0, 0, 0, 0)
   endDate = new Date(endDate)
   endDate.setHours(0, 0, 0, 0)

@@ -35,7 +35,6 @@ onMounted(fetchChart)
           </svg>
           Back
         </button>
-        <h1 class="org-title">Organisation Chart</h1>
         <p class="org-subtitle">Visual hierarchy of your team</p>
       </div>
       <div class="org-actions">
@@ -100,25 +99,25 @@ onMounted(fetchChart)
   align-items: center;
   gap: 0.25rem;
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--muted);
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
   margin-bottom: 0.25rem;
 }
-.back-btn:hover { color: #111827; }
+.back-btn:hover { color: var(--text); }
 .back-icon { width: 1rem; height: 1rem; }
 
 .org-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text);
   margin: 0;
 }
 .org-subtitle {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--muted);
   margin: 0.1rem 0 0;
 }
 
@@ -130,28 +129,31 @@ onMounted(fetchChart)
 }
 
 .search-input {
-  border: 1px solid #e5e7eb;
+  background: var(--surface2);
+  border: 1px solid var(--border-hi);
   border-radius: 0.5rem;
   padding: 0.4rem 0.75rem;
   font-size: 0.85rem;
+  color: var(--text);
   outline: none;
   width: 14rem;
 }
-.search-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff; }
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
 
 .refresh-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-hi);
   border-radius: 0.5rem;
-  background: #fff;
+  background: var(--surface2);
   padding: 0.4rem 0.75rem;
   font-size: 0.85rem;
   cursor: pointer;
-  color: #374151;
+  color: var(--dim);
 }
-.refresh-btn:hover { background: #f9fafb; }
+.refresh-btn:hover { background: var(--surface3); color: var(--text); }
 .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .refresh-icon { width: 1rem; height: 1rem; }
 .spin { animation: spin 1s linear infinite; }
@@ -165,16 +167,16 @@ onMounted(fetchChart)
   justify-content: center;
   gap: 0.75rem;
   min-height: 200px;
-  color: #6b7280;
+  color: var(--muted);
   font-size: 0.9rem;
 }
-.state-box--error { color: #dc2626; }
+.state-box--error { color: var(--red); }
 
 .spinner {
   width: 2rem;
   height: 2rem;
-  border: 3px solid #e5e7eb;
-  border-top-color: #6366f1;
+  border: 3px solid var(--border-hi);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

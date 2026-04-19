@@ -1,39 +1,38 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-semibold text-slate-800">Leave Policies</h1>
       <button class="inline-flex items-center rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700" @click="openCreate()">
         New Policy
       </button>
     </div>
 
-    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
+    <div class="overflow-hidden rounded-lg border border-gray-700 bg-gray-800">
+      <table class="min-w-full divide-y divide-gray-700">
+        <thead class="bg-gray-700/50">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Name</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Description</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Auto Accrual</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Accrual Freq</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Active</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Actions</th>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Name</th>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Description</th>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Auto Accrual</th>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Accrual Freq</th>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Active</th>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200">
-          <tr v-for="p in policies" :key="p.id" class="hover:bg-slate-50">
-            <td class="px-4 py-3 font-medium text-slate-800">{{ p.name }}</td>
-            <td class="px-4 py-3 text-slate-600">{{ p.description || '—' }}</td>
-            <td class="px-4 py-3 text-slate-600">{{ p.auto_accrual ? 'Yes' : 'No' }}</td>
-            <td class="px-4 py-3 text-slate-600 capitalize">{{ p.accrual_frequency }}</td>
+        <tbody class="divide-y divide-gray-700">
+          <tr v-for="p in policies" :key="p.id" class="hover:bg-gray-700/50">
+            <td class="px-4 py-3 font-medium text-white">{{ p.name }}</td>
+            <td class="px-4 py-3 text-gray-400">{{ p.description || '—' }}</td>
+            <td class="px-4 py-3 text-gray-400">{{ p.auto_accrual ? 'Yes' : 'No' }}</td>
+            <td class="px-4 py-3 text-gray-400 capitalize">{{ p.accrual_frequency }}</td>
             <td class="px-4 py-3">
-              <span :class="p.is_active ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'" class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium">
+              <span :class="p.is_active ? 'bg-green-900/40 text-green-400' : 'bg-gray-700 text-gray-400'" class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium">
                 {{ p.is_active ? 'Active' : 'Inactive' }}
               </span>
             </td>
             <td class="px-4 py-3 text-right">
               <div class="flex justify-end gap-2">
                 <button class="rounded border px-3 py-1 text-sm" @click="openEdit(p)">Edit</button>
-                <button class="rounded border border-red-300 bg-red-50 px-3 py-1 text-sm text-red-700 hover:bg-red-100" @click="remove(p)">Delete</button>
+                <button class="rounded border border-red-300 bg-red-900/30 px-3 py-1 text-sm text-red-400 hover:bg-red-900/50" @click="remove(p)">Delete</button>
               </div>
             </td>
           </tr>
@@ -42,39 +41,39 @@
     </div>
 
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
-        <h2 class="mb-4 text-lg font-semibold text-slate-800">{{ editing ? 'Edit' : 'New' }} Policy</h2>
+      <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-gray-800 p-6">
+        <h2 class="mb-4 text-lg font-semibold text-white">{{ editing ? 'Edit' : 'New' }} Policy</h2>
 
-        <div v-if="formError" class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{{ formError }}</div>
-        <div v-if="formSuccess" class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">{{ formSuccess }}</div>
+        <div v-if="formError" class="mb-4 rounded-md bg-red-900/30 p-3 text-sm text-red-400">{{ formError }}</div>
+        <div v-if="formSuccess" class="mb-4 rounded-md bg-green-900/30 p-3 text-sm text-green-400">{{ formSuccess }}</div>
 
         <form @submit.prevent="save">
           <div class="grid grid-cols-1 gap-4">
             <!-- Basic Info -->
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-slate-700">Name</label>
-                <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border-slate-300 shadow-sm" required />
+                <label class="block text-sm font-medium text-gray-300">Name</label>
+                <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border-gray-600" required />
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-700">Description</label>
-                <input v-model="form.description" type="text" class="mt-1 w-full rounded-md border-slate-300 shadow-sm" placeholder="Optional description" />
+                <label class="block text-sm font-medium text-gray-300">Description</label>
+                <input v-model="form.description" type="text" class="mt-1 w-full rounded-md border-gray-600" placeholder="Optional description" />
               </div>
             </div>
 
             <div class="flex items-center gap-4">
               <label class="inline-flex items-center">
-                <input type="checkbox" v-model="form.is_active" class="mr-2 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                <span class="text-sm text-slate-700">Active</span>
+                <input type="checkbox" v-model="form.is_active" class="mr-2 rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                <span class="text-sm text-gray-300">Active</span>
               </label>
             </div>
 
             <!-- Accrual Settings -->
-            <h3 class="text-sm font-semibold text-slate-800 border-b pb-1">Accrual Settings</h3>
+            <h3 class="text-sm font-semibold text-white border-b pb-1">Accrual Settings</h3>
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-slate-700">Accrual Frequency</label>
-                <select v-model="form.accrual_frequency" class="mt-1 w-full rounded-md border-slate-300 shadow-sm">
+                <label class="block text-sm font-medium text-gray-300">Accrual Frequency</label>
+                <select v-model="form.accrual_frequency" class="mt-1 w-full rounded-md border-gray-600">
                   <option value="monthly">Monthly</option>
                   <option value="quarterly">Quarterly</option>
                   <option value="half_yearly">Half Yearly</option>
@@ -82,8 +81,8 @@
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-700">Accrual Start Month</label>
-                <select v-model.number="form.accrual_start_month" class="mt-1 w-full rounded-md border-slate-300 shadow-sm">
+                <label class="block text-sm font-medium text-gray-300">Accrual Start Month</label>
+                <select v-model.number="form.accrual_start_month" class="mt-1 w-full rounded-md border-gray-600">
                   <option v-for="m in 12" :key="m" :value="m">{{ monthName(m) }}</option>
                 </select>
               </div>
@@ -92,145 +91,145 @@
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="inline-flex items-center">
-                  <input type="checkbox" v-model="form.auto_accrual" class="mr-2 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span class="text-sm text-slate-700">Auto-accrual</span>
+                  <input type="checkbox" v-model="form.auto_accrual" class="mr-2 rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                  <span class="text-sm text-gray-300">Auto-accrual</span>
                 </label>
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-700">Accrual Rate (days/month)</label>
-                <input v-model.number="form.accrual_rate" type="number" step="0.01" min="0" class="mt-1 w-full rounded-md border-slate-300 shadow-sm" />
+                <label class="block text-sm font-medium text-gray-300">Accrual Rate (days/month)</label>
+                <input v-model.number="form.accrual_rate" type="number" step="0.01" min="0" class="mt-1 w-full rounded-md border-gray-600" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-700">Max Carry Forward</label>
-                <input v-model.number="form.accrual_max_carry_forward" type="number" min="0" placeholder="Unlimited" class="mt-1 w-full rounded-md border-slate-300 shadow-sm" />
+                <label class="block text-sm font-medium text-gray-300">Max Carry Forward</label>
+                <input v-model.number="form.accrual_max_carry_forward" type="number" min="0" placeholder="Unlimited" class="mt-1 w-full rounded-md border-gray-600" />
               </div>
             </div>
 
             <!-- Approval Workflow -->
-            <h3 class="text-sm font-semibold text-slate-800 border-b pb-1">Approval Workflow</h3>
+            <h3 class="text-sm font-semibold text-white border-b pb-1">Approval Workflow</h3>
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="inline-flex items-center">
-                  <input type="checkbox" v-model="form.requires_approval" class="mr-2 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span class="text-sm text-slate-700">Requires Approval</span>
+                  <input type="checkbox" v-model="form.requires_approval" class="mr-2 rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                  <span class="text-sm text-gray-300">Requires Approval</span>
                 </label>
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-700">Max Approvers</label>
-                <input v-model.number="form.max_approvers" type="number" min="1" class="mt-1 w-full rounded-md border-slate-300 shadow-sm" />
+                <label class="block text-sm font-medium text-gray-300">Max Approvers</label>
+                <input v-model.number="form.max_approvers" type="number" min="1" class="mt-1 w-full rounded-md border-gray-600" />
               </div>
               <div>
                 <label class="inline-flex items-center mt-6">
-                  <input type="checkbox" v-model="form.allow_self_approval" class="mr-2 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span class="text-sm text-slate-700">Allow Self-Approval</span>
+                  <input type="checkbox" v-model="form.allow_self_approval" class="mr-2 rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                  <span class="text-sm text-gray-300">Allow Self-Approval</span>
                 </label>
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-slate-700">Minimum Notice Days</label>
-              <input v-model.number="form.min_notice_days" type="number" min="0" class="mt-1 w-32 rounded-md border-slate-300 shadow-sm" />
+              <label class="block text-sm font-medium text-gray-300">Minimum Notice Days</label>
+              <input v-model.number="form.min_notice_days" type="number" min="0" class="mt-1 w-32 rounded-md border-gray-600" />
             </div>
 
             <!-- Leave Restrictions -->
-            <h3 class="text-sm font-semibold text-slate-800 border-b pb-1">Leave Restrictions</h3>
+            <h3 class="text-sm font-semibold text-white border-b pb-1">Leave Restrictions</h3>
             <div class="grid grid-cols-2 gap-4">
               <div class="flex flex-col gap-2">
                 <label class="inline-flex items-center">
-                  <input type="checkbox" v-model="form.restrict_weekends_holidays" class="mr-2 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span class="text-sm text-slate-700">Exclude Weekends & Holidays</span>
+                  <input type="checkbox" v-model="form.restrict_weekends_holidays" class="mr-2 rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                  <span class="text-sm text-gray-300">Exclude Weekends & Holidays</span>
                 </label>
                 <label class="inline-flex items-center">
-                  <input type="checkbox" v-model="form.allow_negative_balance" class="mr-2 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span class="text-sm text-slate-700">Allow Negative Balance</span>
+                  <input type="checkbox" v-model="form.allow_negative_balance" class="mr-2 rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                  <span class="text-sm text-gray-300">Allow Negative Balance</span>
                 </label>
               </div>
               <div>
                 <label class="inline-flex items-center">
-                  <input type="checkbox" v-model="form.restrict_consecutive_days" class="mr-2 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span class="text-sm text-slate-700">Restrict Consecutive Days</span>
+                  <input type="checkbox" v-model="form.restrict_consecutive_days" class="mr-2 rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                  <span class="text-sm text-gray-300">Restrict Consecutive Days</span>
                 </label>
-                <input v-if="form.restrict_consecutive_days" v-model.number="form.max_consecutive_days" type="number" min="1" placeholder="Max days" class="mt-1 w-32 rounded-md border-slate-300 shadow-sm" />
+                <input v-if="form.restrict_consecutive_days" v-model.number="form.max_consecutive_days" type="number" min="1" placeholder="Max days" class="mt-1 w-32 rounded-md border-gray-600" />
               </div>
             </div>
 
             <!-- Probation Settings -->
-            <h3 class="text-sm font-semibold text-slate-800 border-b pb-1">Probation Settings</h3>
+            <h3 class="text-sm font-semibold text-white border-b pb-1">Probation Settings</h3>
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <label class="inline-flex items-center">
-                  <input type="checkbox" v-model="form.probation_restrictions" class="mr-2 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span class="text-sm text-slate-700">Probation Restrictions</span>
+                  <input type="checkbox" v-model="form.probation_restrictions" class="mr-2 rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                  <span class="text-sm text-gray-300">Probation Restrictions</span>
                 </label>
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-700">Probation Period (months)</label>
-                <input v-model.number="form.probation_period_months" type="number" min="1" max="12" class="mt-1 w-full rounded-md border-slate-300 shadow-sm" />
+                <label class="block text-sm font-medium text-gray-300">Probation Period (months)</label>
+                <input v-model.number="form.probation_period_months" type="number" min="1" max="12" class="mt-1 w-full rounded-md border-gray-600" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-700">Probation Leave Rate</label>
-                <input v-model.number="form.probation_leave_rate" type="number" step="0.01" min="0" max="5" class="mt-1 w-full rounded-md border-slate-300 shadow-sm" />
+                <label class="block text-sm font-medium text-gray-300">Probation Leave Rate</label>
+                <input v-model.number="form.probation_leave_rate" type="number" step="0.01" min="0" max="5" class="mt-1 w-full rounded-md border-gray-600" />
               </div>
             </div>
 
             <!-- Policy Items -->
-            <h3 class="text-sm font-semibold text-slate-800 border-b pb-1">Policy Items (per leave type allocation)</h3>
+            <h3 class="text-sm font-semibold text-white border-b pb-1">Policy Items (per leave type allocation)</h3>
             <div class="space-y-2">
-              <div v-for="item in items" :key="item.leave_type_id" class="flex items-center gap-3 rounded border border-slate-200 p-2">
-                <div class="w-40 text-sm font-medium text-slate-700">{{ leaveTypeName(item.leave_type_id) }}</div>
+              <div v-for="item in items" :key="item.leave_type_id" class="flex items-center gap-3 rounded border border-gray-700 p-2">
+                <div class="w-40 text-sm font-medium text-gray-300">{{ leaveTypeName(item.leave_type_id) }}</div>
                 <div class="w-28">
-                  <label class="text-xs text-slate-500">Days/Year</label>
-                  <input type="number" step="0.01" v-model.number="item.allocation_per_year" class="w-full rounded-md border-slate-300 shadow-sm text-sm" />
+                  <label class="text-xs text-gray-400">Days/Year</label>
+                  <input type="number" step="0.01" v-model.number="item.allocation_per_year" class="w-full rounded-md border-gray-600 text-sm" />
                 </div>
                 <div class="flex items-center gap-1">
-                  <input type="checkbox" v-model="item.can_carry_forward" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span class="text-xs text-slate-600">Carry Fwd</span>
+                  <input type="checkbox" v-model="item.can_carry_forward" class="rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                  <span class="text-xs text-gray-400">Carry Fwd</span>
                 </div>
                 <div v-if="item.can_carry_forward" class="w-20">
-                  <input type="number" min="0" v-model.number="item.carry_forward_limit" placeholder="Limit" class="w-full rounded-md border-slate-300 shadow-sm text-sm" />
+                  <input type="number" min="0" v-model.number="item.carry_forward_limit" placeholder="Limit" class="w-full rounded-md border-gray-600 text-sm" />
                 </div>
                 <div class="flex items-center gap-1">
-                  <input type="checkbox" v-model="item.is_encashable" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span class="text-xs text-slate-600">Encashable</span>
+                  <input type="checkbox" v-model="item.is_encashable" class="rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
+                  <span class="text-xs text-gray-400">Encashable</span>
                 </div>
                 <button type="button" class="text-sm text-red-600" @click="removeItem(item.leave_type_id)">Remove</button>
               </div>
 
               <div class="flex items-center gap-2">
-                <select v-model.number="newItemLeaveType" class="rounded-md border-slate-300 shadow-sm">
+                <select v-model.number="newItemLeaveType" class="rounded-md border-gray-600">
                   <option :value="0">Select leave type</option>
                   <option v-for="lt in availableLeaveTypes" :key="lt.id" :value="lt.id">{{ lt.name }} ({{ lt.code }})</option>
                 </select>
-                <input v-model.number="newItemAllocation" type="number" step="0.01" placeholder="Days/year" class="w-32 rounded-md border-slate-300 shadow-sm" />
+                <input v-model.number="newItemAllocation" type="number" step="0.01" placeholder="Days/year" class="w-32 rounded-md border-gray-600" />
                 <button type="button" class="rounded bg-brand-600 px-3 py-1 text-white text-sm" @click="addItem">Add</button>
               </div>
             </div>
 
             <!-- Assignments -->
-            <h3 class="text-sm font-semibold text-slate-800 border-b pb-1">Assignments</h3>
+            <h3 class="text-sm font-semibold text-white border-b pb-1">Assignments</h3>
             <div class="space-y-2">
               <div v-for="(a, idx) in assignments" :key="idx" class="flex items-center gap-3">
                 <div class="w-40">
-                  <select v-model="a.scope" class="w-full rounded-md border-slate-300 shadow-sm">
+                  <select v-model="a.scope" class="w-full rounded-md border-gray-600">
                     <option value="organization">Organization</option>
                     <option value="department">Department</option>
                     <option value="team">Team</option>
                     <option value="employee">Employee</option>
                   </select>
                 </div>
-                <input v-if="a.scope === 'department'" v-model="a.target_key" placeholder="Department name" class="flex-1 rounded-md border-slate-300 shadow-sm" />
-                <input v-if="a.scope === 'team' || a.scope === 'employee'" v-model.number="a.target_id" placeholder="ID" class="flex-1 rounded-md border-slate-300 shadow-sm" />
+                <input v-if="a.scope === 'department'" v-model="a.target_key" placeholder="Department name" class="flex-1 rounded-md border-gray-600" />
+                <input v-if="a.scope === 'team' || a.scope === 'employee'" v-model.number="a.target_id" placeholder="ID" class="flex-1 rounded-md border-gray-600" />
                 <button type="button" class="text-sm text-red-600" @click="assignments.splice(idx,1)">Remove</button>
               </div>
 
               <div class="flex items-center gap-2">
-                <select v-model="newAssignment.scope" class="rounded-md border-slate-300 shadow-sm">
+                <select v-model="newAssignment.scope" class="rounded-md border-gray-600">
                   <option value="organization">Organization</option>
                   <option value="department">Department</option>
                   <option value="team">Team</option>
                   <option value="employee">Employee</option>
                 </select>
-                <input v-if="newAssignment.scope === 'department'" v-model="newAssignment.target_key" placeholder="Department name" class="rounded-md border-slate-300 shadow-sm" />
-                <input v-if="newAssignment.scope === 'team' || newAssignment.scope === 'employee'" v-model.number="newAssignment.target_id" placeholder="ID" class="rounded-md border-slate-300 shadow-sm" />
+                <input v-if="newAssignment.scope === 'department'" v-model="newAssignment.target_key" placeholder="Department name" class="rounded-md border-gray-600" />
+                <input v-if="newAssignment.scope === 'team' || newAssignment.scope === 'employee'" v-model.number="newAssignment.target_id" placeholder="ID" class="rounded-md border-gray-600" />
                 <button type="button" class="rounded bg-brand-600 px-3 py-1 text-white text-sm" @click="addAssignment">Add</button>
               </div>
             </div>
@@ -250,9 +249,15 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, ref, reactive, onMounted } from 'vue'
 import { leaveService, type LeaveType, type LeavePolicy } from '@/services/leave'
 import { useLeave } from '@/composables/useLeave'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
+
+const { confirm: dialog } = useConfirm()
+const toast = useToast()
 
 const { leaveTypes, fetchLeaveTypes } = useLeave()
 
@@ -433,12 +438,12 @@ async function save() {
 }
 
 async function remove(p: LeavePolicy) {
-  if (!confirm('Delete this policy?')) return
+  if (!await dialog('Delete', 'Delete this policy?')) return
   try {
     await leaveService.deleteLeavePolicy(p.id)
     await loadPolicies()
   } catch (e: any) {
-    alert(e?.response?.data?.message || 'Failed to delete policy')
+    toast.error(e?.response?.data?.message || 'Failed to delete policy')
   }
 }
 </script>

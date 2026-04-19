@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { recruitmentService, type JobBoardIntegration } from '@/services/recruitmentService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 import IntegrationFormModal from '@/pages/app/recruitment/IntegrationFormModal.vue'
 
 const integrations = ref<JobBoardIntegration[]>([])
@@ -86,7 +89,7 @@ const toggleIntegration = async (integration: JobBoardIntegration) => {
 }
 
 const deleteIntegration = async (integration: JobBoardIntegration) => {
-  if (!confirm(`Remove ${integration.display_name} integration?`)) return
+  if (!await dialog('Remove', `Remove ${integration.display_name} integration?`)) return
   try {
     await recruitmentService.deleteIntegration(integration.id)
     await loadIntegrations()

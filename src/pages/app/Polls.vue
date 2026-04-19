@@ -157,7 +157,6 @@ onMounted(fetchPolls)
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">Polls</h1>
         <p class="mt-1 text-sm text-gray-400">Create and participate in team polls</p>
       </div>
       <button

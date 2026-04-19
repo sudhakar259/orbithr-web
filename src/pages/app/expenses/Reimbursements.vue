@@ -3,6 +3,9 @@ defineOptions({ name: 'ExpenseReimbursements' })
 
 import { ref, onMounted } from 'vue'
 import expenseService, { type Reimbursement } from '@/services/expenseService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 interface ReimbursementRow extends Reimbursement {
   employee_name?: string
@@ -61,7 +64,7 @@ async function handleProcess() {
 }
 
 async function handleMarkPaid(id: number) {
-  if (!confirm('Mark this reimbursement as paid?')) return
+  if (!await dialog('Confirm', 'Mark this reimbursement as paid?')) return
   try {
     await expenseService.markPaid(id)
     await fetchData()

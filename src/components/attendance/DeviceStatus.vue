@@ -102,6 +102,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useAuth } from '@/composables/useAuth'
 
 interface Device {
   id: number
@@ -123,9 +124,11 @@ const auth = useAuthStore()
 const loading = ref(false)
 const syncingDevice = ref<number | null>(null)
 
+const { hasRole } = useAuth()
 const canManageDevices = computed(() => {
   return auth.user?.permissions?.includes('manage attendance devices') ||
-         auth.user?.roles?.some(role => ['admin', 'hr_manager'].includes(role.name))
+         hasRole('admin') ||
+         hasRole('hr_manager')
 })
 
 const onlineDevices = computed(() => {

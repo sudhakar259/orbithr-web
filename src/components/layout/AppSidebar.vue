@@ -4,10 +4,12 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
+import { useModuleStore } from '@/stores/modules'
 
 const route = useRoute()
 const router = useRouter()
 const { user, roles, hasPermission, logout } = useAuth()
+const moduleStore = useModuleStore()
 const showMenu = ref(false)
 
 // ── Dynamic badge counts ──────────────────────────────
@@ -30,6 +32,7 @@ async function fetchBadges() {
 onMounted(() => {
   fetchBadges()
   syncExpanded()
+  moduleStore.loadTenantModules()
 })
 
 watch(() => route.name, syncExpanded)
@@ -85,6 +88,7 @@ interface NavGroup {
   superAdminOnly?: boolean
   roles?: string[]
   permissions?: string[]
+  module?: string
   // If children exists, this is a collapsible parent group
   children?: NavChild[]
   // If to exists, this is a direct link (no expand)
@@ -97,10 +101,12 @@ interface NavSection {
   items: NavGroup[]
 }
 
-function canSeeGroup(item: { superAdminOnly?: boolean; roles?: string[]; permissions?: string[] }): boolean {
+function canSeeGroup(item: { superAdminOnly?: boolean; roles?: string[]; permissions?: string[]; module?: string }): boolean {
   // Super admin has a dedicated shell at /super — they don't use tenant HR items
   if (isSuperAdmin.value) return false
   if (item.superAdminOnly) return false
+  // If the nav group is tied to an optional module, hide it when not active for this tenant
+  if (item.module && !moduleStore.hasModule(item.module)) return false
   if (isAdmin.value) return true
   const itemRoles = item.roles?.map((x: string) => x.toLowerCase()) ?? []
   const itemPerms = item.permissions ?? []
@@ -243,6 +249,7 @@ const moduleGroups = computed<NavGroup[]>(() => [
   {
     key: 'payroll',
     label: 'Payroll',
+    module: 'payroll',
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>',
     permissions: ['view payroll'],
     roles: ['admin'],
@@ -295,6 +302,7 @@ const moduleGroups = computed<NavGroup[]>(() => [
   {
     key: 'performance',
     label: 'Performance',
+    module: 'performance',
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>',
     permissions: ['view performance'],
     roles: ['admin', 'hr_manager', 'manager', 'employee'],
@@ -402,6 +410,7 @@ const moduleGroups = computed<NavGroup[]>(() => [
   {
     key: 'lnd',
     label: 'Learning & Dev',
+    module: 'learning',
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>',
     permissions: ['view courses'],
     roles: ['admin', 'hr_manager', 'manager', 'employee'],
@@ -447,6 +456,7 @@ const moduleGroups = computed<NavGroup[]>(() => [
   {
     key: 'expenses',
     label: 'Expenses',
+    module: 'expenses',
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>',
     permissions: ['view expenses'],
     roles: ['admin', 'hr_manager', 'manager', 'employee'],
@@ -486,6 +496,7 @@ const moduleGroups = computed<NavGroup[]>(() => [
   {
     key: 'recruitment',
     label: 'Recruitment',
+    module: 'recruitment',
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>',
     permissions: ['view jobs'],
     roles: ['admin'],
@@ -724,7 +735,7 @@ const navSections = computed<NavSection[]>(() => [
         label: 'Modules',
         to: { name: 'tenant-modules' },
         icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>',
-        roles: ['admin'],
+        superAdminOnly: true,
       },
       {
         key: 'reports',

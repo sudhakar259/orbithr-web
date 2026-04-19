@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import EmployeeForm from '../EmployeeForm.vue'
@@ -68,9 +69,9 @@ describe('EmployeeForm – rendering', () => {
     expect(wrapper.text()).toContain('Personal Information')
   })
 
-  it('renders Banking Information section', () => {
+  it('renders Banking & Emergency section', () => {
     const wrapper = mountCreate()
-    expect(wrapper.text()).toContain('Banking Information')
+    expect(wrapper.text()).toContain('Banking & Emergency')
   })
 
   it('renders Emergency Contact section', () => {
@@ -78,13 +79,15 @@ describe('EmployeeForm – rendering', () => {
     expect(wrapper.text()).toContain('Emergency Contact')
   })
 
-  it('shows "Create Employee" submit button in create mode', () => {
+  it('shows save submit button in create mode', async () => {
     const wrapper = mountCreate()
-    expect(wrapper.text()).toContain('Create Employee')
+    expect(wrapper.text()).toContain('Save Employee')
   })
 
-  it('shows "Update Employee" submit button in edit mode', () => {
+  it('shows "Update Employee" submit button on last tab in edit mode', async () => {
     const wrapper = mountEdit()
+    const tabs = wrapper.findAll('.ef-tab')
+    await tabs[3].trigger('click')
     expect(wrapper.text()).toContain('Update Employee')
   })
 
@@ -116,13 +119,12 @@ describe('EmployeeForm – locked fields in edit mode', () => {
     expect(emailInput.attributes('disabled')).toBeDefined()
   })
 
-  it('employee_id field is disabled in edit mode', () => {
+  it('employee_id is shown as a locked badge (not an input) in edit mode', () => {
     const wrapper = mountEdit()
-    // Find all text inputs and locate the employee_id one via value
-    const allInputs = wrapper.findAll('input')
-    const empIdInput = allInputs.find(i => i.element.value === 'EMP099')
-    expect(empIdInput).toBeDefined()
-    expect(empIdInput!.attributes('disabled')).toBeDefined()
+    // The employee code is now a readonly badge, not an input
+    const badge = wrapper.find('.ef-code-badge--locked')
+    expect(badge.exists()).toBe(true)
+    expect(badge.text()).toContain('EMP099')
   })
 
   it('shows "Email cannot be changed" hint in edit mode', () => {
@@ -130,9 +132,9 @@ describe('EmployeeForm – locked fields in edit mode', () => {
     expect(wrapper.text()).toContain('Email cannot be changed after creation.')
   })
 
-  it('shows "Employee code is immutable" hint in edit mode', () => {
+  it('shows auto-generated hint for employee code in edit mode', () => {
     const wrapper = mountEdit()
-    expect(wrapper.text()).toContain('Employee code is immutable.')
+    expect(wrapper.text()).toContain('Employee code is auto-generated and cannot be edited.')
   })
 
   it('email field is NOT disabled in create mode', () => {
@@ -194,12 +196,22 @@ describe('EmployeeForm – initialData population', () => {
 
 // ─── form submission ──────────────────────────────────────────────────────────
 
+// Helper: fill minimum required fields so client-side validation passes
+async function fillRequiredFields(wrapper: ReturnType<typeof mountCreate>) {
+  const inputs = wrapper.findAll('input')
+  const byPlaceholder = (ph: string) => inputs.find(i => i.attributes('placeholder') === ph)
+  await byPlaceholder('John')?.setValue('John')
+  await byPlaceholder('john@company.com')?.setValue('john@test.com')
+  await byPlaceholder('+91 98xxxxxxxx')?.setValue('9876543210')
+}
+
 describe('EmployeeForm – form submission', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('calls createEmployee when submitting in create mode', async () => {
     mockCreate.mockResolvedValueOnce({ data: { id: 1 } } as any)
     const wrapper = mountCreate()
+    await fillRequiredFields(wrapper)
     await wrapper.find('form').trigger('submit')
     expect(mockCreate).toHaveBeenCalledTimes(1)
   })
@@ -214,6 +226,7 @@ describe('EmployeeForm – form submission', () => {
   it('emits submit event on success', async () => {
     mockCreate.mockResolvedValueOnce({ data: { id: 1 } } as any)
     const wrapper = mountCreate()
+    await fillRequiredFields(wrapper)
     await wrapper.find('form').trigger('submit')
     await wrapper.vm.$nextTick()
     expect(wrapper.emitted('submit')).toBeTruthy()
@@ -230,6 +243,7 @@ describe('EmployeeForm – form submission', () => {
       response: { data: { message: 'Server Error' } },
     })
     const wrapper = mountCreate()
+    await fillRequiredFields(wrapper)
     await wrapper.find('form').trigger('submit')
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('Server Error')
@@ -240,6 +254,7 @@ describe('EmployeeForm – form submission', () => {
       response: { data: { errors: { first_name: 'First name is required.' } } },
     })
     const wrapper = mountCreate()
+    await fillRequiredFields(wrapper)
     await wrapper.find('form').trigger('submit')
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('First name is required.')

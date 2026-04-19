@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getEmployee } from '@/services/employee'
@@ -6,7 +7,7 @@ import EmployeeForm from '@/components/employee/EmployeeForm.vue'
 
 const router = useRouter()
 const route = useRoute()
-const employeeId = computed(() => Number(route.params.id))
+const employeeId = computed(() => route.params.id as string)
 const loading = ref(true)
 const error = ref('')
 const employeeData = ref<any>(null)

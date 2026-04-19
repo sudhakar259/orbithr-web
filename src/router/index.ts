@@ -101,7 +101,7 @@ const routes: RouteRecordRaw[] = [
         path: 'admin/tenant-modules',
         name: 'tenant-modules',
         component: () => import('@/pages/app/admin/TenantModules.vue'),
-        meta: { title: 'Tenant Modules', roles: ['admin'] },
+        meta: { title: 'Tenant Modules', superAdminOnly: true },
       },
       {
         path: 'admin/domain-requests',

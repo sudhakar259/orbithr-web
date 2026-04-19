@@ -153,11 +153,18 @@ async function confirmDeleteRole(row: RoleItem) {
 const showAssignModal = ref(false)
 const assignLoading   = ref(false)
 const selectedRole    = ref<RoleItem | null>(null)
-const assignedUsers   = ref<{ id: number; name: string; email: string }[]>([])
-const addUserIdsText  = ref('')
+const assignedUsers   = ref<{ id: string; name: string; email: string }[]>([])
+
+// Employee search
+const empSearch       = ref('')
+const empResults      = ref<{ id: string; name: string; email: string }[]>([])
+const empSearching    = ref(false)
+let   empTimer: number | undefined
 
 async function openAssignModal(role: RoleItem) {
   selectedRole.value = role
+  empSearch.value = ''
+  empResults.value = []
   showAssignModal.value = true
   await loadAssignedUsers()
 }
@@ -166,7 +173,7 @@ async function loadAssignedUsers() {
   if (!selectedRole.value) return
   assignLoading.value = true
   try {
-    const { data } = await roleApi.users(selectedRole.value.id, { per_page: 50 })
+    const { data } = await roleApi.users(selectedRole.value.id, { per_page: 100 })
     const rows = Array.isArray(data) ? data : data.data || []
     assignedUsers.value = rows.map((u: any) => ({ id: u.id, name: u.name, email: u.email }))
   } finally {
@@ -174,19 +181,38 @@ async function loadAssignedUsers() {
   }
 }
 
-async function detachUser(uid: number) {
+function onEmpSearch() {
+  if (empTimer) window.clearTimeout(empTimer)
+  if (!empSearch.value.trim()) { empResults.value = []; return }
+  empTimer = window.setTimeout(searchEmployees, 300)
+}
+
+async function searchEmployees() {
+  empSearching.value = true
+  try {
+    const { data } = await api.get('/employees', { params: { search: empSearch.value, per_page: 20 } })
+    const rows = Array.isArray(data) ? data : data.data || []
+    const assignedIds = new Set(assignedUsers.value.map(u => String(u.id)))
+    empResults.value = rows
+      .filter((e: any) => !assignedIds.has(String(e.user_id || e.id)))
+      .map((e: any) => ({ id: String(e.user_id || e.id), name: `${e.first_name} ${e.last_name}`.trim(), email: e.email }))
+  } finally {
+    empSearching.value = false
+  }
+}
+
+async function attachUser(emp: { id: string; name: string; email: string }) {
   if (!selectedRole.value) return
-  await roleApi.assignUsers(selectedRole.value.id, { detach: [uid] })
+  await roleApi.assignUsers(selectedRole.value.id, { attach: [emp.id] })
+  empSearch.value = ''
+  empResults.value = []
   await loadAssignedUsers()
   await load()
 }
 
-async function attachUsers() {
+async function detachUser(uid: string) {
   if (!selectedRole.value) return
-  const ids = addUserIdsText.value.split(',').map(s => parseInt(s.trim())).filter(n => Number.isFinite(n))
-  if (!ids.length) return
-  await roleApi.assignUsers(selectedRole.value.id, { attach: ids })
-  addUserIdsText.value = ''
+  await roleApi.assignUsers(selectedRole.value.id, { detach: [uid] })
   await loadAssignedUsers()
   await load()
 }
@@ -371,14 +397,31 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
           </div>
 
           <div class="modal-body">
-            <!-- Add users -->
-            <div class="assign-add-row">
-              <input v-model="addUserIdsText" type="text" class="field-input" placeholder="User IDs comma-separated, e.g. 12, 34" />
-              <button class="btn-primary" style="white-space:nowrap" @click="attachUsers">Add</button>
+            <!-- Employee search -->
+            <div class="assign-search-wrap">
+              <input
+                v-model="empSearch"
+                type="text"
+                class="field-input"
+                placeholder="Search employee by name or email…"
+                @input="onEmpSearch"
+              />
+              <div v-if="empSearching" class="assign-state"><span class="spinner" /> Searching…</div>
+              <div v-else-if="empSearch && empResults.length === 0 && !empSearching" class="assign-state">No employees found.</div>
+              <div v-if="empResults.length" class="assign-results">
+                <div v-for="e in empResults" :key="e.id" class="assign-result-row" @click="attachUser(e)">
+                  <div class="assign-avatar">{{ initials(e.name) }}</div>
+                  <div class="assign-info">
+                    <div class="assign-name">{{ e.name }}</div>
+                    <div class="assign-email">{{ e.email }}</div>
+                  </div>
+                  <span class="assign-add-badge">+ Add</span>
+                </div>
+              </div>
             </div>
 
-            <!-- User list -->
-            <div class="assign-list-head">Linked Users</div>
+            <!-- Assigned users list -->
+            <div class="assign-list-head">Assigned Users ({{ assignedUsers.length }})</div>
             <div class="assign-list">
               <div v-if="assignLoading" class="assign-state"><span class="spinner" /> Loading…</div>
               <div v-else-if="!assignedUsers.length" class="assign-state">No users assigned yet.</div>
@@ -588,7 +631,22 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
   animation: fadeUp .2s ease;
 }
 .modal-body { padding: 20px 24px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-.assign-add-row { display: flex; gap: 10px; align-items: center; }
+.assign-search-wrap { display: flex; flex-direction: column; gap: 6px; }
+.assign-results {
+  border: 1px solid var(--border-hi); border-radius: 8px; overflow: hidden;
+  max-height: 180px; overflow-y: auto;
+}
+.assign-result-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  cursor: pointer; transition: background .12s;
+}
+.assign-result-row:hover { background: var(--surface2); }
+.assign-result-row + .assign-result-row { border-top: 1px solid var(--border); }
+.assign-add-badge {
+  margin-left: auto; font-size: 11px; font-weight: 600; color: var(--accent);
+  background: rgba(79,126,255,.1); border: 1px solid rgba(79,126,255,.25);
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+}
 .assign-list-head { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .assign-list { display: flex; flex-direction: column; gap: 2px; }
 .assign-state { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }

@@ -327,7 +327,15 @@ onMounted(load)
   text-decoration: none;
 }
 .btn-accent:hover { opacity: 0.88; }
-.btn-icon { width: 16px; height: 16px; }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  background: var(--surface2); color: var(--dim);
+  border: 1px solid var(--border-hi); border-radius: 8px; padding: 8px 16px;
+  font-size: 0.875rem; font-weight: 500; cursor: pointer;
+  text-decoration: none;
+}
+.btn-secondary:hover { background: var(--surface3); color: var(--text); }
+.btn-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
 /* Filters */
 .filters-bar { background: var(--surface); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }

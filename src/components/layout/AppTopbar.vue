@@ -147,8 +147,6 @@ interface CtaConfig {
   to: string
 }
 const ctaMap: Record<string, CtaConfig> = {
-  employees: { label: 'Add Employee', to: '/app/employees/new' },
-  'employee-new': { label: 'Add Employee', to: '/app/employees/new' },
   recruitment: { label: 'Post Job', to: '/app/recruitment/jobs/new' },
   'recruitment.jobs.create': { label: 'Post Job', to: '/app/recruitment/jobs/new' },
   candidates: { label: 'Add Candidate', to: '/app/recruitment/candidates/new' },

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
@@ -9,7 +10,7 @@ import HierarchyAssignment from '@/components/employee/HierarchyAssignment.vue'
 
 const route  = useRoute()
 const router = useRouter()
-const id     = computed(() => Number(route.params.id))
+const id     = computed(() => route.params.id as string)
 const loading = ref(true)
 const error   = ref<string | null>(null)
 const activeTab = ref<'overview' | 'personal' | 'work' | 'hierarchy'>('overview')

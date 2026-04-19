@@ -260,6 +260,10 @@ const settingKeys: Record<string, SettingKeyDef[]> = {
     { key: 'date_format', label: 'Date Format', type: 'select', options: ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] },
     { key: 'currency', label: 'Currency', type: 'select', options: ['USD', 'EUR', 'GBP', 'INR', 'AED'] },
   ],
+  hr: [
+    { key: 'employee_id_prefix', label: 'Employee Code Prefix', type: 'text' },
+    { key: 'employee_id_digits', label: 'Code Digit Padding', type: 'select', options: ['3', '4', '5', '6'] },
+  ],
   branding: [
     { key: 'logo_url', label: 'Logo URL', type: 'readonly' },
     { key: 'app_color', label: 'App Color', type: 'color' },
@@ -495,7 +499,13 @@ onMounted(() => {
       <div v-if="settingsLoading" class="loading-row">Loading settings...</div>
       <div v-else class="settings-groups">
         <div v-for="(items, group) in settingKeys" :key="group" class="settings-group">
-          <h3 class="group-title">{{ group }}</h3>
+          <h3 class="group-title">{{ group === 'hr' ? 'HR — Employee Codes' : group }}</h3>
+          <p v-if="group === 'hr'" class="group-desc">
+            Employee codes are auto-generated on creation using this prefix and digit padding.
+            Example: prefix <strong>{{ getSettingVal('employee_id_prefix') || 'EMP' }}</strong> with
+            <strong>{{ getSettingVal('employee_id_digits') || '4' }}</strong> digits →
+            <strong>{{ (getSettingVal('employee_id_prefix') || 'EMP') + '0001'.slice(-(Number(getSettingVal('employee_id_digits') || 4))) }}</strong>
+          </p>
           <div class="group-fields">
             <div v-for="item in items" :key="item.key" class="setting-field">
               <label>{{ item.label }}</label>
@@ -582,7 +592,9 @@ onMounted(() => {
 /* Settings groups */
 .settings-groups { display: flex; flex-direction: column; gap: 20px; }
 .settings-group { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rs); padding: 18px; }
-.group-title { font-size: 13px; font-weight: 600; color: var(--text); text-transform: capitalize; margin: 0 0 14px; }
+.group-title { font-size: 13px; font-weight: 600; color: var(--text); text-transform: capitalize; margin: 0 0 6px; }
+.group-desc { font-size: 12px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
+.group-desc strong { color: var(--accent); }
 .group-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .setting-field { display: flex; flex-direction: column; gap: 5px; }
 .setting-field label { font-size: 11px; color: var(--muted); font-weight: 500; }

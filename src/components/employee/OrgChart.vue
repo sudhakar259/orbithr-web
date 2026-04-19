@@ -10,29 +10,29 @@
 
     <!-- Zoom + Legend -->
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3 text-xs text-slate-600">
+      <div class="flex items-center gap-3 text-xs text-gray-400">
         <span class="inline-flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded bg-emerald-600 ring-1 ring-emerald-400/40"></span> Manager</span>
         <span class="inline-flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded bg-sky-600 ring-1 ring-sky-400/40"></span> Team Lead</span>
         <span class="inline-flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded bg-indigo-500 ring-1 ring-indigo-400/40"></span> Individual</span>
       </div>
       <div class="flex items-center justify-end gap-2">
-        <div class="inline-flex overflow-hidden rounded-md border border-slate-200">
+        <div class="inline-flex overflow-hidden rounded-md border border-gray-700">
           <button
-            class="px-2 py-1 text-xs hover:bg-slate-50"
+            class="px-2 py-1 text-xs text-gray-300 hover:bg-gray-700"
             @click="zoomOut"
             aria-label="Zoom out"
           >-</button>
-          <div class="px-2 py-1 text-xs border-x border-slate-200">
+          <div class="px-2 py-1 text-xs text-gray-300 border-x border-gray-700">
             {{ (zoom * 100).toFixed(0) }}%
           </div>
           <button
-            class="px-2 py-1 text-xs hover:bg-slate-50"
+            class="px-2 py-1 text-xs text-gray-300 hover:bg-gray-700"
             @click="zoomIn"
             aria-label="Zoom in"
           >+</button>
         </div>
         <button
-          class="rounded-md border border-slate-200 px-2 py-1 text-xs hover:bg-slate-50"
+          class="rounded-md border border-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700"
           @click="reset"
         >
           Reset
@@ -43,7 +43,7 @@
     <!-- Chart Container -->
     <div
       ref="containerEl"
-      class="relative overflow-auto rounded-lg border border-slate-200 bg-white p-4 sm:p-6"
+      class="relative overflow-auto rounded-lg border border-gray-700 bg-gray-900 p-4 sm:p-6"
       :style="{ minHeight: '420px' }"
     >
       <div
@@ -244,7 +244,7 @@ const Box = (props: { name: string; title?: string; count?: number }) => {
 const Connector = () =>
   h("div", { class: "mx-auto h-4 w-[2px] bg-slate-400/70" });
 
-const ChartNode = defineComponent<{ node: any }>({
+const ChartNode = defineComponent<{ node: Node }>({
   name: "ChartNode",
   props: { node: { type: Object, required: true } },
   setup(props) {
@@ -287,7 +287,7 @@ const ChartNode = defineComponent<{ node: any }>({
                 },
                 [
                   ...visibleChildren.value.map(
-                    (c: any, idx: number) =>
+                    (c: Node, idx: number) =>
                       h("div", { class: "relative pt-3" }, [
                         h("span", {
                           class:
@@ -300,7 +300,7 @@ const ChartNode = defineComponent<{ node: any }>({
                             width: idx % 2 === 0 ? "10px" : "26px",
                           },
                         }),
-                        h(ChartNode as any, { node: c }),
+                        h(ChartNode as ReturnType<typeof defineComponent>, { node: c }),
                       ])
                   ),
                   hiddenCount.value

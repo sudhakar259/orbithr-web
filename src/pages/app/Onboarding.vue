@@ -87,6 +87,7 @@ interface EmployeeTaskItem {
   id: number
   title: string
   category: string
+  status: string
   is_completed: boolean
 }
 
@@ -105,7 +106,7 @@ const employeesList = ref<Employee[]>([])
 async function fetchEmployeeOnboardings() {
   employeesLoading.value = true
   try {
-    const { data } = await api.get('/onboarding/summary')
+    const { data } = await api.get('/onboarding/employees')
     employeeOnboardings.value = data.data ?? data
   } catch { /* silently ignore */ }
   finally { employeesLoading.value = false }
@@ -134,17 +135,28 @@ async function viewEmployeeTasks(emp: EmployeeOnboarding) {
   employeeTasksLoading.value = true
   try {
     const { data } = await api.get(`/onboarding/employee/${emp.employee_id}`)
-    employeeTasks.value = data.data ?? data
+    const raw = data.tasks ?? data.data ?? data
+    employeeTasks.value = (Array.isArray(raw) ? raw : []).map((t: Record<string, unknown> & { task?: Record<string, unknown> }) => ({
+      id: t.id,
+      title: t.task?.title ?? t.title ?? '—',
+      category: t.task?.category ?? t.category ?? '',
+      status: t.status ?? 'pending',
+      is_completed: t.status === 'completed' || t.status === 'skipped',
+    }))
   } catch { /* silently ignore */ }
   finally { employeeTasksLoading.value = false }
 }
 
 async function toggleTask(empId: number, task: EmployeeTaskItem) {
+  const newCompleted = !task.is_completed
   try {
-    await api.put(`/onboarding/employee/${empId}/tasks/${task.id}`, { is_completed: !task.is_completed })
-    task.is_completed = !task.is_completed
+    await api.put(`/onboarding/employee/${empId}/tasks/${task.id}`, {
+      status: newCompleted ? 'completed' : 'pending',
+    })
+    task.is_completed = newCompleted
+    task.status = newCompleted ? 'completed' : 'pending'
     if (selectedEmployee.value) {
-      selectedEmployee.value.completed_tasks += task.is_completed ? 1 : -1
+      selectedEmployee.value.completed_tasks += newCompleted ? 1 : -1
     }
   } catch { /* silently ignore */ }
 }
@@ -257,8 +269,8 @@ onMounted(() => {
             <tr v-for="t in tasks" :key="t.id" class="text-gray-300">
               <td class="px-4 py-3 text-gray-500">{{ t.order_index }}</td>
               <td class="px-4 py-3 text-white font-medium">{{ t.title }}</td>
-              <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs rounded-full" :class="categoryBadgeClass(t.category)">{{ t.category.replace(/_/g, ' ') }}</span></td>
-              <td class="px-4 py-3">{{ t.assigned_to_role.replace(/_/g, ' ') }}</td>
+              <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs rounded-full" :class="categoryBadgeClass(t.category)">{{ (t.category ?? '').replace(/_/g, ' ') }}</span></td>
+              <td class="px-4 py-3">{{ (t.assigned_to_role ?? '').replace(/_/g, ' ') }}</td>
               <td class="px-4 py-3">
                 <div class="flex gap-2">
                   <button class="text-blue-400 hover:text-blue-300 text-xs" @click="openEditTask(t)">Edit</button>
@@ -321,7 +333,7 @@ onMounted(() => {
               @change="toggleTask(selectedEmployee!.employee_id, task)"
             />
             <span class="text-sm" :class="task.is_completed ? 'text-gray-500 line-through' : 'text-gray-300'">{{ task.title }}</span>
-            <span class="px-2 py-0.5 text-xs rounded-full ml-auto" :class="categoryBadgeClass(task.category)">{{ task.category.replace(/_/g, ' ') }}</span>
+            <span class="px-2 py-0.5 text-xs rounded-full ml-auto" :class="categoryBadgeClass(task.category)">{{ (task.category ?? '').replace(/_/g, ' ') }}</span>
           </label>
           <p v-if="employeeTasks.length === 0" class="text-gray-500 text-sm text-center py-4">No tasks found</p>
         </div>
@@ -360,7 +372,7 @@ onMounted(() => {
               <td class="px-4 py-3">
                 <span class="px-2 py-0.5 text-xs rounded-full"
                   :class="emp.status === 'completed' ? 'bg-green-900/50 text-green-400' : emp.status === 'in_progress' ? 'bg-blue-900/50 text-blue-400' : 'bg-yellow-900/50 text-yellow-400'"
-                >{{ emp.status.replace(/_/g, ' ') }}</span>
+                >{{ (emp.status ?? '').replace(/_/g, ' ') }}</span>
               </td>
             </tr>
             <tr v-if="employeeOnboardings.length === 0"><td colspan="3" class="px-4 py-8 text-center text-gray-500">No employee onboarding records</td></tr>

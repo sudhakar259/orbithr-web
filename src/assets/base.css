@@ -260,6 +260,20 @@ html.dark {
 /* Light theme: restore default (dark) calendar icon — no inversion needed */
 [data-theme="light"] input::-webkit-calendar-picker-indicator { filter: none !important; }
 
+/* ─── Checkbox & radio — dark theme fix ─────────────────────────────── */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+  background-color: var(--surface2);
+  border: 1px solid var(--border-hi);
+  color-scheme: dark;
+}
+[data-theme="light"] input[type="checkbox"],
+[data-theme="light"] input[type="radio"] {
+  accent-color: var(--ds-primary-600, #4F46E5);
+  color-scheme: light;
+}
+
 /* ─── Calendar / date-time picker icon — dark theme fix ─────────────── */
 /* The browser renders this icon as a dark SVG; invert it on dark backgrounds */
 input[type="date"]::-webkit-calendar-picker-indicator,

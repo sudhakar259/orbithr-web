@@ -5,9 +5,9 @@ import { ref, onMounted } from 'vue'
 import api from '@/services/api'
 
 interface ExitRecord {
-  id: number
+  id: string
   employee_name: string
-  employee_id: number
+  employee_id: string
   exit_type: string
   reason: string
   last_working_date: string
@@ -20,9 +20,45 @@ interface ExitRecord {
 }
 
 interface ClearanceItem {
-  id: number
+  id: string
   name: string
   is_cleared: boolean
+}
+
+interface ExitRaw {
+  id: string
+  exit_type?: string
+  reason?: string
+  last_working_date?: string
+  notice_period_days?: number
+  status?: string
+  exit_interview_scheduled_at?: string | null
+  exit_interview_notes?: string | null
+  exit_interview_conducted?: boolean
+  fnf_amount?: number | null
+  employee?: { id?: string; first_name?: string; last_name?: string }
+  clearances?: { id: string; clearance_item?: string; status?: string }[]
+}
+
+function mapExit(raw: ExitRaw): ExitRecord {
+  return {
+    id: raw.id,
+    employee_name: [raw.employee?.first_name, raw.employee?.last_name].filter(Boolean).join(' ') || '—',
+    employee_id: raw.employee?.id ?? '',
+    exit_type: raw.exit_type ?? '',
+    reason: raw.reason ?? '',
+    last_working_date: raw.last_working_date ?? '',
+    notice_period_days: raw.notice_period_days ?? 0,
+    status: raw.status ?? '',
+    interview_date: raw.exit_interview_scheduled_at ?? null,
+    interview_notes: raw.exit_interview_notes ?? null,
+    fnf_amount: raw.fnf_amount ?? null,
+    clearances: (raw.clearances ?? []).map(c => ({
+      id: c.id,
+      name: c.clearance_item ?? '',
+      is_cleared: c.status === 'cleared',
+    })),
+  }
 }
 
 interface Employee { id: number; first_name: string; last_name: string }
@@ -36,7 +72,8 @@ async function fetchExits() {
   loading.value = true
   try {
     const { data } = await api.get('/exits')
-    exits.value = data.data ?? data
+    const rows: ExitRaw[] = data.data ?? data
+    exits.value = rows.map(mapExit)
   } catch { /* silently ignore */ }
   finally { loading.value = false }
 }
@@ -67,23 +104,33 @@ async function initiateExit() {
 
 // ── Detail Panel ──
 const selectedExit = ref<ExitRecord | null>(null)
+const detailLoading = ref(false)
 const interviewDate = ref('')
 const interviewNotes = ref('')
 const fnfAmount = ref('')
 const actionLoading = ref(false)
 
-function selectExit(exit: ExitRecord) {
+async function selectExit(exit: ExitRecord) {
+  detailLoading.value = true
   selectedExit.value = exit
   interviewDate.value = exit.interview_date ?? ''
   interviewNotes.value = exit.interview_notes ?? ''
   fnfAmount.value = exit.fnf_amount?.toString() ?? ''
+  try {
+    const { data } = await api.get(`/exits/${exit.id}`)
+    selectedExit.value = mapExit(data)
+    interviewDate.value = selectedExit.value.interview_date ?? ''
+    interviewNotes.value = selectedExit.value.interview_notes ?? ''
+    fnfAmount.value = selectedExit.value.fnf_amount?.toString() ?? ''
+  } catch { /* silently ignore */ }
+  finally { detailLoading.value = false }
 }
 
 async function scheduleInterview() {
   if (!selectedExit.value || !interviewDate.value) return
   actionLoading.value = true
   try {
-    await api.post(`/exits/${selectedExit.value.id}/schedule-interview`, { interview_date: interviewDate.value })
+    await api.post(`/exits/${selectedExit.value.id}/schedule-interview`, { scheduled_at: interviewDate.value })
     selectedExit.value.interview_date = interviewDate.value
     await fetchExits()
   } catch { /* silently ignore */ }
@@ -103,9 +150,12 @@ async function completeInterview() {
 
 async function toggleClearance(clearance: ClearanceItem) {
   if (!selectedExit.value) return
+  const newCleared = !clearance.is_cleared
   try {
-    await api.put(`/exits/${selectedExit.value.id}/clearances/${clearance.id}`, { is_cleared: !clearance.is_cleared })
-    clearance.is_cleared = !clearance.is_cleared
+    await api.put(`/exits/${selectedExit.value.id}/clearances/${clearance.id}`, {
+      status: newCleared ? 'cleared' : 'pending',
+    })
+    clearance.is_cleared = newCleared
   } catch { /* silently ignore */ }
 }
 
@@ -141,8 +191,6 @@ function exitTypeBadgeClass(type: string) {
   }
   return map[type] ?? 'bg-gray-700 text-gray-300'
 }
-
-const defaultClearanceItems = ['IT Access', 'Assets Return', 'Knowledge Transfer', 'Finance Clearance', 'HR Clearance']
 
 onMounted(() => {
   fetchExits()
@@ -203,82 +251,86 @@ onMounted(() => {
         <h3 class="text-lg font-semibold text-white">{{ selectedExit.employee_name }}</h3>
         <button class="text-gray-400 hover:text-gray-300 text-sm" @click="selectedExit = null">Close</button>
       </div>
+      <div v-if="detailLoading" class="flex justify-center py-6"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500" /></div>
 
-      <!-- Exit Info -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <p class="text-xs text-gray-400">Exit Type</p>
-          <span class="px-2 py-0.5 text-xs rounded-full mt-1 inline-block" :class="exitTypeBadgeClass(selectedExit.exit_type)">{{ selectedExit.exit_type.replace(/_/g, ' ') }}</span>
-        </div>
-        <div>
-          <p class="text-xs text-gray-400">Last Working Date</p>
-          <p class="text-sm text-white mt-1">{{ selectedExit.last_working_date }}</p>
-        </div>
-        <div>
-          <p class="text-xs text-gray-400">Notice Period</p>
-          <p class="text-sm text-white mt-1">{{ selectedExit.notice_period_days }} days</p>
-        </div>
-        <div>
-          <p class="text-xs text-gray-400">Status</p>
-          <span class="px-2 py-0.5 text-xs rounded-full mt-1 inline-block" :class="statusBadgeClass(selectedExit.status)">{{ selectedExit.status.replace(/_/g, ' ') }}</span>
-        </div>
-      </div>
-
-      <!-- Exit Interview -->
-      <div class="border-t border-gray-700 pt-4 space-y-3">
-        <h4 class="text-sm font-semibold text-white">Exit Interview</h4>
-        <div v-if="!selectedExit.interview_date" class="flex items-end gap-3">
-          <div class="flex-1">
-            <label class="block text-xs text-gray-400 mb-1">Interview Date</label>
-            <input v-model="interviewDate" type="date" class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2" />
+      <template v-if="!detailLoading">
+        <!-- Exit Info -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p class="text-xs text-gray-400">Exit Type</p>
+            <span class="px-2 py-0.5 text-xs rounded-full mt-1 inline-block" :class="exitTypeBadgeClass(selectedExit.exit_type)">{{ (selectedExit.exit_type ?? '').replace(/_/g, ' ') }}</span>
           </div>
-          <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg" :disabled="actionLoading" @click="scheduleInterview">Schedule</button>
-        </div>
-        <div v-else-if="!selectedExit.interview_notes" class="space-y-2">
-          <p class="text-sm text-gray-400">Scheduled: {{ selectedExit.interview_date }}</p>
-          <textarea v-model="interviewNotes" rows="3" placeholder="Interview notes..." class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2" />
-          <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg" :disabled="actionLoading" @click="completeInterview">Complete Interview</button>
-        </div>
-        <div v-else>
-          <p class="text-sm text-gray-400">Completed on {{ selectedExit.interview_date }}</p>
-          <p class="text-sm text-gray-300 mt-1">{{ selectedExit.interview_notes }}</p>
-        </div>
-      </div>
-
-      <!-- Clearance Checklist -->
-      <div class="border-t border-gray-700 pt-4 space-y-3">
-        <h4 class="text-sm font-semibold text-white">Clearance Checklist</h4>
-        <div class="space-y-2">
-          <label
-            v-for="item in (selectedExit.clearances ?? defaultClearanceItems.map((n, i) => ({ id: i+1, name: n, is_cleared: false })))"
-            :key="item.id"
-            class="flex items-center gap-3 p-2 rounded hover:bg-gray-700/50 cursor-pointer"
-          >
-            <input
-              type="checkbox"
-              :checked="item.is_cleared"
-              class="rounded border-gray-600 bg-gray-700 text-blue-600"
-              @change="toggleClearance(item)"
-            />
-            <span class="text-sm" :class="item.is_cleared ? 'text-gray-500 line-through' : 'text-gray-300'">{{ item.name }}</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- FnF Settlement -->
-      <div class="border-t border-gray-700 pt-4 space-y-3">
-        <h4 class="text-sm font-semibold text-white">Final Settlement (FnF)</h4>
-        <div v-if="selectedExit.fnf_amount">
-          <p class="text-sm text-green-400">Processed: ${{ selectedExit.fnf_amount.toLocaleString() }}</p>
-        </div>
-        <div v-else class="flex items-end gap-3">
-          <div class="flex-1">
-            <label class="block text-xs text-gray-400 mb-1">FnF Amount</label>
-            <input v-model="fnfAmount" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2" placeholder="0.00" />
+          <div>
+            <p class="text-xs text-gray-400">Last Working Date</p>
+            <p class="text-sm text-white mt-1">{{ selectedExit.last_working_date }}</p>
           </div>
-          <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg" :disabled="actionLoading" @click="processFnf">Process FnF</button>
+          <div>
+            <p class="text-xs text-gray-400">Notice Period</p>
+            <p class="text-sm text-white mt-1">{{ selectedExit.notice_period_days }} days</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400">Status</p>
+            <span class="px-2 py-0.5 text-xs rounded-full mt-1 inline-block" :class="statusBadgeClass(selectedExit.status)">{{ (selectedExit.status ?? '').replace(/_/g, ' ') }}</span>
+          </div>
         </div>
-      </div>
+
+        <!-- Exit Interview -->
+        <div class="border-t border-gray-700 pt-4 space-y-3">
+          <h4 class="text-sm font-semibold text-white">Exit Interview</h4>
+          <div v-if="!selectedExit.interview_date" class="flex items-end gap-3">
+            <div class="flex-1">
+              <label class="block text-xs text-gray-400 mb-1">Interview Date</label>
+              <input v-model="interviewDate" type="date" class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2" />
+            </div>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg" :disabled="actionLoading" @click="scheduleInterview">Schedule</button>
+          </div>
+          <div v-else-if="!selectedExit.interview_notes" class="space-y-2">
+            <p class="text-sm text-gray-400">Scheduled: {{ selectedExit.interview_date }}</p>
+            <textarea v-model="interviewNotes" rows="3" placeholder="Interview notes..." class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2" />
+            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg" :disabled="actionLoading" @click="completeInterview">Complete Interview</button>
+          </div>
+          <div v-else>
+            <p class="text-sm text-gray-400">Completed on {{ selectedExit.interview_date }}</p>
+            <p class="text-sm text-gray-300 mt-1">{{ selectedExit.interview_notes }}</p>
+          </div>
+        </div>
+
+        <!-- Clearance Checklist -->
+        <div class="border-t border-gray-700 pt-4 space-y-3">
+          <h4 class="text-sm font-semibold text-white">Clearance Checklist</h4>
+          <div class="space-y-2">
+            <label
+              v-for="item in selectedExit.clearances"
+              :key="item.id"
+              class="flex items-center gap-3 p-2 rounded hover:bg-gray-700/50 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                :checked="item.is_cleared"
+                class="rounded border-gray-600 bg-gray-700 text-blue-600"
+                @change="toggleClearance(item)"
+              />
+              <span class="text-sm" :class="item.is_cleared ? 'text-gray-500 line-through' : 'text-gray-300'">{{ item.name }}</span>
+            </label>
+            <p v-if="selectedExit.clearances.length === 0" class="text-sm text-gray-500">No clearance items</p>
+          </div>
+        </div>
+
+        <!-- FnF Settlement -->
+        <div class="border-t border-gray-700 pt-4 space-y-3">
+          <h4 class="text-sm font-semibold text-white">Final Settlement (FnF)</h4>
+          <div v-if="selectedExit.fnf_amount">
+            <p class="text-sm text-green-400">Processed: ${{ selectedExit.fnf_amount.toLocaleString() }}</p>
+          </div>
+          <div v-else class="flex items-end gap-3">
+            <div class="flex-1">
+              <label class="block text-xs text-gray-400 mb-1">FnF Amount</label>
+              <input v-model="fnfAmount" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2" placeholder="0.00" />
+            </div>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg" :disabled="actionLoading" @click="processFnf">Process FnF</button>
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- Exit List Table -->

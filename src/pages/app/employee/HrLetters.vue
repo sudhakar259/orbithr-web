@@ -80,6 +80,14 @@ interface GeneratedLetter {
   status: string
 }
 
+interface GeneratedLetterRaw {
+  id: number
+  status: string
+  created_at: string
+  employee?: { first_name?: string; last_name?: string }
+  template?: { type?: string }
+}
+
 const generatedLetters = ref<GeneratedLetter[]>([])
 const lettersLoading = ref(false)
 const showGenerateForm = ref(false)
@@ -89,11 +97,22 @@ const generating = ref(false)
 interface Employee { id: number; first_name: string; last_name: string }
 const employees = ref<Employee[]>([])
 
+function mapLetter(raw: GeneratedLetterRaw): GeneratedLetter {
+  return {
+    id: raw.id,
+    employee_name: [raw.employee?.first_name, raw.employee?.last_name].filter(Boolean).join(' ') || '—',
+    letter_type: raw.template?.type ?? '',
+    generated_at: raw.created_at ? new Date(raw.created_at).toLocaleDateString() : '—',
+    status: raw.status,
+  }
+}
+
 async function fetchGeneratedLetters() {
   lettersLoading.value = true
   try {
     const { data } = await api.get('/hr-letters')
-    generatedLetters.value = data.data ?? data
+    const rows: GeneratedLetterRaw[] = data.data ?? data
+    generatedLetters.value = rows.map(mapLetter)
   } catch { /* silently ignore */ }
   finally { lettersLoading.value = false }
 }
@@ -108,7 +127,21 @@ async function fetchEmployees() {
 async function generateLetter() {
   generating.value = true
   try {
-    await api.post('/hr-letters/generate', generateForm.value)
+    let parsedCustomValues: Record<string, string> = {}
+    if (generateForm.value.custom_values.trim()) {
+      try {
+        parsedCustomValues = JSON.parse(generateForm.value.custom_values)
+      } catch {
+        alert('Custom values must be valid JSON, e.g.\n{"last_working_date": "31 Dec 2024"}')
+        generating.value = false
+        return
+      }
+    }
+    await api.post('/hr-letters/generate', {
+      employee_id: generateForm.value.employee_id,
+      template_id: generateForm.value.template_id,
+      custom_values: parsedCustomValues,
+    })
     showGenerateForm.value = false
     generateForm.value = { employee_id: '', template_id: '', custom_values: '' }
     await fetchGeneratedLetters()
@@ -119,16 +152,26 @@ async function generateLetter() {
 async function downloadLetter(id: number) {
   try {
     const { data } = await api.get(`/hr-letters/${id}/download`, { responseType: 'blob' })
-    const url = window.URL.createObjectURL(data)
+    const url = window.URL.createObjectURL(new Blob([data], { type: 'application/pdf' }))
     const a = document.createElement('a')
     a.href = url
     a.download = `letter-${id}.pdf`
+    document.body.appendChild(a)
     a.click()
-    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000)
   } catch { /* silently ignore */ }
 }
 
-function typeBadgeClass(type: string) {
+async function deleteLetter(id: number) {
+  if (!await dialog('Delete Letter', 'Are you sure you want to delete this generated letter? This action cannot be undone.')) return
+  try {
+    await api.delete(`/hr-letters/${id}`)
+    await fetchGeneratedLetters()
+  } catch { /* silently ignore */ }
+}
+
+function typeBadgeClass(type: string | undefined | null) {
   const map: Record<string, string> = {
     appointment: 'bg-blue-900/50 text-blue-400',
     experience: 'bg-green-900/50 text-green-400',
@@ -222,7 +265,7 @@ onMounted(() => {
           <tbody class="divide-y divide-gray-700">
             <tr v-for="t in templates" :key="t.id" class="text-gray-300">
               <td class="px-4 py-3 text-white font-medium">{{ t.name }}</td>
-              <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs rounded-full" :class="typeBadgeClass(t.type)">{{ t.type.replace(/_/g, ' ') }}</span></td>
+              <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs rounded-full" :class="typeBadgeClass(t.type)">{{ (t.type ?? '').replace(/_/g, ' ') }}</span></td>
               <td class="px-4 py-3">
                 <span class="px-2 py-0.5 text-xs rounded-full" :class="t.is_active ? 'bg-green-900/50 text-green-400' : 'bg-gray-700 text-gray-400'">{{ t.is_active ? 'Active' : 'Inactive' }}</span>
               </td>
@@ -265,8 +308,9 @@ onMounted(() => {
             </select>
           </div>
           <div>
-            <label class="block text-sm text-gray-400 mb-1">Custom Values (optional)</label>
-            <textarea v-model="generateForm.custom_values" rows="3" class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2" placeholder="Any additional values..." />
+            <label class="block text-sm text-gray-400 mb-1">Custom Values <span class="text-gray-600">(optional)</span></label>
+            <p class="text-xs text-gray-500 mb-1">JSON object to override or fill placeholders, e.g. <code class="text-blue-400">{"last_working_date": "31 Dec 2024"}</code></p>
+            <textarea v-model="generateForm.custom_values" rows="3" class="w-full bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-2 font-mono" placeholder='{"last_working_date": "31 Dec 2024"}' />
           </div>
           <div class="flex justify-end gap-3">
             <button class="bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600 px-4 py-2 text-sm font-medium rounded-lg" @click="showGenerateForm = false">Cancel</button>
@@ -290,13 +334,16 @@ onMounted(() => {
           <tbody class="divide-y divide-gray-700">
             <tr v-for="l in generatedLetters" :key="l.id" class="text-gray-300">
               <td class="px-4 py-3 text-white font-medium">{{ l.employee_name }}</td>
-              <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs rounded-full" :class="typeBadgeClass(l.letter_type)">{{ l.letter_type.replace(/_/g, ' ') }}</span></td>
+              <td class="px-4 py-3"><span class="px-2 py-0.5 text-xs rounded-full" :class="typeBadgeClass(l.letter_type)">{{ (l.letter_type ?? '').replace(/_/g, ' ') }}</span></td>
               <td class="px-4 py-3 text-gray-400">{{ l.generated_at }}</td>
               <td class="px-4 py-3">
                 <span class="px-2 py-0.5 text-xs rounded-full" :class="l.status === 'generated' ? 'bg-green-900/50 text-green-400' : 'bg-yellow-900/50 text-yellow-400'">{{ l.status }}</span>
               </td>
               <td class="px-4 py-3">
-                <button class="text-blue-400 hover:text-blue-300 text-xs" @click="downloadLetter(l.id)">Download</button>
+                <div class="flex gap-2">
+                  <button class="text-blue-400 hover:text-blue-300 text-xs" @click="downloadLetter(l.id)">Download</button>
+                  <button class="text-red-400 hover:text-red-300 text-xs" @click="deleteLetter(l.id)">Delete</button>
+                </div>
               </td>
             </tr>
             <tr v-if="generatedLetters.length === 0"><td colspan="5" class="px-4 py-8 text-center text-gray-500">No letters generated yet</td></tr>

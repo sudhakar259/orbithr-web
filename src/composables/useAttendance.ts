@@ -12,6 +12,8 @@ import {
   type Shift,
   type WorkStatusOption,
 } from '@/services/attendance'
+import { useAuth } from '@/composables/useAuth'
+import { isCompanyHoliday, isEmployeeWeekOff } from '@/utils/attendanceData'
 
 const createEmptySummary = (): AttendanceSummary => ({
   total_days: 0,
@@ -34,23 +36,9 @@ const isSameDate = (left: string | null | undefined, right: string | null | unde
 
 const normalizeDate = (date: string) => date
 
-import { isCompanyHoliday, isEmployeeWeekOff } from '@/utils/attendanceData'
-
-const computeSummary = (records: AttendanceRecord[]): AttendanceSummary => {
+const computeSummary = (records: AttendanceRecord[], employeeId?: number): AttendanceSummary => {
   if (!records.length) {
     return createEmptySummary()
-  }
-
-  // Determine employee id if available from local auth (no fallback — undefined means unknown)
-  let employeeId: number | undefined
-  try {
-    // dynamic import useAuth to avoid circular deps at module load
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useAuth } = require('@/composables/useAuth')
-    const auth = useAuth()
-    employeeId = auth.user?.value?.employee_id || undefined
-  } catch {
-    // ignore — employeeId stays undefined
   }
 
   const today = new Date()
@@ -112,8 +100,11 @@ const extractErrorMessage = (error: unknown): string => {
     const data = response?.data
     if (data) {
       if (typeof data === 'string') return data
-      if (typeof data.message === 'string') return data.message
-      if (typeof data.error === 'string') return data.error
+      if (typeof data === 'object' && data !== null) {
+        const d = data as Record<string, unknown>
+        if (typeof d.message === 'string') return d.message
+        if (typeof d.error === 'string') return d.error
+      }
     }
   }
 
@@ -167,7 +158,10 @@ export function useAttendance() {
     if (incoming) {
       summary.value = incoming
     } else {
-      summary.value = computeSummary(records.value)
+      const auth = useAuth()
+      const empId = auth.user?.value?.employee?.id
+      const numericEmpId = empId !== undefined ? Number(empId) : undefined
+      summary.value = computeSummary(records.value, Number.isFinite(numericEmpId) ? numericEmpId : undefined)
     }
   }
 
@@ -235,13 +229,8 @@ export function useAttendance() {
   const fetchTodayAttendance = async (employeeId?: number) => {
     let id = employeeId
     if (!id) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { useAuth } = require('@/composables/useAuth')
-        id = useAuth().user?.value?.employee_id
-      } catch {
-        // ignore
-      }
+      const auth = useAuth()
+      id = auth.user?.value?.employee?.id
     }
     if (!id) return
     const record = await runRequest(() => attendanceService.getTodayAttendance(id!))

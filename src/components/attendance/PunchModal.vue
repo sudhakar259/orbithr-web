@@ -1,130 +1,62 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <!-- Background overlay -->
-      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="$emit('close')"></div>
-
-      <!-- Modal panel -->
-      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-        <form @submit.prevent="handleSubmit">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="sm:flex sm:items-start">
-              <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
-                <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                  {{ form.punch_type === 'check_out' ? 'Record Check Out' : 'Record Check In' }}
-                </h3>
-                <div class="mt-4 space-y-4">
-                  <!-- Punch Type -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Punch Type</label>
-                    <select
-                      v-model="form.punch_type"
-                      required
-                      :disabled="!!props.punchType"
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    >
-                      <option value="check_in">Check In</option>
-                      <option value="check_out">Check Out</option>
-                    </select>
-                  </div>
-
-                  <!-- Date -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Date</label>
-                    <input
-                      v-model="form.attendance_date"
-                      type="date"
-                      required
-                      :max="new Date().toISOString().split('T')[0]"
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                  </div>
-
-                  <!-- Time -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Time</label>
-                    <input
-                      v-model="form.timestamp"
-                      type="time"
-                      required
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                  </div>
-
-                  <!-- Punch Method -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Punch Method</label>
-                    <select
-                      v-model="form.method"
-                      required
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    >
-                      <option value="manual">Manual Entry</option>
-                      <option value="biometric">Biometric</option>
-                      <option value="rfid">RFID Card</option>
-                      <option value="facial">Facial Recognition</option>
-                      <option value="web">Web Portal</option>
-                      <option value="mobile">Mobile App</option>
-                    </select>
-                  </div>
-
-                  <!-- Location (for mobile/web punches) -->
-                  <div v-if="['web', 'mobile'].includes(form.method)">
-                    <label class="block text-sm font-medium text-gray-700">Location</label>
-                    <input
-                      v-model="form.location"
-                      type="text"
-                      placeholder="Enter location"
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                  </div>
-
-                  <!-- Notes -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                    <textarea
-                      v-model="form.notes"
-                      rows="3"
-                      placeholder="Any additional notes..."
-                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    ></textarea>
-                  </div>
-                </div>
-              </div>
-            </div>
+  <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="$emit('close')">
+    <div class="bg-gray-800 border border-gray-700 rounded-xl w-full max-w-md mx-4 shadow-2xl">
+      <form @submit.prevent="handleSubmit">
+        <!-- Header -->
+        <div class="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-700">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full" :class="isCheckOut ? 'bg-red-900/50' : 'bg-blue-900/50'">
+            <svg class="h-5 w-5" :class="isCheckOut ? 'text-red-400' : 'text-blue-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path v-if="isCheckOut" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
           </div>
-
-          <!-- Modal footer -->
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="submit"
-              :disabled="loading"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-            >
-              <span v-if="loading">Recording...</span>
-              <span v-else>Record Punch</span>
-            </button>
-            <button
-              type="button"
-              @click="$emit('close')"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-            >
-              Cancel
-            </button>
+          <div>
+            <h3 class="text-base font-semibold text-white">{{ isCheckOut ? 'Check Out' : 'Check In' }}</h3>
+            <p class="text-xs text-gray-400">{{ currentTime }} · {{ currentDate }}</p>
           </div>
-        </form>
-      </div>
+        </div>
+
+        <!-- Body -->
+        <div class="px-6 py-5 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">
+              {{ isCheckOut ? 'What did you accomplish today?' : 'What are you working on?' }}
+            </label>
+            <textarea
+              v-model="notes"
+              rows="4"
+              :placeholder="isCheckOut ? 'Summarise what you worked on today...' : 'Describe your tasks for today...'"
+              class="w-full bg-gray-700 border border-gray-600 text-gray-200 placeholder-gray-500 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              autofocus
+            />
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end gap-3 px-6 pb-6">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600"
+            @click="$emit('close')"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            :disabled="loading"
+            class="px-5 py-2 text-sm font-medium text-white rounded-lg disabled:opacity-50"
+            :class="isCheckOut ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
+          >
+            {{ loading ? 'Recording...' : (isCheckOut ? 'Check Out' : 'Check In') }}
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 interface Props {
   show: boolean
@@ -135,65 +67,32 @@ interface PunchData {
   punch_type: 'check_in' | 'check_out'
   attendance_date: string
   timestamp: string
-  method: 'manual' | 'biometric' | 'rfid' | 'facial' | 'web' | 'mobile'
-  location?: string
+  method: string
   notes?: string
 }
 
 const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  close: []
-  punch: [data: PunchData]
-}>()
+const emit = defineEmits<{ close: []; punch: [data: PunchData] }>()
 
 const loading = ref(false)
+const notes = ref('')
 
-const form = reactive<PunchData>({
-  punch_type: 'check_in',
-  attendance_date: new Date().toISOString().split('T')[0],
-  timestamp: new Date().toTimeString().slice(0, 5),
-  method: 'manual',
-  location: '',
-  notes: ''
-})
+const isCheckOut = computed(() => props.punchType === 'check_out')
+const currentTime = computed(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+const currentDate = computed(() => new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }))
 
-// Reset form when modal opens
-watch(() => props.show, (newValue) => {
-  if (newValue) {
-    // Reset to current date/time
-    form.attendance_date = new Date().toISOString().split('T')[0]
-    form.timestamp = new Date().toTimeString().slice(0, 5)
-    form.punch_type = props.punchType || 'check_in'
-    form.method = 'manual'
-    form.location = ''
-    form.notes = ''
-  }
-})
+watch(() => props.show, (val) => { if (!val) notes.value = '' })
 
-const handleSubmit = async () => {
+const handleSubmit = () => {
   loading.value = true
-
   try {
-    // Validate form
-    if (!form.attendance_date || !form.timestamp) {
-      throw new Error('Please fill in all required fields')
-    }
-
-    // Create punch data
-    const punchData: PunchData = {
-      punch_type: form.punch_type,
-      attendance_date: form.attendance_date,
-      timestamp: form.timestamp,
-      method: form.method,
-      location: form.location || undefined,
-      notes: form.notes || undefined
-    }
-
-    emit('punch', punchData)
-  } catch (error) {
-    console.error('Punch submission error:', error)
-    // You might want to show an error message to the user
+    emit('punch', {
+      punch_type: props.punchType ?? 'check_in',
+      attendance_date: new Date().toISOString().split('T')[0],
+      timestamp: new Date().toTimeString().slice(0, 5),
+      method: 'web',
+      notes: notes.value || undefined,
+    })
   } finally {
     loading.value = false
   }

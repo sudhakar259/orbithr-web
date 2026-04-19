@@ -178,7 +178,7 @@ const routes: RouteRecordRaw[] = [
         path: 'attendance',
         name: 'attendance',
         component: Attendance,
-        meta: { title: 'Attendance', permissions: ['view attendance'], roles: ['admin']},
+        meta: { title: 'Attendance', permissions: ['view attendance'], roles: ['admin', 'hr_manager', 'manager', 'employee']},
       },
       {
         path: 'regularizations',
@@ -208,7 +208,7 @@ const routes: RouteRecordRaw[] = [
         path: 'leave',
         name: 'leave',
         component: Leave,
-        meta: { title: 'Leave Management', permissions: ['view leaves'], roles: ['admin']},
+        meta: { title: 'Leave Management', permissions: ['view leaves'], roles: ['admin', 'hr_manager', 'manager', 'employee']},
       },
       {
         path: 'payroll',

@@ -53,11 +53,11 @@ const nextMonth = () => {
 const loadAttendance = async () => {
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth() + 1
-  await fetchCalendarData(year, month, user.value?.employee_id)
+  await fetchCalendarData(year, month, user.value?.employee?.id)
 }
 
 const loadTodayAttendance = async () => {
-  await fetchTodayAttendance(user.value?.employee_id)
+  await fetchTodayAttendance(user.value?.employee?.id)
 }
 
 const handlePunch = async (punchData: PunchPayload) => {
@@ -67,7 +67,7 @@ const handlePunch = async (punchData: PunchPayload) => {
       ...punchData,
       punch_type: punchData.punch_type,
       method: punchData.method || 'api',
-      employee_id: user.value?.employee_id
+      employee_id: user.value?.employee?.id
     }
     console.log('Recording punch:', payload)
     const result = await recordPunch(payload)
@@ -99,7 +99,7 @@ const handleWorkStatus = async (punchData: PunchPayload) => {
       project: punchData.project,
       notes: punchData.notes,
       gps_coordinates: punchData.gps_coordinates,
-      employee_id: user.value?.employee_id
+      employee_id: user.value?.employee?.id
     }
     await recordPunch(payload)
     showWorkStatusModal.value = false

@@ -22,24 +22,33 @@ interface WorkflowCondition {
 }
 
 interface WorkflowAction {
-  type: 'send_email' | 'send_notification' | 'assign_task' | 'update_field' | 'webhook' | 'slack_message' | 'create_ticket'
-  config: Record<string, string>
+  type: string
+  // send_email
+  recipients?: string[]
+  subject?: string
+  body?: string
+  // send_webhook
+  url?: string
+  method?: string
+  // other action types (stored for future use)
+  config?: Record<string, string>
 }
 
 type TriggerType =
+  | 'punch_in' | 'punch_out' | 'leave_requested' | 'employee_created'
   | 'employee_joined' | 'leave_approved' | 'leave_rejected'
   | 'attendance_missed' | 'birthday' | 'work_anniversary'
   | 'payroll_processed' | 'onboarding_started' | 'offboarding_started'
   | 'document_expiry'
 
 interface Workflow {
-  id: number
+  id: string
   name: string
   description: string
   trigger: TriggerType
   conditions: WorkflowCondition[]
   actions: WorkflowAction[]
-  status: 'active' | 'inactive' | 'draft'
+  status: 'active' | 'inactive'
   runs_count: number
   last_run: string | null
   created_at: string
@@ -47,49 +56,65 @@ interface Workflow {
 
 /* ── Constants ─────────────────────────────────────── */
 const triggerOptions: { value: TriggerType; label: string; category: string }[] = [
-  { value: 'employee_joined', label: 'Employee Joined', category: 'employee' },
-  { value: 'onboarding_started', label: 'Onboarding Started', category: 'employee' },
-  { value: 'offboarding_started', label: 'Offboarding Started', category: 'employee' },
-  { value: 'birthday', label: 'Employee Birthday', category: 'employee' },
-  { value: 'work_anniversary', label: 'Work Anniversary', category: 'employee' },
-  { value: 'leave_approved', label: 'Leave Approved', category: 'leave' },
-  { value: 'leave_rejected', label: 'Leave Rejected', category: 'leave' },
-  { value: 'attendance_missed', label: 'Attendance Missed', category: 'attendance' },
-  { value: 'payroll_processed', label: 'Payroll Processed', category: 'payroll' },
-  { value: 'document_expiry', label: 'Document Expiry', category: 'scheduled' },
+  { value: 'punch_in',          label: 'Employee Checks In',    category: 'attendance' },
+  { value: 'punch_out',         label: 'Employee Checks Out',   category: 'attendance' },
+  { value: 'attendance_missed', label: 'Attendance Missed',     category: 'attendance' },
+  { value: 'leave_requested',   label: 'Leave Requested',       category: 'leave' },
+  { value: 'leave_approved',    label: 'Leave Approved',        category: 'leave' },
+  { value: 'leave_rejected',    label: 'Leave Rejected',        category: 'leave' },
+  { value: 'employee_created',  label: 'New Employee Added',    category: 'employee' },
+  { value: 'employee_joined',   label: 'Employee Joined',       category: 'employee' },
+  { value: 'onboarding_started',label: 'Onboarding Started',    category: 'employee' },
+  { value: 'offboarding_started',label: 'Offboarding Started',  category: 'employee' },
+  { value: 'birthday',          label: 'Employee Birthday',     category: 'employee' },
+  { value: 'work_anniversary',  label: 'Work Anniversary',      category: 'employee' },
+  { value: 'payroll_processed', label: 'Payroll Processed',     category: 'payroll' },
+  { value: 'document_expiry',   label: 'Document Expiry',       category: 'scheduled' },
 ]
 
 const triggerCategoryColors: Record<string, string> = {
   employee: 'green', leave: 'blue', attendance: 'yellow', payroll: 'purple', scheduled: 'gray',
 }
 
-const actionOptions: { value: WorkflowAction['type']; label: string; icon: string }[] = [
-  { value: 'send_email', label: 'Send Email', icon: '📧' },
+const actionOptions: { value: string; label: string; icon: string }[] = [
+  { value: 'send_email',        label: 'Send Email',        icon: '📧' },
+  { value: 'send_webhook',      label: 'Webhook',           icon: '🔗' },
   { value: 'send_notification', label: 'Send Notification', icon: '🔔' },
-  { value: 'assign_task', label: 'Assign Task', icon: '📋' },
-  { value: 'update_field', label: 'Update Field', icon: '✏️' },
-  { value: 'webhook', label: 'Webhook', icon: '🔗' },
-  { value: 'slack_message', label: 'Slack Message', icon: '💬' },
-  { value: 'create_ticket', label: 'Create Ticket', icon: '🎫' },
+  { value: 'assign_task',       label: 'Assign Task',       icon: '📋' },
+  { value: 'update_field',      label: 'Update Field',      icon: '✏️' },
+  { value: 'slack_message',     label: 'Slack Message',     icon: '💬' },
+  { value: 'create_ticket',     label: 'Create Ticket',     icon: '🎫' },
+]
+
+const emailRecipients = [
+  { value: 'manager',  label: "Manager" },
+  { value: 'employee', label: 'Employee' },
+  { value: 'hr',       label: 'HR' },
+]
+
+const templateVariables = [
+  '{{employee_name}}', '{{employee_email}}', '{{attendance_date}}',
+  '{{check_in}}', '{{check_out}}', '{{location}}', '{{notes}}',
 ]
 
 const conditionFields = [
-  { value: 'department', label: 'Department' },
-  { value: 'designation', label: 'Designation' },
-  { value: 'employment_type', label: 'Employment Type' },
-  { value: 'location', label: 'Location' },
-  { value: 'team', label: 'Team' },
-  { value: 'leave_type', label: 'Leave Type' },
-  { value: 'leave_days', label: 'Leave Days' },
-  { value: 'tenure_months', label: 'Tenure (months)' },
+  { value: 'department',       label: 'Department' },
+  { value: 'designation',      label: 'Designation' },
+  { value: 'employment_type',  label: 'Employment Type' },
+  { value: 'location',         label: 'Location' },
+  { value: 'team',             label: 'Team' },
+  { value: 'leave_type',       label: 'Leave Type' },
+  { value: 'leave_days',       label: 'Leave Days' },
+  { value: 'tenure_months',    label: 'Tenure (months)' },
+  { value: 'punch_type',       label: 'Punch Type' },
 ]
 
 const operatorOptions = [
-  { value: 'equals', label: 'Equals' },
-  { value: 'not_equals', label: 'Not Equals' },
-  { value: 'contains', label: 'Contains' },
+  { value: 'equals',       label: 'Equals' },
+  { value: 'not_equals',   label: 'Not Equals' },
+  { value: 'contains',     label: 'Contains' },
   { value: 'greater_than', label: 'Greater Than' },
-  { value: 'less_than', label: 'Less Than' },
+  { value: 'less_than',    label: 'Less Than' },
 ]
 
 /* ── State ─────────────────────────────────────────── */
@@ -97,7 +122,7 @@ const loading = ref(true)
 const workflows = ref<Workflow[]>([])
 const showCreateModal = ref(false)
 const editingWorkflow = ref<Workflow | null>(null)
-const activeTab = ref<'all' | 'active' | 'inactive' | 'draft'>('all')
+const activeTab = ref<'all' | 'active' | 'inactive'>('all')
 const searchQuery = ref('')
 const triggerFilter = ref('')
 const wizardStep = ref(1)
@@ -111,57 +136,42 @@ const form = ref({
   actions: [] as WorkflowAction[],
 })
 
-/* ── Mock data ─────────────────────────────────────── */
-const mockWorkflows: Workflow[] = [
-  {
-    id: 1, name: 'Welcome Email on Joining', description: 'Send welcome email with onboarding docs when new employee joins',
-    trigger: 'employee_joined', conditions: [{ field: 'department', operator: 'not_equals', value: 'Contractual', logic: 'AND' }],
-    actions: [{ type: 'send_email', config: { template: 'welcome_onboarding', to: '{{employee.email}}' } }, { type: 'assign_task', config: { task: 'Complete KYC documents', assignee: '{{employee.manager}}' } }],
-    status: 'active', runs_count: 142, last_run: '2026-04-08T09:15:00Z', created_at: '2025-11-10T10:00:00Z',
-  },
-  {
-    id: 2, name: 'Birthday Celebration Alert', description: 'Notify HR and team lead about upcoming employee birthdays',
-    trigger: 'birthday', conditions: [],
-    actions: [{ type: 'send_notification', config: { to: 'hr_team', message: '{{employee.name}} birthday tomorrow!' } }, { type: 'slack_message', config: { channel: '#celebrations', message: 'Birthday celebration for {{employee.name}}' } }],
-    status: 'active', runs_count: 89, last_run: '2026-04-07T06:00:00Z', created_at: '2025-12-01T10:00:00Z',
-  },
-  {
-    id: 3, name: 'Missed Attendance Escalation', description: 'Escalate to manager when attendance is missed for 2+ consecutive days',
-    trigger: 'attendance_missed', conditions: [{ field: 'tenure_months', operator: 'less_than', value: '6', logic: 'AND' }],
-    actions: [{ type: 'send_email', config: { to: '{{employee.manager.email}}', template: 'attendance_alert' } }, { type: 'create_ticket', config: { category: 'HR Review', priority: 'high' } }],
-    status: 'active', runs_count: 34, last_run: '2026-04-08T08:30:00Z', created_at: '2026-01-15T10:00:00Z',
-  },
-  {
-    id: 4, name: 'Leave Approval Notification', description: 'Send push notification when leave request is approved by manager',
-    trigger: 'leave_approved', conditions: [{ field: 'leave_type', operator: 'not_equals', value: 'Comp Off', logic: 'AND' }],
-    actions: [{ type: 'send_notification', config: { to: '{{employee}}', message: 'Your {{leave_type}} leave has been approved' } }],
-    status: 'active', runs_count: 267, last_run: '2026-04-08T11:22:00Z', created_at: '2025-10-01T10:00:00Z',
-  },
-  {
-    id: 5, name: 'Payroll Processed Summary', description: 'Send payroll summary report to finance team after payroll processing',
-    trigger: 'payroll_processed', conditions: [],
-    actions: [{ type: 'send_email', config: { to: 'finance@company.com', template: 'payroll_summary' } }, { type: 'webhook', config: { url: 'https://erp.internal/api/payroll-sync', method: 'POST' } }],
-    status: 'inactive', runs_count: 12, last_run: '2026-03-31T18:00:00Z', created_at: '2026-02-01T10:00:00Z',
-  },
-  {
-    id: 6, name: 'Document Expiry Reminder', description: 'Remind employees 30 days before document expiry (Passport, Visa, etc.)',
-    trigger: 'document_expiry', conditions: [],
-    actions: [{ type: 'send_email', config: { to: '{{employee.email}}', template: 'document_expiry_reminder' } }, { type: 'send_notification', config: { to: 'hr_admin', message: '{{employee.name}} document expiring soon' } }],
-    status: 'draft', runs_count: 0, last_run: null, created_at: '2026-04-05T10:00:00Z',
-  },
-  {
-    id: 7, name: 'Work Anniversary Recognition', description: 'Auto-post on social wall and notify HR for milestone anniversaries',
-    trigger: 'work_anniversary', conditions: [{ field: 'tenure_months', operator: 'greater_than', value: '11', logic: 'AND' }],
-    actions: [{ type: 'slack_message', config: { channel: '#general', message: 'Congratulations {{employee.name}} on {{years}} years!' } }, { type: 'assign_task', config: { task: 'Arrange anniversary gift', assignee: 'hr_admin' } }],
-    status: 'active', runs_count: 23, last_run: '2026-04-06T06:00:00Z', created_at: '2026-01-20T10:00:00Z',
-  },
-  {
-    id: 8, name: 'Leave Rejection Follow-up', description: 'Create a follow-up task for HR when leave is rejected to discuss with employee',
-    trigger: 'leave_rejected', conditions: [{ field: 'leave_days', operator: 'greater_than', value: '3', logic: 'AND' }],
-    actions: [{ type: 'create_ticket', config: { category: 'HR Follow-up', priority: 'medium' } }],
-    status: 'inactive', runs_count: 8, last_run: '2026-03-28T14:00:00Z', created_at: '2026-03-01T10:00:00Z',
-  },
-]
+/* ── Data mapping ──────────────────────────────────── */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function apiToWorkflow(rule: any): Workflow {
+  return {
+    id: rule.id,
+    name: rule.name,
+    description: rule.description ?? '',
+    trigger: rule.trigger_event as TriggerType,
+    conditions: (rule.conditions ?? []).map((c: WorkflowCondition) => ({ ...c, logic: c.logic ?? 'AND' })),
+    actions: rule.actions ?? [],
+    status: rule.is_active ? 'active' : 'inactive',
+    runs_count: rule.run_count ?? 0,
+    last_run: rule.last_run_at ?? null,
+    created_at: rule.created_at,
+  }
+}
+
+function formToPayload(f: typeof form.value) {
+  const actions = f.actions.map(a => {
+    if (a.type === 'send_email') {
+      return { type: 'send_email', recipients: a.recipients ?? ['manager'], subject: a.subject ?? '', body: a.body ?? '' }
+    }
+    if (a.type === 'send_webhook') {
+      return { type: 'send_webhook', url: a.url ?? '', method: a.method ?? 'post' }
+    }
+    return { type: a.type, ...(a.config ? { config: a.config } : {}) }
+  })
+  return {
+    name: f.name,
+    description: f.description,
+    trigger_event: f.trigger,
+    conditions: f.conditions.map(c => ({ field: c.field, operator: c.operator, value: c.value })),
+    actions,
+    is_active: true,
+  }
+}
 
 /* ── Computed ──────────────────────────────────────── */
 const stats = computed(() => {
@@ -176,7 +186,7 @@ const stats = computed(() => {
     total: all.length,
     active: active.length,
     runs_today: runsToday,
-    success_rate: total_runs > 0 ? '97.3%' : '0%',
+    success_rate: total_runs > 0 ? '97.3%' : '—',
   }
 })
 
@@ -195,7 +205,6 @@ const tabCounts = computed(() => ({
   all: workflows.value.length,
   active: workflows.value.filter(w => w.status === 'active').length,
   inactive: workflows.value.filter(w => w.status === 'inactive').length,
-  draft: workflows.value.filter(w => w.status === 'draft').length,
 }))
 
 const canProceedStep1 = computed(() => form.value.name.trim() && form.value.trigger)
@@ -208,10 +217,10 @@ function getTriggerLabel(t: TriggerType) {
 function getTriggerCategory(t: TriggerType) {
   return triggerOptions.find(o => o.value === t)?.category ?? 'scheduled'
 }
-function getActionLabel(t: WorkflowAction['type']) {
+function getActionLabel(t: string) {
   return actionOptions.find(o => o.value === t)?.label ?? t
 }
-function getActionIcon(t: WorkflowAction['type']) {
+function getActionIcon(t: string) {
   return actionOptions.find(o => o.value === t)?.icon ?? '⚡'
 }
 function timeAgo(dateStr: string | null) {
@@ -227,14 +236,26 @@ function timeAgo(dateStr: string | null) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
+function toggleEmailRecipient(action: WorkflowAction, value: string) {
+  if (!action.recipients) action.recipients = []
+  const idx = action.recipients.indexOf(value)
+  if (idx >= 0) action.recipients.splice(idx, 1)
+  else action.recipients.push(value)
+}
+
+function insertTemplateVar(action: WorkflowAction, field: 'subject' | 'body', v: string) {
+  (action as Record<string, string>)[field] = ((action as Record<string, string>)[field] ?? '') + v
+}
+
 /* ── CRUD ──────────────────────────────────────────── */
 async function fetchWorkflows() {
   loading.value = true
   try {
-    const res = await api.get('/workflows')
-    workflows.value = res.data?.data ?? res.data ?? []
+    const res = await api.get('/workflow/rules')
+    const raw = res.data?.data ?? res.data ?? []
+    workflows.value = raw.map(apiToWorkflow)
   } catch {
-    workflows.value = [...mockWorkflows]
+    workflows.value = []
   } finally {
     loading.value = false
   }
@@ -263,41 +284,27 @@ function openEditModal(wf: Workflow) {
 function addCondition() {
   form.value.conditions.push({ field: 'department', operator: 'equals', value: '', logic: 'AND' })
 }
-
-function removeCondition(i: number) {
-  form.value.conditions.splice(i, 1)
-}
+function removeCondition(i: number) { form.value.conditions.splice(i, 1) }
 
 function addAction() {
-  form.value.actions.push({ type: 'send_email', config: {} })
+  form.value.actions.push({ type: 'send_email', recipients: ['manager'], subject: '', body: '' })
 }
-
-function removeAction(i: number) {
-  form.value.actions.splice(i, 1)
-}
+function removeAction(i: number) { form.value.actions.splice(i, 1) }
 
 async function saveWorkflow() {
   saving.value = true
   try {
+    const payload = formToPayload(form.value)
     if (editingWorkflow.value) {
-      await api.put(`/workflows/${editingWorkflow.value.id}`, form.value).catch(() => {})
+      const res = await api.put(`/workflow/rules/${editingWorkflow.value.id}`, payload)
+      const updated = apiToWorkflow(res.data?.data ?? res.data)
       const idx = workflows.value.findIndex(w => w.id === editingWorkflow.value!.id)
-      if (idx >= 0) {
-        workflows.value[idx] = { ...workflows.value[idx], ...form.value } as Workflow
-      }
+      if (idx >= 0) workflows.value[idx] = updated
       toast.success('Workflow updated successfully')
     } else {
-      const newWf: Workflow = {
-        id: Date.now(),
-        ...form.value,
-        trigger: form.value.trigger as TriggerType,
-        status: 'draft',
-        runs_count: 0,
-        last_run: null,
-        created_at: new Date().toISOString(),
-      }
-      await api.post('/workflows', form.value).catch(() => {})
-      workflows.value.unshift(newWf)
+      const res = await api.post('/workflow/rules', payload)
+      const created = apiToWorkflow(res.data?.data ?? res.data)
+      workflows.value.unshift(created)
       toast.success('Workflow created successfully')
     }
     showCreateModal.value = false
@@ -309,35 +316,38 @@ async function saveWorkflow() {
 }
 
 async function toggleStatus(wf: Workflow) {
-  const newStatus = wf.status === 'active' ? 'inactive' : 'active'
   try {
-    await api.patch(`/workflows/${wf.id}/toggle`).catch(() => {})
-    wf.status = newStatus
-    toast.success(`Workflow ${newStatus === 'active' ? 'activated' : 'deactivated'}`)
+    const res = await api.post(`/workflow/rules/${wf.id}/toggle`)
+    const updated = apiToWorkflow(res.data?.data ?? res.data)
+    const idx = workflows.value.findIndex(w => w.id === wf.id)
+    if (idx >= 0) workflows.value[idx] = updated
+    toast.success(`Workflow ${updated.status === 'active' ? 'activated' : 'deactivated'}`)
   } catch {
     toast.error('Failed to update workflow status')
   }
 }
 
 async function duplicateWorkflow(wf: Workflow) {
-  const dup: Workflow = {
-    ...JSON.parse(JSON.stringify(wf)),
-    id: Date.now(),
-    name: `${wf.name} (Copy)`,
-    status: 'draft',
-    runs_count: 0,
-    last_run: null,
-    created_at: new Date().toISOString(),
+  try {
+    const res = await api.post('/workflow/rules', {
+      name: `${wf.name} (Copy)`,
+      description: wf.description,
+      trigger_event: wf.trigger,
+      conditions: wf.conditions.map(c => ({ field: c.field, operator: c.operator, value: c.value })),
+      actions: wf.actions,
+      is_active: false,
+    })
+    workflows.value.unshift(apiToWorkflow(res.data?.data ?? res.data))
+    toast.success('Workflow duplicated')
+  } catch {
+    toast.error('Failed to duplicate workflow')
   }
-  await api.post('/workflows', dup).catch(() => {})
-  workflows.value.unshift(dup)
-  toast.success('Workflow duplicated')
 }
 
 async function deleteWorkflow(wf: Workflow) {
   if (!await dialog('Delete', `Delete "${wf.name}"? This cannot be undone.`)) return
   try {
-    await api.delete(`/workflows/${wf.id}`).catch(() => {})
+    await api.delete(`/workflow/rules/${wf.id}`)
     workflows.value = workflows.value.filter(w => w.id !== wf.id)
     toast.success('Workflow deleted')
   } catch {
@@ -367,7 +377,7 @@ onMounted(fetchWorkflows)
     <!-- Tabs -->
     <div class="tab-bar">
       <button
-        v-for="t in (['all', 'active', 'inactive', 'draft'] as const)" :key="t"
+        v-for="t in (['all', 'active', 'inactive'] as const)" :key="t"
         class="tab-btn" :class="{ active: activeTab === t }"
         @click="activeTab = t"
       >
@@ -486,7 +496,7 @@ onMounted(fetchWorkflows)
       <div v-if="wizardStep === 1" class="step-content">
         <div class="form-group">
           <label class="form-label">Workflow Name</label>
-          <input v-model="form.name" type="text" class="form-input" placeholder="e.g. Welcome Email on Joining" />
+          <input v-model="form.name" type="text" class="form-input" placeholder="e.g. Notify manager on check-in" />
         </div>
         <div class="form-group">
           <label class="form-label">Description</label>
@@ -496,7 +506,12 @@ onMounted(fetchWorkflows)
           <label class="form-label">Trigger Event</label>
           <select v-model="form.trigger" class="form-input">
             <option value="" disabled>Select a trigger event</option>
-            <option v-for="t in triggerOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
+            <optgroup v-for="cat in ['attendance', 'leave', 'employee', 'payroll', 'scheduled']" :key="cat" :label="cat.charAt(0).toUpperCase() + cat.slice(1)">
+              <option
+                v-for="t in triggerOptions.filter(o => o.category === cat)"
+                :key="t.value" :value="t.value"
+              >{{ t.label }}</option>
+            </optgroup>
           </select>
         </div>
       </div>
@@ -544,41 +559,81 @@ onMounted(fetchWorkflows)
               <option v-for="a in actionOptions" :key="a.value" :value="a.value">{{ a.icon }} {{ a.label }}</option>
             </select>
 
+            <!-- Send Email -->
             <template v-if="action.type === 'send_email'">
-              <input v-model="action.config.to" type="text" class="form-input" placeholder="Recipient (e.g. {{employee.email}})" />
-              <input v-model="action.config.template" type="text" class="form-input" placeholder="Email template name" />
+              <div class="form-group">
+                <label class="form-label">Send To</label>
+                <div class="recipient-pills">
+                  <button
+                    v-for="r in emailRecipients" :key="r.value"
+                    type="button"
+                    @click="toggleEmailRecipient(action, r.value)"
+                    :class="['recipient-pill', { active: (action.recipients ?? []).includes(r.value) }]"
+                  >{{ r.label }}</button>
+                  <input
+                    v-model="action.config!.custom_email"
+                    type="email"
+                    class="form-input recipient-email"
+                    placeholder="or custom email..."
+                    @blur="action.config?.custom_email && toggleEmailRecipient(action, action.config.custom_email)"
+                  />
+                </div>
+              </div>
+              <input v-model="action.subject" type="text" class="form-input" placeholder="Subject — use {{employee_name}} etc." />
+              <textarea v-model="action.body" class="form-input form-textarea" rows="3" placeholder="Email body — use {{check_in}}, {{location}}, {{notes}}…" />
+              <div class="var-chips">
+                <span class="var-chips-label">Insert:</span>
+                <button
+                  v-for="v in templateVariables" :key="v"
+                  type="button"
+                  class="var-chip"
+                  @click="insertTemplateVar(action, 'body', v)"
+                >{{ v }}</button>
+              </div>
             </template>
-            <template v-else-if="action.type === 'send_notification'">
-              <input v-model="action.config.to" type="text" class="form-input" placeholder="Recipient" />
-              <input v-model="action.config.message" type="text" class="form-input" placeholder="Notification message" />
-            </template>
-            <template v-else-if="action.type === 'assign_task'">
-              <input v-model="action.config.task" type="text" class="form-input" placeholder="Task description" />
-              <input v-model="action.config.assignee" type="text" class="form-input" placeholder="Assignee" />
-            </template>
-            <template v-else-if="action.type === 'webhook'">
-              <input v-model="action.config.url" type="text" class="form-input" placeholder="Webhook URL" />
-              <select v-model="action.config.method" class="form-input">
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-                <option value="PATCH">PATCH</option>
+
+            <!-- Webhook -->
+            <template v-else-if="action.type === 'send_webhook'">
+              <input v-model="action.url" type="url" class="form-input" placeholder="Webhook URL (https://...)" />
+              <select v-model="action.method" class="form-input">
+                <option value="post">POST</option>
+                <option value="put">PUT</option>
+                <option value="patch">PATCH</option>
               </select>
             </template>
-            <template v-else-if="action.type === 'slack_message'">
-              <input v-model="action.config.channel" type="text" class="form-input" placeholder="Channel (e.g. #general)" />
-              <input v-model="action.config.message" type="text" class="form-input" placeholder="Message" />
+
+            <!-- Send Notification -->
+            <template v-else-if="action.type === 'send_notification'">
+              <input v-model="action.config!.to" type="text" class="form-input" placeholder="Recipient (e.g. {{employee_name}} or hr_team)" />
+              <input v-model="action.config!.message" type="text" class="form-input" placeholder="Notification message" />
             </template>
+
+            <!-- Assign Task -->
+            <template v-else-if="action.type === 'assign_task'">
+              <input v-model="action.config!.task" type="text" class="form-input" placeholder="Task description" />
+              <input v-model="action.config!.assignee" type="text" class="form-input" placeholder="Assignee" />
+            </template>
+
+            <!-- Slack Message -->
+            <template v-else-if="action.type === 'slack_message'">
+              <input v-model="action.config!.channel" type="text" class="form-input" placeholder="Channel (e.g. #general)" />
+              <input v-model="action.config!.message" type="text" class="form-input" placeholder="Message" />
+            </template>
+
+            <!-- Create Ticket -->
             <template v-else-if="action.type === 'create_ticket'">
-              <input v-model="action.config.category" type="text" class="form-input" placeholder="Ticket category" />
-              <select v-model="action.config.priority" class="form-input">
+              <input v-model="action.config!.category" type="text" class="form-input" placeholder="Ticket category" />
+              <select v-model="action.config!.priority" class="form-input">
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
               </select>
             </template>
+
+            <!-- Update Field -->
             <template v-else>
-              <input v-model="action.config.field" type="text" class="form-input" placeholder="Field name" />
-              <input v-model="action.config.value" type="text" class="form-input" placeholder="New value" />
+              <input v-model="action.config!.field" type="text" class="form-input" placeholder="Field name" />
+              <input v-model="action.config!.value" type="text" class="form-input" placeholder="New value" />
             </template>
           </div>
           <button class="remove-btn" @click="removeAction(i)">✕</button>
@@ -627,13 +682,8 @@ onMounted(fetchWorkflows)
 
 /* Filter row */
 .filter-row { display: flex; gap: 10px; align-items: center; }
-.search-wrap {
-  position: relative; flex: 1; max-width: 360px;
-}
-.search-icon {
-  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-  font-size: 13px; pointer-events: none;
-}
+.search-wrap { position: relative; flex: 1; max-width: 360px; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; pointer-events: none; }
 .search-input {
   width: 100%; padding: 9px 12px 9px 36px; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--rs); font-size: 13px;
@@ -680,11 +730,11 @@ onMounted(fetchWorkflows)
   font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
   text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; flex-shrink: 0;
 }
-.trigger-badge.green { background: rgba(54,211,153,.12); color: #36D399; }
-.trigger-badge.blue { background: rgba(79,126,255,.12); color: #4F7EFF; }
+.trigger-badge.green  { background: rgba(54,211,153,.12); color: #36D399; }
+.trigger-badge.blue   { background: rgba(79,126,255,.12); color: #4F7EFF; }
 .trigger-badge.yellow { background: rgba(249,168,37,.12); color: #F9A825; }
 .trigger-badge.purple { background: rgba(155,110,255,.12); color: #9B6EFF; }
-.trigger-badge.gray { background: rgba(156,163,175,.12); color: #9CA3AF; }
+.trigger-badge.gray   { background: rgba(156,163,175,.12); color: #9CA3AF; }
 
 /* Actions summary */
 .wf-actions-summary { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
@@ -692,7 +742,6 @@ onMounted(fetchWorkflows)
   font-size: 11px; padding: 3px 8px; border-radius: 6px;
   background: var(--surface2); color: var(--dim); border: 1px solid var(--border);
 }
-
 .wf-conditions-count { font-size: 11px; color: var(--muted); }
 
 /* Card footer */
@@ -707,10 +756,7 @@ onMounted(fetchWorkflows)
 /* Toggle switch */
 .toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; cursor: pointer; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider {
-  position: absolute; inset: 0; background: var(--surface3); border-radius: 20px;
-  transition: background .2s;
-}
+.toggle-slider { position: absolute; inset: 0; background: var(--surface3); border-radius: 20px; transition: background .2s; }
 .toggle-slider::before {
   content: ''; position: absolute; width: 16px; height: 16px; left: 2px; bottom: 2px;
   background: var(--muted); border-radius: 50%; transition: all .2s;
@@ -782,6 +828,27 @@ onMounted(fetchWorkflows)
 .form-input:focus { border-color: var(--accent); }
 .form-input::placeholder { color: var(--muted); }
 .form-textarea { resize: vertical; min-height: 60px; }
+
+/* Recipient pills */
+.recipient-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.recipient-pill {
+  padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border);
+  font-size: 12px; color: var(--muted); background: none; cursor: pointer;
+  transition: all .15s;
+}
+.recipient-pill:hover { border-color: var(--accent); color: var(--text); }
+.recipient-pill.active { background: rgba(79,126,255,.15); border-color: var(--accent); color: var(--accent); }
+.recipient-email { flex: 1; min-width: 140px; padding: 5px 10px; font-size: 12px; }
+
+/* Template variable chips */
+.var-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.var-chips-label { font-size: 11px; color: var(--muted); }
+.var-chip {
+  font-size: 10px; padding: 2px 7px; border-radius: 4px; border: none;
+  background: var(--surface3); color: var(--dim); cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.var-chip:hover { background: rgba(79,126,255,.2); color: var(--accent); }
 
 /* Condition rows */
 .condition-row { display: flex; flex-direction: column; gap: 6px; }

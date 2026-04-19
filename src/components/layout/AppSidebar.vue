@@ -180,13 +180,13 @@ const moduleGroups = computed<NavGroup[]>(() => [
     label: 'Attendance',
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>',
     permissions: ['view attendance'],
-    roles: ['admin'],
+    roles: ['admin', 'manager', 'employee'],
     children: [
       {
         name: 'Attendance Records',
         to: { name: 'attendance' },
         icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>',
-        permissions: ['view attendance'], roles: ['admin'],
+        permissions: ['view attendance'], roles: ['admin', 'manager', 'employee'],
       },
       {
         name: 'Regularization',
@@ -215,14 +215,14 @@ const moduleGroups = computed<NavGroup[]>(() => [
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>',
     badge: pendingLeaves.value,
     permissions: ['view leaves'],
-    roles: ['admin'],
+    roles: ['admin', 'manager', 'employee'],
     children: [
       {
         name: 'Leave Requests',
         to: { name: 'leave' },
         icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>',
         badge: pendingLeaves.value,
-        permissions: ['view leaves'], roles: ['admin'],
+        permissions: ['view leaves'], roles: ['admin', 'manager', 'employee'],
       },
       {
         name: 'Leave Types',
@@ -240,7 +240,7 @@ const moduleGroups = computed<NavGroup[]>(() => [
         name: 'Holiday Calendar',
         to: { name: 'holiday-calendar' },
         icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>',
-        roles: ['admin', 'hr_manager'],
+        roles: ['admin', 'hr_manager', 'manager', 'employee'],
       },
     ],
   },
@@ -252,7 +252,7 @@ const moduleGroups = computed<NavGroup[]>(() => [
     module: 'payroll',
     icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>',
     permissions: ['view payroll'],
-    roles: ['admin'],
+    roles: ['admin', 'hr_manager', 'employee'],
     children: [
       {
         name: 'Payroll Processing',
@@ -264,7 +264,7 @@ const moduleGroups = computed<NavGroup[]>(() => [
         name: 'Payslips',
         to: { name: 'payslips' },
         icon: '<svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>',
-        permissions: ['view payroll'], roles: ['admin', 'hr_manager'],
+        permissions: ['view payroll'], roles: ['admin', 'hr_manager', 'employee'],
       },
       {
         name: 'Statutory Compliance',

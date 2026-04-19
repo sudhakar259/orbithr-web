@@ -4,9 +4,12 @@ import { ref, onMounted, computed } from 'vue'
 import api from '@/services/api'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Modal from '@/components/ui/Modal.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+
+const { confirm: dialog } = useConfirm()
 
 interface OrgGoal {
   id: number
@@ -143,7 +146,7 @@ const updateGoal = async () => {
 
 /* Delete */
 const deleteGoal = async (id: number) => {
-  if (!confirm('Delete this goal?')) return
+  if (!await dialog('Delete', 'Delete this goal?')) return
   try {
     await api.delete(`/org-goals/${id}`)
     toast.success('Goal deleted')

@@ -2,6 +2,11 @@
 import { ref, computed, onMounted, defineOptions } from 'vue'
 import { useRouter } from 'vue-router'
 import { listEmployees, deleteEmployee } from '@/services/employee'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
+
+const { confirm: dialog } = useConfirm()
+const toast = useToast()
 
 defineOptions({ name: 'EmployeesPage' })
 
@@ -92,19 +97,19 @@ function clearSelection() { selected.value = {}; selectAll.value = false }
 
 async function bulkDelete() {
   if (!selectedCount.value) return
-  if (!confirm(`Delete ${selectedCount.value} selected employees? This cannot be undone.`)) return
+  if (!await dialog('Delete', `Delete ${selectedCount.value} selected employees? This cannot be undone.`)) return
   loading.value = true
   try {
     for (const id of selectedIds.value) await deleteEmployee(id)
     await load(); clearSelection()
-  } catch { alert('Failed to delete selected employees') }
+  } catch { toast.error('Failed to delete selected employees') }
   finally { loading.value = false }
 }
 
 async function handleDelete(emp: Employee) {
-  if (!confirm(`Delete ${emp.first_name} ${emp.last_name}?`)) return
+  if (!await dialog('Delete', `Delete ${emp.first_name} ${emp.last_name}?`)) return
   try { await deleteEmployee(emp.id); await load() }
-  catch { alert('Failed to delete employee') }
+  catch { toast.error('Failed to delete employee') }
 }
 
 function normalizeEmployee(data: Record<string, unknown>): Employee {

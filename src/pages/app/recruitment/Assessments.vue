@@ -2,6 +2,9 @@
 defineOptions({ name: 'RecruitmentAssessments' })
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 interface Assessment {
   id: number
@@ -107,7 +110,7 @@ async function submit() {
 }
 
 async function deleteAssessment(id: number) {
-  if (!confirm('Delete this assessment?')) return
+  if (!await dialog('Delete', 'Delete this assessment?')) return
   try {
     await api.delete(`/assessments/${id}`)
     await fetchAssessments()

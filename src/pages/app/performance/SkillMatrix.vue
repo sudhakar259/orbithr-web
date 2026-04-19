@@ -4,9 +4,12 @@ import { ref, onMounted, computed } from 'vue'
 import api from '@/services/api'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Modal from '@/components/ui/Modal.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+
+const { confirm: dialog } = useConfirm()
 
 interface SkillEntry {
   id: number
@@ -99,7 +102,7 @@ const addSkill = async () => {
 }
 
 const deleteSkill = async (id: number) => {
-  if (!confirm('Remove this skill entry?')) return
+  if (!await dialog('Remove', 'Remove this skill entry?')) return
   try {
     await api.delete(`/skill-matrix/${id}`)
     toast.success('Skill removed')

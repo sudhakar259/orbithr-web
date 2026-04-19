@@ -8,6 +8,11 @@ import {
   type IntegrationLogEntry,
   type UsageReport,
 } from '@/services/integrationService'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
+
+const { confirm: dialog } = useConfirm()
+const toast = useToast()
 
 // ─── State ───────────────────────────────────────────────────────────────────
 const activeTab = ref<'overview' | 'logs' | 'usage'>('overview')
@@ -132,15 +137,15 @@ const testIntegration = async (item: TenantIntegrationItem) => {
   if (!item.integration_id) return
   try {
     const res = await tenantIntegrationApi.test(item.integration_id)
-    alert(res.data.message)
+    toast.success(res.data.message)
   } catch (e) {
-    alert((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Connection test failed')
+    toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Connection test failed')
   }
 }
 
 const removeIntegration = async (item: TenantIntegrationItem) => {
   if (!item.integration_id) return
-  if (!confirm('Remove this integration?')) return
+  if (!await dialog('Remove', 'Remove this integration?')) return
   try {
     await tenantIntegrationApi.remove(item.integration_id)
     await loadIntegrations()

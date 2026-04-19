@@ -6,6 +6,9 @@ import {
   type JobPosting,
   type RecruitmentStats,
 } from '@/services/recruitmentService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 const router = useRouter()
 
@@ -75,7 +78,7 @@ const closeJob = async (job: JobPosting) => {
 }
 
 const deleteJob = async (job: JobPosting) => {
-  if (!confirm(`Delete "${job.title}"? This cannot be undone.`)) return
+  if (!await dialog('Delete', `Delete "${job.title}"? This cannot be undone.`)) return
   try {
     await recruitmentService.deleteJob(job.id)
     await loadData()

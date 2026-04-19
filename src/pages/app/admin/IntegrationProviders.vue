@@ -6,6 +6,9 @@ import {
   type IntegrationProvider,
   type GlobalIntegrationConfig,
 } from '@/services/integrationService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 // ─── State ───────────────────────────────────────────────────────────────────
 const providers = ref<IntegrationProvider[]>([])
@@ -96,7 +99,7 @@ const saveProvider = async () => {
 }
 
 const deleteProvider = async (p: IntegrationProvider) => {
-  if (!confirm(`Delete provider "${p.name}"?`)) return
+  if (!await dialog('Delete', `Delete provider "${p.name}"?`)) return
   try {
     await adminIntegrationApi.deleteProvider(p.id)
     await load()
@@ -143,7 +146,7 @@ const saveGlobalConfig = async () => {
 }
 
 const deleteGlobalConfig = async (cfg: GlobalIntegrationConfig) => {
-  if (!confirm('Remove this global configuration?')) return
+  if (!await dialog('Remove', 'Remove this global configuration?')) return
   try {
     await adminIntegrationApi.deleteGlobalConfig(cfg.id)
     await load()

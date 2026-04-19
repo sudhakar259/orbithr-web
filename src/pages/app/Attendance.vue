@@ -13,6 +13,9 @@ import RegularizationModal from '@/components/attendance/RegularizationModal.vue
 import TimesheetExportModal from '@/components/attendance/TimesheetExportModal.vue'
 import type { PunchPayload, AttendanceRecord } from '@/services/attendance'
 import { regularizationService } from '@/services/regularization'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 const { fetchCalendarData, fetchTodayAttendance, fetchWorkStatuses, recordPunch, records, leaves, summary, loading, error, todaysRecord } = useAttendance()
 const { user } = useAuth()
@@ -159,11 +162,11 @@ const handleRegularizationSubmit = async (data: {
     selectedAttendanceForRegularization.value = null
 
     // Show success message
-    alert('Regularization request submitted successfully! Your manager and team lead will review it.')
+    toast.success('Regularization request submitted successfully! Your manager and team lead will review it.')
   } catch (err: unknown) {
     console.error('Regularization submission error:', err)
     const axiosErr = err as { response?: { data?: { error?: string } } }
-    alert(axiosErr.response?.data?.error || 'Failed to submit regularization request')
+    toast.error(axiosErr.response?.data?.error || 'Failed to submit regularization request')
   } finally {
     regularizationLoading.value = false
   }

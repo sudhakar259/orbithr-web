@@ -175,13 +175,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { leaveService } from '@/services/leave'
 import type { LeaveAdjustment, LeaveType, Employee } from '@/services/leave'
 import api from '@/services/api'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 const toast = useToast()
+const { confirm: dialog } = useConfirm()
 
 const adjustments = ref<LeaveAdjustment[]>([])
 const employees = ref<Employee[]>([])
@@ -218,6 +220,7 @@ async function loadAdjustments(page = 1) {
     const params: Record<string, unknown> = { page, balance_year: filters.balance_year }
     if (filters.adjustment_type) params.adjustment_type = filters.adjustment_type
     if (filters.reason_type) params.reason_type = filters.reason_type
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await leaveService.getLeaveAdjustments(params as any)
     adjustments.value = result.data
     currentPage.value = result.current_page
@@ -280,6 +283,7 @@ async function submitAdjustment() {
     showCreate.value = false
     toast.success('Adjustment created successfully.')
     loadAdjustments()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     formError.value = e.response?.data?.error || e.response?.data?.message || 'Failed to create adjustment.'
   } finally {
@@ -288,7 +292,7 @@ async function submitAdjustment() {
 }
 
 async function removeAdjustment(adj: LeaveAdjustment) {
-  if (!confirm(`Reverse this ${adj.adjustment_type} of ${adj.adjustment_amount} days?`)) return
+  if (!await dialog('Confirm', `Reverse this ${adj.adjustment_type} of ${adj.adjustment_amount} days?`)) return
   try {
     await leaveService.deleteLeaveAdjustment(adj.id)
     toast.success('Adjustment reversed.')

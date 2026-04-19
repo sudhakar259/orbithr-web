@@ -2,6 +2,9 @@
 defineOptions({ name: 'RecruitmentCalendarSettings' })
 import { ref, onMounted } from 'vue'
 import { calendarService, type CalendarIntegration } from '@/services/recruitmentService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 const integrations = ref<CalendarIntegration[]>([])
 const loading = ref(true)
@@ -40,7 +43,7 @@ const toggleActive = async (integration: CalendarIntegration) => {
 }
 
 const disconnectIntegration = async (integration: CalendarIntegration) => {
-  if (!confirm(`Disconnect ${providerLabel(integration.provider)}? Calendar sync will stop.`)) return
+  if (!await dialog('Disconnect', `Disconnect ${providerLabel(integration.provider)}? Calendar sync will stop.`)) return
   try {
     await calendarService.disconnectIntegration(integration.id)
     integrations.value = integrations.value.filter((i) => i.id !== integration.id)

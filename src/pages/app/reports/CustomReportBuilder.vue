@@ -2,6 +2,9 @@
 defineOptions({ name: 'ReportsCustomBuilder' })
 import { ref, onMounted } from 'vue'
 import { reportService, type ReportTemplate } from '@/services/reportService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -67,7 +70,7 @@ const runReport = async (template: ReportTemplate) => {
 }
 
 const deleteTemplate = async (id: number) => {
-  if (!confirm('Delete this template?')) return
+  if (!await dialog('Delete', 'Delete this template?')) return
   try {
     await reportService.deleteTemplate(id)
     await load()

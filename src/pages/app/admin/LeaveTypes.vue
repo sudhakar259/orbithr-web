@@ -151,8 +151,11 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { leaveService, type LeaveType } from '@/services/leave'
 import { useLeave } from '@/composables/useLeave'
+import { useToast } from '@/composables/useToast'
 
-const { leaveTypes, fetchLeaveTypes, loading } = useLeave()
+const toast = useToast()
+
+const { leaveTypes, fetchLeaveTypes } = useLeave()
 
 const localTypes = ref<LeaveType[]>([])
 const sortedTypes = computed(() => localTypes.value.slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)))
@@ -202,8 +205,9 @@ async function toggleActive(t: LeaveType) {
   try {
     await leaveService.updateLeaveType(t.id, { is_active: !t.is_active })
     await fetchLeaveTypes(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
-    alert(e.response?.data?.error || 'Failed to update status.')
+    toast.error(e.response?.data?.error || 'Failed to update status.')
   }
 }
 
@@ -211,8 +215,9 @@ async function archive(t: LeaveType) {
   try {
     await leaveService.updateLeaveType(t.id, { is_active: false })
     await fetchLeaveTypes(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
-    alert(e.response?.data?.error || 'Failed to archive leave type.')
+    toast.error(e.response?.data?.error || 'Failed to archive leave type.')
   }
 }
 
@@ -294,6 +299,7 @@ async function save() {
     }
     showModal.value = false
     await fetchLeaveTypes(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     const errors = e.response?.data?.errors
     if (errors) {

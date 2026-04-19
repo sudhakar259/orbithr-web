@@ -5,8 +5,10 @@ import api from '@/services/api'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 const toast = useToast()
+const { confirm: dialog } = useConfirm()
 
 // ── Types ──────────────────────────────────────────────
 interface EmailAccount {
@@ -95,7 +97,7 @@ async function syncAccount(id: number) {
 }
 
 async function disconnectAccount(id: number) {
-  if (!confirm('Disconnect this email account? This will remove stored credentials.')) return
+  if (!await dialog('Disconnect', 'Disconnect this email account? This will remove stored credentials.')) return
   disconnectingId.value = id
   try {
     await api.delete(`/email-integration/accounts/${id}`)

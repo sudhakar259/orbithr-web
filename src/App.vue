@@ -1,12 +1,30 @@
 <script setup lang="ts">
+import { watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import MarketingHeader from '@/components/layout/MarketingHeader.vue'
 import SiteFooter from '@/components/layout/SiteFooter.vue'
 import { RouterView } from 'vue-router'
 import ToastContainer from '@/components/ui/ToastContainer.vue'
 import ConfirmDialog  from '@/components/ui/ConfirmDialog.vue'
+import { useThemeStore } from '@/stores/theme'
 
 const route = useRoute()
+const themeStore = useThemeStore()
+
+// Marketing pages and super admin always use dark theme regardless of tenant preference.
+// Only the app dashboard (tenant area) responds to the user's theme toggle.
+watchEffect(() => {
+  const meta = route.meta
+  const isMarketing = meta.layout === 'marketing'
+  const isSuperAdmin = meta.superAdminOnly === true
+
+  if (isMarketing || isSuperAdmin) {
+    document.documentElement.classList.add('dark')
+    document.documentElement.setAttribute('data-theme', 'dark')
+  } else {
+    themeStore.init()
+  }
+})
 </script>
 
 <template>

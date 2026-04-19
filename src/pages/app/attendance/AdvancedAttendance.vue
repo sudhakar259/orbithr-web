@@ -3,12 +3,14 @@ defineOptions({ name: 'AdvancedAttendance' })
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import SimpleStatCard from '@/components/ui/SimpleStatCard.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Modal from '@/components/ui/Modal.vue'
 
 const toast = useToast()
+const { confirm: dialog } = useConfirm()
 const activeTab = ref<'overview' | 'rules' | 'alerts' | 'devices'>('overview')
 
 /* ── Overview ────────────────────────── */
@@ -132,7 +134,7 @@ const saveRule = async () => {
 }
 
 const deleteRule = async (id: number) => {
-  if (!confirm('Delete this rule?')) return
+  if (!await dialog('Delete', 'Delete this rule?')) return
   try {
     await api.delete(`/api/attendance-advanced/rules/${id}`)
     toast.success('Rule deleted')

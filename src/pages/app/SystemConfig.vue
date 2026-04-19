@@ -4,8 +4,10 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 const { hasRole } = useAuth()
+const { confirm: dialog } = useConfirm()
 const toast = useToast()
 const activeTab = ref('notifications')
 const isAdmin = computed(() => hasRole('admin'))
@@ -134,7 +136,7 @@ async function testRule(rule: WorkflowRule) {
 }
 
 async function deleteRule(rule: WorkflowRule) {
-  if (!confirm(`Delete rule "${rule.name}"?`)) return
+  if (!await dialog('Delete', `Delete rule "${rule.name}"?`)) return
   try {
     await api.delete(`/system/workflow-rules/${rule.id}`)
     rules.value = rules.value.filter(r => r.id !== rule.id)
@@ -227,7 +229,7 @@ async function toggleIntegration(int: Integration) {
 }
 
 async function deleteIntegration(int: Integration) {
-  if (!confirm(`Delete "${int.name}"?`)) return
+  if (!await dialog('Delete', `Delete "${int.name}"?`)) return
   try {
     await api.delete(`/system/integrations/${int.id}`)
     integrations.value = integrations.value.filter(i => i.id !== int.id)

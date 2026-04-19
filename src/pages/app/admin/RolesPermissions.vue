@@ -1,7 +1,13 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, computed, onMounted } from 'vue'
 import api, { roleApi, permissionApi } from '@/services/api'
 import { useAuth } from '@/composables/useAuth'
+import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
+
+const toast = useToast()
+const { confirm: dialog } = useConfirm()
 
 interface RoleItem {
   id: number
@@ -127,18 +133,19 @@ async function saveRole() {
     showRoleModal.value = false
     await load()
   } catch (e: any) {
-    alert(e?.response?.data?.message || 'Failed to save role')
+    toast.error(e?.response?.data?.message || 'Failed to save role')
   } finally {
     saving.value = false
   }
 }
 
-async function deleteRole(id: number) {
+async function confirmDeleteRole(row: RoleItem) {
+  if (!await dialog('Delete', `Delete role "${row.name}"?`)) return
   try {
-    await roleApi.remove(id)
+    await roleApi.remove(row.id)
     await load()
   } catch (e: any) {
-    alert(e?.response?.data?.message || 'Cannot delete this role')
+    toast.error(e?.response?.data?.message || 'Cannot delete this role')
   }
 }
 
@@ -264,7 +271,7 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
                     </svg>
                     Edit
                   </button>
-                  <button class="act-btn act-delete" @click="confirm(`Delete role &quot;${row.name}&quot;?`) && deleteRole(row.id)" title="Delete">
+                  <button class="act-btn act-delete" @click="confirmDeleteRole(row)" title="Delete">
                     <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
                     </svg>

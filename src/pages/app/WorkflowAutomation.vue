@@ -8,8 +8,10 @@ import SimpleStatCard from '@/components/ui/SimpleStatCard.vue'
 import Modal from '@/components/ui/Modal.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 const toast = useToast()
+const { confirm: dialog } = useConfirm()
 
 /* ── Types ─────────────────────────────────────────── */
 interface WorkflowCondition {
@@ -333,7 +335,7 @@ async function duplicateWorkflow(wf: Workflow) {
 }
 
 async function deleteWorkflow(wf: Workflow) {
-  if (!confirm(`Delete "${wf.name}"? This cannot be undone.`)) return
+  if (!await dialog('Delete', `Delete "${wf.name}"? This cannot be undone.`)) return
   try {
     await api.delete(`/workflows/${wf.id}`).catch(() => {})
     workflows.value = workflows.value.filter(w => w.id !== wf.id)

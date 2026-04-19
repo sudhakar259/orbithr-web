@@ -408,8 +408,15 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+defineOptions({ name: 'AdminPlansPage' })
 import { ref, onMounted } from 'vue'
 import api from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
+
+const { confirm: dialog } = useConfirm()
+const toast = useToast()
 
 const activeTab = ref<'plans' | 'features'>('plans')
 const loading = ref(false)
@@ -507,14 +514,14 @@ async function savePlan() {
     await fetchPlans()
   } catch (e) {
     console.error('Failed to save plan', e)
-    alert('Failed to save plan')
+    toast.error('Failed to save plan')
   } finally {
     formLoading.value = false
   }
 }
 
 async function deletePlan(planId: number) {
-  if (!confirm('Are you sure you want to delete this plan?')) {
+  if (!await dialog('Delete', 'Are you sure you want to delete this plan?')) {
     return
   }
 
@@ -523,7 +530,7 @@ async function deletePlan(planId: number) {
     await fetchPlans()
   } catch (e) {
     console.error('Failed to delete plan', e)
-    alert('Failed to delete plan')
+    toast.error('Failed to delete plan')
   }
 }
 

@@ -4,6 +4,9 @@ import api from '@/services/api'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Modal      from '@/components/ui/Modal.vue'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 interface Holiday {
   id: number | string
@@ -78,7 +81,7 @@ const getDayName = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'long' })
 
 async function deleteHoliday(id: number | string) {
-  if (!confirm('Remove this holiday?')) return
+  if (!await dialog('Remove', 'Remove this holiday?')) return
   try { await api.delete(`/holidays/${id}`) } catch {}
   holidays.value = holidays.value.filter(h => h.id !== id)
   toast.success('Holiday removed.')

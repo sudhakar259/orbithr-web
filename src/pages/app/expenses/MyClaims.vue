@@ -4,6 +4,11 @@ defineOptions({ name: 'MyClaims' })
 import { ref, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import expenseService, { type ExpenseClaim } from '@/services/expenseService'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
+
+const { confirm: dialog } = useConfirm()
+const toast = useToast()
 
 const loading = ref(true)
 const error = ref('')
@@ -53,12 +58,12 @@ async function fetchClaims(page = 1) {
 }
 
 async function handleDelete(id: number) {
-  if (!confirm('Delete this draft claim?')) return
+  if (!await dialog('Delete', 'Delete this draft claim?')) return
   try {
     await expenseService.deleteClaim(id)
     claims.value = claims.value.filter(c => c.id !== id)
   } catch {
-    alert('Failed to delete claim.')
+    toast.error('Failed to delete claim.')
   }
 }
 

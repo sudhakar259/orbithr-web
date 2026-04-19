@@ -249,9 +249,15 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { computed, ref, reactive, onMounted } from 'vue'
 import { leaveService, type LeaveType, type LeavePolicy } from '@/services/leave'
 import { useLeave } from '@/composables/useLeave'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
+
+const { confirm: dialog } = useConfirm()
+const toast = useToast()
 
 const { leaveTypes, fetchLeaveTypes } = useLeave()
 
@@ -432,12 +438,12 @@ async function save() {
 }
 
 async function remove(p: LeavePolicy) {
-  if (!confirm('Delete this policy?')) return
+  if (!await dialog('Delete', 'Delete this policy?')) return
   try {
     await leaveService.deleteLeavePolicy(p.id)
     await loadPolicies()
   } catch (e: any) {
-    alert(e?.response?.data?.message || 'Failed to delete policy')
+    toast.error(e?.response?.data?.message || 'Failed to delete policy')
   }
 }
 </script>

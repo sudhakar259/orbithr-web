@@ -2,6 +2,9 @@
 defineOptions({ name: 'RecruitmentInterviews' })
 import { ref, computed, onMounted } from 'vue'
 import { recruitmentService, calendarService, type Interview } from '@/services/recruitmentService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 import AvailabilityGrid from '@/components/recruitment/AvailabilityGrid.vue'
 
 const loading = ref(true)
@@ -87,7 +90,7 @@ const completeInterview = async (id: number) => {
 }
 
 const cancelInterview = async (id: number) => {
-  if (!confirm('Cancel this interview?')) return
+  if (!await dialog('Cancel Interview', 'Cancel this interview?')) return
   try {
     await recruitmentService.cancelInterview(id, 'Cancelled by recruiter')
     await load()

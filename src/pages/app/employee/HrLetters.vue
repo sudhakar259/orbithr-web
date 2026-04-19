@@ -3,6 +3,9 @@ defineOptions({ name: 'HrLetters' })
 
 import { ref, onMounted } from 'vue'
 import api from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 type Tab = 'templates' | 'generated'
 const activeTab = ref<Tab>('templates')
@@ -61,7 +64,7 @@ async function saveTemplate() {
 }
 
 async function deleteTemplate(id: number) {
-  if (!confirm('Delete this template?')) return
+  if (!await dialog('Delete', 'Delete this template?')) return
   try {
     await api.delete(`/hr-letters/templates/${id}`)
     await fetchTemplates()

@@ -233,6 +233,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 interface Plan {
   id?: number
@@ -250,7 +253,9 @@ interface Plan {
 
 const props = defineProps<{
   plan?: Plan | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   modules: any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   featureTemplate: any[]
   isEditMode: boolean
 }>()
@@ -273,7 +278,9 @@ const formData = ref<Plan>({
   is_popular: false,
 })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const features = ref<any[]>([])
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const selectedModules = ref<any[]>([])
 const showAddFeatureModal = ref(false)
 const newFeature = ref({ slug: '', value: '' })
@@ -287,6 +294,7 @@ watch(
     if (newPlan) {
       formData.value = { ...newPlan }
       features.value = newPlan.features || []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       selectedModules.value = newPlan.planModules?.map((pm: any) => pm.module) || []
     }
   },
@@ -305,6 +313,7 @@ const addModule = (event: Event) => {
   ;(event.target as HTMLSelectElement).value = ''
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const removeModule = (module: any) => {
   selectedModules.value = selectedModules.value.filter((m) => m.id !== module.id)
 }
@@ -327,6 +336,7 @@ const confirmAddFeature = () => {
   showAddFeatureModal.value = false
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const removeFeature = (feature: any) => {
   features.value = features.value.filter((f) => f.slug !== feature.slug)
 }
@@ -351,7 +361,7 @@ const submitForm = async () => {
 
     if (!response.ok) {
       const error = await response.json()
-      alert(error.message || 'Failed to save plan')
+      toast.error(error.message || 'Failed to save plan')
       return
     }
 

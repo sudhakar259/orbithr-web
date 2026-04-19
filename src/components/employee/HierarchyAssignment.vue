@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { onMounted, ref, reactive, computed } from 'vue'
 import api from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm: dialog } = useConfirm()
 
 const props = withDefaults(defineProps<{ employeeId: number; currentManager?: number | null }>(), {
   currentManager: null,
 })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const allEmployees  = ref<any[]>([])
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const manager       = ref<any>(null)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const subordinates  = ref<any[]>([])
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const allTeams      = ref<any[]>([])
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const assignedTeams = ref<any[]>([])
 
 const showManagerModal = ref(false)
@@ -52,12 +60,12 @@ async function assignTeam() {
   try {
     await api.post(`/employees/${props.employeeId}/assign-team`, teamForm)
     await loadAssignedTeams(); teamForm.team_id = ''; teamForm.role = ''; showTeamForm.value = false
-  } catch (e: any) {
-    teamError.value = e?.response?.data?.message || 'Failed to assign team'
+  } catch (e) {
+    teamError.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to assign team'
   } finally { teamLoading.value = false }
 }
 async function removeTeam(teamId: number) {
-  if (!confirm('Remove this team assignment?')) return
+  if (!await dialog('Confirm', 'Remove this team assignment?')) return
   removeTeamLoading.value = true
   try { await api.delete(`/employees/${props.employeeId}/remove-team/${teamId}`); await loadAssignedTeams() } catch {}
   finally { removeTeamLoading.value = false }

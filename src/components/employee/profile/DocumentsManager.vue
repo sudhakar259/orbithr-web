@@ -2,10 +2,16 @@
 import { onMounted, ref } from 'vue'
 import DocumentUpload from '@/components/employee/DocumentUpload.vue'
 import { documentApi } from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
+
+const { confirm: dialog } = useConfirm()
+const toast = useToast()
 
 const props = defineProps<{ employeeId: number }>()
 const emit = defineEmits<{ (e: 'changed'): void }>()
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const docs      = ref<any[]>([])
 const loading   = ref(false)
 const showUpload = ref(false)
@@ -38,6 +44,7 @@ async function load() {
   finally { loading.value = false }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function download(doc: any) {
   try {
     const response = await documentApi.download(props.employeeId, doc.id)
@@ -47,16 +54,18 @@ async function download(doc: any) {
     link.download = doc.original_filename || doc.document_name
     link.click()
     window.URL.revokeObjectURL(url)
-  } catch { alert('Download failed.') }
+  } catch { toast.error('Download failed.') }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function remove(doc: any) {
-  if (!confirm(`Delete "${doc.document_name}"?`)) return
+  if (!await dialog('Delete', `Delete "${doc.document_name}"?`)) return
   try {
     await documentApi.delete(props.employeeId, doc.id)
     await load(); emit('changed')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
-    alert(e?.response?.data?.error || 'Failed to delete document.')
+    toast.error(e?.response?.data?.error || 'Failed to delete document.')
   }
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 defineOptions({ name: 'AppDashboard' })
 import { useRouter } from 'vue-router'
@@ -12,7 +12,7 @@ import StatusPill from '@/components/ui/StatusPill.vue'
 import BaseStat from '@/components/ui/BaseStat.vue'
 
 const router = useRouter()
-const { isAuthenticated, hasRole, user } = useAuth()
+const { isAuthenticated, hasRole, hasPermission, user } = useAuth()
 const { fetchLeaveRequests, leaveRequests } = useLeave()
 
 // ── First login modal ───────────────────────────────
@@ -44,10 +44,60 @@ const loadingEmp  = ref(true)
 const loadingAtt  = ref(true)
 const loadingLeave = ref(true)
 
+// ── Dashboard /today endpoint state ────────────────
+interface DashOnLeave { id: number; name: string; leave_type: string; days: number }
+interface DashPresent { id: number; name: string; check_in: string | null; status: string }
+const dashOnLeave = ref<DashOnLeave[]>([])
+const dashPresent = ref<DashPresent[]>([])
+const loadingDashToday = ref(true)
+
+// ── Leave Calendar state ───────────────────────────
+interface CalLeave {
+  id: number
+  employee: { first_name: string; last_name?: string }
+  start_date: string
+  end_date: string
+  leave_type?: { name: string }
+}
+const calMonth = ref(new Date().getMonth())
+const calYear  = ref(new Date().getFullYear())
+const calLeaves = ref<CalLeave[]>([])
+const loadingCal = ref(true)
+
 const yr = new Date().getFullYear()
 const todayStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
 
 // ── Fetch ───────────────────────────────────────────
+async function fetchDashboardToday() {
+  loadingDashToday.value = true
+  try {
+    const r = await api.get('/dashboard/today')
+    const d = r.data ?? {}
+    dashOnLeave.value = d.on_leave_today ?? []
+    dashPresent.value = d.present_today ?? []
+  } catch {
+    dashOnLeave.value = []
+    dashPresent.value = []
+  } finally {
+    loadingDashToday.value = false
+  }
+}
+
+async function fetchCalendarLeaves() {
+  loadingCal.value = true
+  const mm = String(calMonth.value + 1).padStart(2, '0')
+  const monthStr = `${calYear.value}-${mm}`
+  try {
+    const r = await api.get('/leave-requests', { params: { status: 'approved', month: monthStr } })
+    const raw = r.data?.data ?? r.data ?? []
+    calLeaves.value = Array.isArray(raw) ? raw : []
+  } catch {
+    calLeaves.value = []
+  } finally {
+    loadingCal.value = false
+  }
+}
+
 async function fetchAll() {
   await Promise.allSettled([
     // Employees
@@ -78,36 +128,106 @@ async function fetchAll() {
     api.get('/holidays', { params: { upcoming: true, per_page: 5 } })
       .then(r => { holidays.value = r.data?.data ?? r.data ?? [] })
       .catch(() => {}),
+
+    // Dashboard today (on leave / present)
+    fetchDashboardToday(),
+
+    // Calendar leaves for current month
+    hasPermission('view-leaves') ? fetchCalendarLeaves() : Promise.resolve(),
   ])
 }
 
 onMounted(fetchAll)
 
+// Re-fetch calendar when month changes
+watch([calMonth, calYear], () => { fetchCalendarLeaves() })
+
+// ── Calendar helpers ───────────────────────────────
+const CAL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const CAL_DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+
+const calLabel = computed(() => `${CAL_MONTHS[calMonth.value]} ${calYear.value}`)
+
+function calPrev() {
+  if (calMonth.value === 0) { calMonth.value = 11; calYear.value-- }
+  else { calMonth.value-- }
+}
+function calNext() {
+  if (calMonth.value === 11) { calMonth.value = 0; calYear.value++ }
+  else { calMonth.value++ }
+}
+
+interface CalDay { day: number; inMonth: boolean; isToday: boolean; leaves: { initials: string; name: string }[] }
+
+const calGrid = computed<CalDay[]>(() => {
+  const firstDay = new Date(calYear.value, calMonth.value, 1).getDay()
+  const daysInMonth = new Date(calYear.value, calMonth.value + 1, 0).getDate()
+  const today = new Date()
+  const isCurrentMonth = today.getMonth() === calMonth.value && today.getFullYear() === calYear.value
+
+  const cells: CalDay[] = []
+
+  // Leading blanks
+  for (let i = 0; i < firstDay; i++) {
+    cells.push({ day: 0, inMonth: false, isToday: false, leaves: [] })
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear.value}-${String(calMonth.value + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    const dayLeaves: { initials: string; name: string }[] = []
+
+    for (const lr of calLeaves.value) {
+      if (lr.start_date <= dateStr && lr.end_date >= dateStr && lr.employee) {
+        const fn = lr.employee.first_name ?? ''
+        const ln = lr.employee.last_name ?? ''
+        const name = `${fn} ${ln}`.trim()
+        const initials = name.split(' ').map(p => p[0] ?? '').join('').slice(0, 2).toUpperCase()
+        dayLeaves.push({ initials, name })
+      }
+    }
+
+    cells.push({
+      day: d,
+      inMonth: true,
+      isToday: isCurrentMonth && d === today.getDate(),
+      leaves: dayLeaves,
+    })
+  }
+
+  return cells
+})
+
 // ── KPI cards ───────────────────────────────────────
-const kpiStats = computed(() => [
-  {
-    id: 'emp', icon: '👥', label: 'Total Employees',
-    value: loadingEmp.value ? '…' : (employees.value.length || 0),
-    color: 'blue', change: null, up: true,
-  },
-  {
-    id: 'att', icon: '✅', label: 'Present Today',
-    value: loadingAtt.value ? '…' : (attStats.value.present + attStats.value.wfh || 0),
-    color: 'green',
-    change: attStats.value.total ? `${Math.round((attStats.value.present + attStats.value.wfh) / attStats.value.total * 100)}%` : null,
-    up: true,
-  },
-  {
-    id: 'leave', icon: '📋', label: 'Pending Leaves',
-    value: loadingLeave.value ? '…' : pendingLeaves.value.length,
-    color: 'yellow', change: null, up: false,
-  },
-  {
-    id: 'absent', icon: '🔴', label: 'Absent Today',
-    value: loadingAtt.value ? '…' : (attStats.value.absent || 0),
-    color: 'red', change: null, up: false,
-  },
-])
+const kpiStats = computed(() => {
+  const stats = []
+  if (hasPermission('view-employee')) {
+    stats.push({
+      id: 'emp', icon: '\u{1F465}', label: 'Total Employees',
+      value: loadingEmp.value ? '\u2026' : (employees.value.length || 0),
+      color: 'blue', change: null, up: true,
+    })
+  }
+  stats.push(
+    {
+      id: 'att', icon: '\u2705', label: 'Present Today',
+      value: loadingAtt.value ? '\u2026' : (attStats.value.present + attStats.value.wfh || 0),
+      color: 'green',
+      change: attStats.value.total ? `${Math.round((attStats.value.present + attStats.value.wfh) / attStats.value.total * 100)}%` : null,
+      up: true,
+    },
+    {
+      id: 'leave', icon: '\u{1F4CB}', label: 'Pending Leaves',
+      value: loadingLeave.value ? '\u2026' : pendingLeaves.value.length,
+      color: 'yellow', change: null, up: false,
+    },
+    {
+      id: 'absent', icon: '\u{1F534}', label: 'Absent Today',
+      value: loadingAtt.value ? '\u2026' : (attStats.value.absent || 0),
+      color: 'red', change: null, up: false,
+    },
+  )
+  return stats
+})
 
 // ── Recent employees ────────────────────────────────
 const GRADIENTS = [
@@ -120,11 +240,11 @@ const GRADIENTS = [
 const recentEmps = computed(() =>
   employees.value.slice(0, 6).map((e: Employee, i: number) => ({
     id:       e.id,
-    name:     e.name ?? e.full_name ?? '—',
-    dept:     e.department?.name ?? e.department ?? '—',
-    role:     e.position?.title ?? e.job_title ?? e.role ?? '—',
+    name:     e.name ?? e.full_name ?? '\u2014',
+    dept:     e.department?.name ?? e.department ?? '\u2014',
+    role:     e.position?.title ?? e.job_title ?? e.role ?? '\u2014',
     status:   e.employment_status ?? e.status ?? 'active',
-    joined:   e.hire_date ? new Date(e.hire_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+    joined:   e.hire_date ? new Date(e.hire_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '\u2014',
     initials: (e.name ?? e.full_name ?? '?').split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase(),
     gradient: GRADIENTS[i % GRADIENTS.length],
   }))
@@ -172,7 +292,7 @@ const pendingLeaves = computed(() =>
     .filter(r => r.status === 'pending')
     .map(r => ({
       id:       r.id,
-      name:     r.employee ? `${r.employee.first_name} ${r.employee.last_name ?? ''}`.trim() : '—',
+      name:     r.employee ? `${r.employee.first_name} ${r.employee.last_name ?? ''}`.trim() : '\u2014',
       type:     r.leaveType?.name ?? String(r.leave_type_id),
       from:     new Date(r.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
       initials: (r.employee ? `${r.employee.first_name} ${r.employee.last_name ?? ''}`.trim() : '?').split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase(),
@@ -201,22 +321,44 @@ const upcomingEvents = computed(() =>
       id:    h.id,
       day:   d.getDate(),
       month: d.toLocaleString('en-IN', { month: 'short' }).toUpperCase(),
-      title: h.name ?? h.title ?? '—',
+      title: h.name ?? h.title ?? '\u2014',
       meta:  h.type ?? 'Holiday',
       tag:   'holiday',
     }
   })
 )
 
-// ── Quick actions ───────────────────────────────────
-const quickActions = [
-  { icon: '📄', label: 'Generate Payslip', to: '/app/payslips' },
-  { icon: '👤', label: 'Add Employee',     to: '/app/employees/new' },
-  { icon: '📊', label: 'HR Reports',       to: '/app/reports' },
-  { icon: '📅', label: 'Attendance Log',   to: '/app/attendance' },
-  { icon: '🔍', label: 'Job Openings',     to: '/app/recruitment' },
-  { icon: '📩', label: 'Leave Requests',   to: '/app/leave' },
-]
+// ── Quick actions (permission-gated) ────────────────
+const quickActions = computed(() => {
+  const actions = []
+  if (hasPermission('view-payroll')) {
+    actions.push({ icon: '\u{1F4C4}', label: 'Generate Payslip', to: '/app/payslips' })
+  }
+  if (hasPermission('view-employee')) {
+    actions.push({ icon: '\u{1F464}', label: 'Add Employee', to: '/app/employees/new' })
+  }
+  actions.push(
+    { icon: '\u{1F4CA}', label: 'HR Reports',     to: '/app/reports' },
+    { icon: '\u{1F4C5}', label: 'Attendance Log',  to: '/app/attendance' },
+    { icon: '\u{1F50D}', label: 'Job Openings',    to: '/app/recruitment' },
+    { icon: '\u{1F4E9}', label: 'Leave Requests',  to: '/app/leave' },
+  )
+  return actions
+})
+
+// ── Dashboard today helpers ─────────────────────────
+function formatCheckIn(t: string | null): string {
+  if (!t) return 'N/A'
+  // t is "HH:mm" from the API
+  const [h, m] = t.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+
+function initialsOf(name: string): string {
+  return name.split(' ').map(p => p[0] ?? '').join('').slice(0, 2).toUpperCase()
+}
 
 // ── Greeting ────────────────────────────────────────
 const greeting = computed(() => {
@@ -232,13 +374,13 @@ const greeting = computed(() => {
     <!-- Page header -->
     <div class="dash-header">
       <div>
-        <h1 class="dash-title">{{ greeting }}, {{ user?.name?.split(' ')[0] ?? 'there' }} 👋</h1>
-        <p class="dash-sub">{{ todayStr }} · Here's what's happening today</p>
+        <h1 class="dash-title">{{ greeting }}, {{ user?.name?.split(' ')[0] ?? 'there' }}</h1>
+        <p class="dash-sub">{{ todayStr }} -- Here's what's happening today</p>
       </div>
     </div>
 
     <!-- KPI Cards -->
-    <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+    <div class="kpi-row">
       <BaseStat
         v-for="k in kpiStats"
         :key="k.id"
@@ -256,7 +398,7 @@ const greeting = computed(() => {
         "
       >
         <template #icon>
-          <span class="text-lg">{{ k.icon }}</span>
+          <span class="kpi-emoji">{{ k.icon }}</span>
         </template>
       </BaseStat>
     </div>
@@ -266,12 +408,12 @@ const greeting = computed(() => {
       <!-- Left column -->
       <div class="col-l">
 
-        <!-- Headcount Chart -->
-        <div class="card">
+        <!-- Headcount Chart (gated) -->
+        <div v-if="hasPermission('view-employee')" class="card">
           <div class="card-head">
             <div>
               <div class="ct">Headcount Overview</div>
-              <div class="cs">Hires vs Separations — {{ yr }}</div>
+              <div class="cs">Hires vs Separations -- {{ yr }}</div>
             </div>
             <div class="tabs">
               <div v-for="t in ['Monthly', 'Quarterly']" :key="t" class="tab"
@@ -303,6 +445,36 @@ const greeting = computed(() => {
           </div>
         </div>
 
+        <!-- Monthly Leave Calendar (gated) -->
+        <div v-if="hasPermission('view-leaves')" class="card">
+          <div class="card-head">
+            <div>
+              <div class="ct">Leave Calendar</div>
+              <div class="cs">Team leaves this month</div>
+            </div>
+            <div class="cal-nav">
+              <button class="cal-btn" @click="calPrev">&lt;</button>
+              <span class="cal-label">{{ calLabel }}</span>
+              <button class="cal-btn" @click="calNext">&gt;</button>
+            </div>
+          </div>
+          <div class="card-body cal-body">
+            <div v-if="loadingCal" class="empty-state">Loading...</div>
+            <div v-else class="cal-grid">
+              <div v-for="dh in CAL_DAYS" :key="dh" class="cal-hdr">{{ dh }}</div>
+              <div v-for="(cell, ci) in calGrid" :key="ci"
+                   class="cal-cell" :class="{ 'out': !cell.inMonth, 'today': cell.isToday }">
+                <span v-if="cell.inMonth" class="cal-day">{{ cell.day }}</span>
+                <div v-if="cell.leaves.length" class="cal-dots">
+                  <span v-for="(lv, li) in cell.leaves.slice(0, 3)" :key="li"
+                        class="cal-dot" :title="lv.name">{{ lv.initials }}</span>
+                  <span v-if="cell.leaves.length > 3" class="cal-dot cal-more">+{{ cell.leaves.length - 3 }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Recent Employees Table -->
         <div class="card">
           <div class="card-head">
@@ -310,9 +482,9 @@ const greeting = computed(() => {
               <div class="ct">Recent Employees</div>
               <div class="cs">Last onboarded</div>
             </div>
-            <RouterLink to="/app/employees" class="btn-link">View All →</RouterLink>
+            <RouterLink to="/app/employees" class="btn-link">View All &rarr;</RouterLink>
           </div>
-          <div v-if="loadingEmp" class="empty-state">Loading…</div>
+          <div v-if="loadingEmp" class="empty-state">Loading...</div>
           <div v-else-if="recentEmps.length === 0" class="empty-state">No employees found.</div>
           <div v-else class="tbl-wrap">
             <table>
@@ -355,7 +527,7 @@ const greeting = computed(() => {
               <div class="ct">Today's Attendance</div>
               <div class="cs">{{ todayStr }}</div>
             </div>
-            <RouterLink to="/app/attendance" class="btn-link">Details →</RouterLink>
+            <RouterLink to="/app/attendance" class="btn-link">Details &rarr;</RouterLink>
           </div>
           <div class="card-body">
             <div class="ring-wrap">
@@ -381,6 +553,53 @@ const greeting = computed(() => {
           </div>
         </div>
 
+        <!-- Who's On Leave Today (gated) -->
+        <div v-if="hasPermission('view-leaves')" class="card">
+          <div class="card-head">
+            <div>
+              <div class="ct">On Leave Today</div>
+              <div class="cs">{{ dashOnLeave.length }} team member{{ dashOnLeave.length !== 1 ? 's' : '' }}</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div v-if="loadingDashToday" class="empty-state">Loading...</div>
+            <div v-else-if="dashOnLeave.length === 0" class="empty-state">No one is on leave today</div>
+            <div v-else class="wol-list">
+              <div v-for="person in dashOnLeave" :key="person.id" class="wol-item">
+                <div class="wol-av" :style="{ background: GRADIENTS[person.id % GRADIENTS.length] }">{{ initialsOf(person.name) }}</div>
+                <div class="wol-info">
+                  <div class="wol-name">{{ person.name }}</div>
+                  <div class="wol-type">{{ person.leave_type }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Attendance / Today's Punch-ins (gated) -->
+        <div v-if="hasPermission('view-attendance')" class="card">
+          <div class="card-head">
+            <div>
+              <div class="ct">Team Attendance</div>
+              <div class="cs">{{ dashPresent.length }} punched in</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div v-if="loadingDashToday" class="empty-state">Loading...</div>
+            <div v-else-if="dashPresent.length === 0" class="empty-state">No punch-ins recorded yet</div>
+            <div v-else class="wol-list">
+              <div v-for="person in dashPresent.slice(0, 6)" :key="person.id" class="wol-item">
+                <div class="wol-av" :style="{ background: GRADIENTS[person.id % GRADIENTS.length] }">{{ initialsOf(person.name) }}</div>
+                <div class="wol-info">
+                  <div class="wol-name">{{ person.name }}</div>
+                  <div class="wol-type">{{ formatCheckIn(person.check_in) }}</div>
+                </div>
+                <span v-if="person.status === 'absent'" class="wol-badge absent">Not yet punched in</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Upcoming Events -->
         <div class="card" v-if="upcomingEvents.length">
           <div class="card-head">
@@ -388,7 +607,7 @@ const greeting = computed(() => {
               <div class="ct">Upcoming Holidays</div>
               <div class="cs">Next {{ upcomingEvents.length }} events</div>
             </div>
-            <RouterLink to="/app/holiday-calendar" class="btn-link">View →</RouterLink>
+            <RouterLink to="/app/holiday-calendar" class="btn-link">View &rarr;</RouterLink>
           </div>
           <div class="card-body" style="padding:10px 14px 14px">
             <div class="ev-list">
@@ -408,14 +627,14 @@ const greeting = computed(() => {
           </div>
         </div>
 
-        <!-- Leave Approvals -->
-        <div class="card">
+        <!-- Leave Approvals (gated) -->
+        <div v-if="hasPermission('view-leaves') || hasPermission('view-leave-requests')" class="card">
           <div class="card-head">
             <div>
               <div class="ct">Leave Requests</div>
               <div class="cs">{{ pendingLeaves.length }} pending</div>
             </div>
-            <RouterLink to="/app/leave" class="btn-link">View all →</RouterLink>
+            <RouterLink to="/app/leave" class="btn-link">View all &rarr;</RouterLink>
           </div>
           <div class="card-body">
             <TransitionGroup name="lr" tag="div" class="lr-list">
@@ -423,16 +642,16 @@ const greeting = computed(() => {
                 <div class="lr-av" :style="{ background: req.gradient }">{{ req.initials }}</div>
                 <div class="lr-info">
                   <div class="lr-n">{{ req.name }}</div>
-                  <div class="lr-t">{{ req.type }} · {{ req.from }}</div>
+                  <div class="lr-t">{{ req.type }} -- {{ req.from }}</div>
                 </div>
                 <div class="lr-btns">
-                  <button class="lbtn a" @click="approveLeave(req.id)" title="Approve">✓</button>
-                  <button class="lbtn r" @click="rejectLeave(req.id)"  title="Reject">✕</button>
+                  <button class="lbtn a" @click="approveLeave(req.id)" title="Approve">&#10003;</button>
+                  <button class="lbtn r" @click="rejectLeave(req.id)"  title="Reject">&#10005;</button>
                 </div>
               </div>
             </TransitionGroup>
-            <div v-if="!loadingLeave && !pendingLeaves.length" class="empty-state">🎉 All caught up!</div>
-            <div v-if="loadingLeave" class="empty-state">Loading…</div>
+            <div v-if="!loadingLeave && !pendingLeaves.length" class="empty-state">All caught up!</div>
+            <div v-if="loadingLeave" class="empty-state">Loading...</div>
           </div>
         </div>
 
@@ -466,6 +685,10 @@ const greeting = computed(() => {
 .dash-title { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
 .dash-sub   { font-size: 12px; color: var(--muted); margin-top: 3px; }
 
+/* KPI row */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.kpi-emoji { font-size: 18px; }
+
 /* KPI */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 .kpi {
@@ -489,7 +712,7 @@ const greeting = computed(() => {
 .kpi-lbl { font-size: 12px; color: var(--muted); }
 
 /* Layout */
-.dash-grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start; }
+.dash-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
 .col-l, .col-r { display: flex; flex-direction: column; gap: 16px; }
 
 /* Card */
@@ -552,6 +775,46 @@ td.sm  { font-size: 11px; }
 .rs-l { flex: 1; color: var(--dim); }
 .rs-v { font-weight: 600; color: var(--text); }
 
+/* Who's on Leave / Team Attendance */
+.wol-list { display: flex; flex-direction: column; gap: 6px; }
+.wol-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--rs); transition: background .1s; }
+.wol-item:hover { background: var(--surface2); }
+.wol-av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600; color: #fff; flex-shrink: 0; }
+.wol-info { flex: 1; min-width: 0; }
+.wol-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wol-type { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.wol-badge { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 20px; flex-shrink: 0; text-transform: uppercase; letter-spacing: .4px; }
+.wol-badge.absent { background: rgba(255,107,107,.12); color: var(--red); }
+
+/* Leave Calendar */
+.cal-body { padding: 14px 16px; }
+.cal-nav { display: flex; align-items: center; gap: 8px; }
+.cal-btn {
+  width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--muted); cursor: pointer; display: grid; place-items: center;
+  font-size: 13px; font-weight: 600; transition: all .15s;
+}
+.cal-btn:hover { border-color: var(--accent); color: var(--accent); }
+.cal-label { font-size: 12px; font-weight: 600; color: var(--text); min-width: 110px; text-align: center; }
+
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-hdr { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: center; padding: 4px 0 6px; }
+.cal-cell {
+  min-height: 42px; padding: 3px; border-radius: 4px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  transition: background .1s;
+}
+.cal-cell.out { opacity: 0; pointer-events: none; }
+.cal-cell.today { background: rgba(79,126,255,.1); border: 1px solid var(--accent); }
+.cal-day { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1; }
+.cal-dots { display: flex; flex-wrap: wrap; gap: 1px; justify-content: center; }
+.cal-dot {
+  width: 18px; height: 14px; border-radius: 3px;
+  background: var(--accent); color: #fff; font-size: 7px; font-weight: 700;
+  display: grid; place-items: center; line-height: 1;
+}
+.cal-more { background: var(--surface3); color: var(--muted); }
+
 /* Events */
 .ev-list { display: flex; flex-direction: column; gap: 2px; }
 .ev-item { display: flex; align-items: center; gap: 10px; padding: 8px 9px; border-radius: var(--rs); transition: background .1s; cursor: pointer; }
@@ -595,6 +858,7 @@ td.sm  { font-size: 11px; }
 /* Responsive */
 @media (max-width: 1100px) {
   .dash-grid  { grid-template-columns: 1fr; }
+  .kpi-row    { grid-template-columns: repeat(2, 1fr); }
   .kpi-grid   { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

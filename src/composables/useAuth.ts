@@ -8,26 +8,25 @@ const token = ref<string | null>(localStorage.getItem(tokenKey))
 let _rawUser: string | null = null
 try {
   _rawUser = localStorage.getItem(userKey)
-} catch (e) {
+} catch {
   _rawUser = null
 }
-let _parsedUser: any = null
+let _parsedUser: Record<string, unknown> | null = null
 if (_rawUser && _rawUser !== 'undefined' && _rawUser !== 'null') {
   try {
     _parsedUser = JSON.parse(_rawUser)
-  } catch (e) {
+  } catch {
     // malformed JSON in storage — ignore and clear bad value
-    try { localStorage.removeItem(userKey) } catch (err) {}
+    try { localStorage.removeItem(userKey) } catch { /* ignore */ }
     _parsedUser = null
   }
 }
-const user = ref<any>(_parsedUser)
+const user = ref<Record<string, unknown> | null>(_parsedUser)
 
 export function useAuth() {
   const isAuthenticated = () => !!token.value
 
-  // Removed manual setAuthToken logic, interceptor handles it
-  function setAuth(newUser: any, newToken: string) {
+  function setAuth(newUser: Record<string, unknown> | null, newToken: string) {
     user.value  = newUser  || null
     token.value = newToken || null
     if (newToken) {
@@ -42,33 +41,35 @@ export function useAuth() {
     }
   }
 
-  /** Extract user roles (if needed) */
-  function roles() {
+  function roles(): string[] {
     if (!user.value) return []
     if (Array.isArray(user.value.roles))
-      return user.value.roles.map((r: any) => (typeof r === 'string' ? r : r.name))
-    if (Array.isArray(user.value.role)) return user.value.role
+      return (user.value.roles as unknown[]).map(r => (typeof r === 'string' ? r : (r as Record<string, string>).name))
+    if (Array.isArray(user.value.role)) return user.value.role as string[]
     if (typeof user.value.role === 'string') return [user.value.role]
-    return user.value.roles || []
+    return (user.value.roles as string[]) || []
   }
 
   function hasRole(r: string) {
     return roles().includes(r)
   }
 
-  /** ✅ New: Extract user permissions */
-  function permissions() {
+  function permissions(): string[] {
     if (!user.value) return []
     const src = (user.value.all_permissions ?? user.value.permissions ?? [])
     if (Array.isArray(src)) {
-      return src.map((p: any) => (typeof p === 'string' ? p : p.name))
+      return (src as unknown[]).map(p => (typeof p === 'string' ? p : (p as Record<string, string>).name))
     }
     return []
   }
 
-  /** ✅ New: Check if user has a specific permission */
+  /** Check if user has a specific permission.
+   *  Normalises to hyphen-case so "view attendance" matches "view-attendance"
+   *  (sidebar uses spaces; Spatie stores with hyphens). */
   function hasPermission(permission: string) {
-    return permissions().includes(permission)
+    const norm = (p: string) => p.toLowerCase().replace(/\s+/g, '-').trim()
+    const target = norm(permission)
+    return permissions().some(p => norm(p) === target)
   }
 
   async function register(payload: {
@@ -80,23 +81,22 @@ export function useAuth() {
   }) {
     const res = await api.post('/auth/register', payload)
     const { token: t, user: u } = res.data
-    setAuth(u, t) // Use the new, simplified setAuth
+    setAuth(u, t)
     return res
   }
 
-  async function login(payload: { email: string; password: string}) {
+  async function login(payload: { email: string; password: string }) {
     const res = await api.post('auth/login', payload, {
       headers: {
-        'X-Tenant-Domain': window.location.hostname, // e.g. test.orbithr.test
+        'X-Tenant-Domain': window.location.hostname,
       },
     })
-      // Check if backend wants to redirect
     if (res.data.redirect_to) {
-      window.location.href = res.data.redirect_to;
-      return; // stop further execution
+      window.location.href = res.data.redirect_to
+      return
     }
     const { token: t, user: u } = res.data
-    setAuth(u, t) // Use the new, simplified setAuth
+    setAuth(u, t)
     return res
   }
 
@@ -115,14 +115,23 @@ export function useAuth() {
   async function loginWithOtp(email: string, code: string) {
     const res = await authApi.verifyOtp(email, code)
     const { token: t, user: u } = res.data
-    setAuth(u, t) // Use the new, simplified setAuth
+    setAuth(u, t)
     return res
   }
 
-  async function registerWithOtp(payload: { email: string; code: string; password: string; password_confirmation:string; organization: string; plan_id?: string; name?: string, selected_modules?: string[] }) {
+  async function registerWithOtp(payload: {
+    email: string
+    code: string
+    password: string
+    password_confirmation: string
+    organization: string
+    plan_id?: string
+    name?: string
+    selected_modules?: string[]
+  }) {
     const res = await authApi.registerWithOtp(payload)
     const { token: t, user: u } = res.data
-    setAuth(u, t) // Use the new, simplified setAuth
+    setAuth(u, t)
     return res
   }
 
@@ -131,7 +140,6 @@ export function useAuth() {
     user.value = null
     localStorage.removeItem(tokenKey)
     localStorage.removeItem(userKey)
-    // No need to explicitly call setAuthToken(null), as interceptor will read null from storage
   }
 
   function getUser() {
@@ -155,6 +163,6 @@ export function useAuth() {
     registerWithOtp,
     sendOtpRequest,
     verifyOtp,
-    setAuth
+    setAuth,
   }
 }

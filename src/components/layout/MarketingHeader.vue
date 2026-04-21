@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
+
 const open = ref(false)
+
+const MAIN_HOST = (import.meta as unknown as Record<string, Record<string, string>>).env?.VITE_MAIN_HOST || 'orbithr.test'
+
+const isMainSite = computed(() => {
+  const base = window.location.hostname.split(':')[0]
+  return base === MAIN_HOST || !base.endsWith('.' + MAIN_HOST)
+})
 </script>
 
 <template>
@@ -28,8 +36,8 @@ const open = ref(false)
 
       <!-- Desktop CTA -->
       <div class="mh-cta">
-        <RouterLink to="/login" class="mh-signin">Sign In</RouterLink>
-        <RouterLink to="/register" class="mh-btn">Start free trial</RouterLink>
+        <RouterLink to="/login" :class="isMainSite ? 'mh-signin' : 'mh-btn'">Sign In</RouterLink>
+        <RouterLink v-if="isMainSite" to="/register" class="mh-btn">Start free trial</RouterLink>
       </div>
 
       <!-- Mobile hamburger -->
@@ -55,8 +63,8 @@ const open = ref(false)
       <a href="#how-it-works" class="mh-mobile-link" @click="open=false">How it works</a>
       <a href="#testimonials" class="mh-mobile-link" @click="open=false">Customers</a>
       <div class="mh-mobile-divider"></div>
-      <RouterLink to="/login" class="mh-mobile-link" @click="open=false">Sign In</RouterLink>
-      <RouterLink to="/register" class="mh-btn mh-mobile-btn" @click="open=false">Start free trial</RouterLink>
+      <RouterLink to="/login" :class="isMainSite ? 'mh-mobile-link' : 'mh-btn mh-mobile-btn'" @click="open=false">Sign In</RouterLink>
+      <RouterLink v-if="isMainSite" to="/register" class="mh-btn mh-mobile-btn" @click="open=false">Start free trial</RouterLink>
     </div>
   </header>
 </template>

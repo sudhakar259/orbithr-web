@@ -1,4 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
+defineOptions({ name: 'MarketingHome' })
+
+const MAIN_HOST = (import.meta as unknown as Record<string, Record<string, string>>).env?.VITE_MAIN_HOST || 'orbithr.test'
+const isMainSite = computed(() => {
+  const base = window.location.hostname.split(':')[0]
+  return base === MAIN_HOST || !base.endsWith('.' + MAIN_HOST)
+})
+
 const features = [
   { icon: '👥', title: 'Employee Directory',       desc: 'Smart profiles, org charts, documents, and full lifecycle management from hire to offboard.' },
   { icon: '⏱️', title: 'Attendance & Timesheets',  desc: 'Shifts, check-ins, geofencing, regularizations and insightful daily/monthly reports.' },
@@ -70,7 +80,7 @@ const plans = [
         </p>
 
         <div class="hero-cta">
-          <RouterLink to="/register" class="btn-hero-primary">
+          <RouterLink v-if="isMainSite" to="/register" class="btn-hero-primary">
             Start free trial
             <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
           </RouterLink>
@@ -226,7 +236,7 @@ const plans = [
               <span class="pf-check">✓</span> {{ f }}
             </li>
           </ul>
-          <RouterLink :to="plan.cta" class="plan-btn" :class="{ 'plan-btn-primary': plan.highlight }">
+          <RouterLink v-if="isMainSite || plan.cta !== '/register'" :to="plan.cta" class="plan-btn" :class="{ 'plan-btn-primary': plan.highlight }">
             {{ plan.ctaLabel }}
           </RouterLink>
         </div>
@@ -248,7 +258,8 @@ const plans = [
             </div>
           </div>
           <div class="cta-right">
-            <RouterLink to="/register" class="btn-cta-primary">Create your workspace →</RouterLink>
+            <RouterLink v-if="isMainSite" to="/register" class="btn-cta-primary">Create your workspace →</RouterLink>
+            <RouterLink to="/login" v-else class="btn-cta-primary">Sign in to your account →</RouterLink>
             <RouterLink to="/pricing" class="btn-cta-ghost">View all plans</RouterLink>
           </div>
         </div>

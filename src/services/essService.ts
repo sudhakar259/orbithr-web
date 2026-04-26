@@ -43,16 +43,29 @@ export interface EssProfile {
   id: number
   name: string
   email: string
-  phone?: string
+  avatar_url?: string | null
+  banner_url?: string | null
+  phone?: string | null
+  address?: string | null
+  nationality?: string | null
+  emergency_contact_name?: string | null
+  emergency_contact_phone?: string | null
+  emergency_contact_relationship?: string | null
   employee?: {
     id: number
-    employee_code: string
-    department?: string
-    designation?: string
-    joining_date?: string
-    employment_type?: string
-    status?: string
-  }
+    employee_id: string
+    department?: string | null
+    designation?: string | null
+    role?: string | null
+    team?: string | null
+    location?: string | null
+    hire_date?: string | null
+    employment_type?: string | null
+    status?: string | null
+    gender?: string | null
+    date_of_birth?: string | null
+    working_days?: string[] | null
+  } | null
 }
 
 // ── Service ──────────────────────────────────────────────
@@ -96,4 +109,16 @@ export const essService = {
 
   updateProfile: (data: Partial<EssProfile>) =>
     api.put<{ data: EssProfile }>('/ess/profile', data),
+
+  uploadAvatar: (file: File) => {
+    const fd = new FormData()
+    fd.append('avatar', file)
+    return api.post<{ avatar_url: string }>('/ess/profile/avatar', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
+
+  uploadBanner: (file: File) => {
+    const fd = new FormData()
+    fd.append('banner', file)
+    return api.post<{ banner_url: string }>('/ess/profile/banner', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
 }

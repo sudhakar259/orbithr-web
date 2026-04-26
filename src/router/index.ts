@@ -7,7 +7,6 @@ const Pricing = () => import('@/pages/marketing/Pricing.vue')
 const Dashboard = () => import('@/pages/app/Dashboard.vue')
 const Employees = () => import('@/pages/app/Employees.vue')
 import { employeeRoutes } from '@/router/employee'
-const Attendance = () => import('@/pages/app/Attendance.vue')
 const Leave = () => import('@/pages/app/Leave.vue')
 const Payroll = () => import('@/pages/app/Payroll.vue')
 // Performance uses nested routes — see below
@@ -65,7 +64,7 @@ const routes: RouteRecordRaw[] = [
         path: 'employees',
         name: 'employees',
         component: Employees,
-        meta: { title: 'Employees', permissions: ['view employees'], roles: ['admin'] },
+        meta: { title: 'Employees', permissions: ['employee.directory.view'], roles: ['admin'] },
       },
       // Admin area (Super Admin only)
       {
@@ -147,44 +146,55 @@ const routes: RouteRecordRaw[] = [
         path: 'admin/leave-types',
         name: 'leave-types',
         component: () => import('@/pages/app/admin/LeaveTypes.vue'),
-        meta: { title: 'Leave Types', roles: ['admin', 'hr_manager'], permissions: ['view leave'] },
+        meta: { title: 'Leave Types', roles: ['admin', 'hr_manager'], permissions: ['leave.requests.view'] },
       },
       {
         path: 'admin/leave-policies',
         name: 'leave-policies',
         component: () => import('@/pages/app/admin/LeavePolicies.vue'),
-        meta: { title: 'Leave Policies', roles: ['admin', 'hr_manager'], permissions: ['view leave'] },
+        meta: { title: 'Leave Policies', roles: ['admin', 'hr_manager'], permissions: ['leave.requests.view'] },
+      },
+      {
+        path: 'admin/leave-policies/create',
+        name: 'leave-policies.create',
+        component: () => import('@/pages/app/admin/LeavePolicyForm.vue'),
+        meta: { title: 'New Leave Policy', roles: ['admin', 'hr_manager'], permissions: ['leave.requests.view'] },
+      },
+      {
+        path: 'admin/leave-policies/:id/edit',
+        name: 'leave-policies.edit',
+        component: () => import('@/pages/app/admin/LeavePolicyForm.vue'),
+        meta: { title: 'Edit Leave Policy', roles: ['admin', 'hr_manager'], permissions: ['leave.requests.view'] },
       },
       {
         path: 'admin/leave-adjustments',
         name: 'leave-adjustments',
         component: () => import('@/pages/app/admin/LeaveAdjustments.vue'),
-        meta: { title: 'Leave Adjustments', roles: ['admin', 'hr_manager'], permissions: ['view leave'] },
+        meta: { title: 'Leave Adjustments', roles: ['admin', 'hr_manager'], permissions: ['leave.requests.view'] },
       },
       {
         path: 'admin/leave-reports',
         name: 'leave-reports',
         component: () => import('@/pages/app/admin/LeaveReports.vue'),
-        meta: { title: 'Leave Reports', roles: ['admin', 'hr_manager', 'manager'], permissions: ['view leave'] },
+        meta: { title: 'Leave Reports', roles: ['admin', 'hr_manager', 'manager'], permissions: ['leave.requests.view'] },
       },
       {
         path: 'admin/leave-audit-log',
         name: 'leave-audit-log',
         component: () => import('@/pages/app/admin/LeaveAuditLog.vue'),
-        meta: { title: 'Leave Audit Log', roles: ['admin', 'hr_manager'], permissions: ['view leave'] },
+        meta: { title: 'Leave Audit Log', roles: ['admin', 'hr_manager'], permissions: ['leave.requests.view'] },
       },
       ...employeeRoutes,
       {
         path: 'attendance',
         name: 'attendance',
-        component: Attendance,
-        meta: { title: 'Attendance', permissions: ['view attendance'], roles: ['admin', 'hr_manager', 'manager', 'employee']},
+        redirect: { name: 'ess.attendance' },
       },
       {
         path: 'regularizations',
         name: 'regularizations',
         component: () => import('@/pages/app/RegularizationRequests.vue'),
-        meta: { title: 'Regularization Requests', permissions: ['regularize attendance'], roles: ['admin', 'manager', 'team_lead']},
+        meta: { title: 'Regularization Requests', permissions: ['attendance.regularization.create'], roles: ['admin', 'manager', 'team_lead']},
       },
       {
         path: 'my-regularizations',
@@ -196,7 +206,7 @@ const routes: RouteRecordRaw[] = [
         path: 'attendance/advanced',
         name: 'attendance.advanced',
         component: () => import('@/pages/app/attendance/AdvancedAttendance.vue'),
-        meta: { title: 'Advanced Attendance', permissions: ['view attendance'], roles: ['admin', 'hr_manager'] },
+        meta: { title: 'Advanced Attendance', permissions: ['attendance.records.view'], roles: ['admin', 'hr_manager'] },
       },
       {
         path: 'people-analytics',
@@ -208,13 +218,13 @@ const routes: RouteRecordRaw[] = [
         path: 'leave',
         name: 'leave',
         component: Leave,
-        meta: { title: 'Leave Management', permissions: ['view leaves'], roles: ['admin', 'hr_manager', 'manager', 'employee']},
+        meta: { title: 'Leave Management', permissions: ['leave.requests.view'], roles: ['admin', 'hr_manager', 'manager', 'employee']},
       },
       {
         path: 'payroll',
         name: 'payroll',
         component: Payroll,
-        meta: { title: 'Payroll Management', permissions: ['view payroll'], roles: ['admin'] },
+        meta: { title: 'Payroll Management', permissions: ['payroll.payroll.view'], roles: ['admin'] },
       },
       {
         path: 'performance',
@@ -601,13 +611,8 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/app/ess/EssLayout.vue'),
         meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
         children: [
-          { path: '', redirect: { name: 'ess.dashboard' } },
-          {
-            path: 'dashboard',
-            name: 'ess.dashboard',
-            component: () => import('@/pages/app/ess/EssDashboard.vue'),
-            meta: { requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'], permissions: ['view-employees'] },
-          },
+          { path: '', redirect: { name: 'ess.profile' } },
+          { path: 'dashboard', name: 'ess.dashboard', redirect: { name: 'ess.profile' } },
           {
             path: 'profile',
             name: 'ess.profile',
@@ -765,13 +770,13 @@ const routes: RouteRecordRaw[] = [
         path: 'statutory',
         name: 'payroll.statutory',
         component: () => import('@/pages/app/payroll/StatutoryCompliance.vue'),
-        meta: { title: 'Statutory Compliance', requiresAuth: true, permissions: ['view payroll'], roles: ['admin', 'hr_manager'] },
+        meta: { title: 'Statutory Compliance', requiresAuth: true, permissions: ['payroll.payroll.view'], roles: ['admin', 'hr_manager'] },
       },
       {
         path: 'gratuity',
         name: 'payroll.gratuity',
         component: () => import('@/pages/app/payroll/Gratuity.vue'),
-        meta: { title: 'Gratuity', requiresAuth: true, permissions: ['view payroll'], roles: ['admin', 'hr_manager'] },
+        meta: { title: 'Gratuity', requiresAuth: true, permissions: ['payroll.payroll.view'], roles: ['admin', 'hr_manager'] },
       },
       {
         path: 'announcements',
@@ -807,7 +812,7 @@ const routes: RouteRecordRaw[] = [
         path: 'payslips',
         name: 'payslips',
         component: () => import('@/pages/app/Payslips.vue'),
-        meta: { title: 'Payslips', permissions: ['view payroll'], roles: ['admin', 'hr_manager'] },
+        meta: { title: 'Payslips', permissions: ['payroll.payroll.view'], roles: ['admin', 'hr_manager'] },
       },
       {
         path: 'profile',

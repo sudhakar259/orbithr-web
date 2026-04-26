@@ -3,7 +3,7 @@ import api from './api'
 export type PunchType = 'check_in' | 'check_out'
 
 export interface AttendanceRecord {
-  id: number
+  id: string
   employee_id: number
   shift_id?: number | null
   attendance_date: string

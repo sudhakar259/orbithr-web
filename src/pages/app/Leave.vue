@@ -4,7 +4,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useLeave } from '@/composables/useLeave';
 import { useAuth } from '@/composables/useAuth';
-import { leaveService, type LeaveRequest } from '@/services/leave';
+import { leaveService, type LeaveRequest, type LeaveBalanceSummary } from '@/services/leave';
 
 const authStore = useAuth();
 const router = useRouter();
@@ -14,7 +14,6 @@ const openPolicies = () => {
 };
 const {
   leaveRequests,
-  leaveBalances,
   leaveTypes,
   dashboard,
   loading,
@@ -40,6 +39,7 @@ const approvalNotes = ref('');
 const rejectionReason = ref('');
 const submitError = ref('');
 const submitting = ref(false);
+const myBalanceSummary = ref<LeaveBalanceSummary[]>([]);
 
 // Form state for new request
 const requestForm = ref({
@@ -62,6 +62,29 @@ const isEmployee = computed(() => {
   return authStore.hasRole('employee');
 });
 
+const selectedBalance = computed<LeaveBalanceSummary | null>(() => {
+  if (!requestForm.value.leave_type_id) return null;
+  const id = Number(requestForm.value.leave_type_id);
+  return myBalanceSummary.value.find(b => Number(b.leave_type_id) === id) ?? null;
+});
+
+const requestedDays = computed<number>(() => {
+  if (!requestForm.value.start_date || !requestForm.value.end_date) return 0;
+  const start = new Date(requestForm.value.start_date);
+  const end = new Date(requestForm.value.end_date);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
+  const msPerDay = 1000 * 60 * 60 * 24;
+  return Math.floor((end.getTime() - start.getTime()) / msPerDay) + 1;
+});
+
+const balanceWarning = computed<string>(() => {
+  if (!selectedBalance.value) return '';
+  if (requestedDays.value > 0 && requestedDays.value > Number(selectedBalance.value.available)) {
+    return `Only ${selectedBalance.value.available} days available`;
+  }
+  return '';
+});
+
 // Methods
 const loadData = async () => {
   try {
@@ -80,6 +103,13 @@ const loadData = async () => {
         await fetchLeaveBalances();
       }
       await fetchLeaveRequests({ employee_id: authStore.user?.employee_id });
+
+      // Load merged leave type + balance summary for the request form & balances tab
+      try {
+        myBalanceSummary.value = await leaveService.getMyBalanceSummary();
+      } catch (e) {
+        console.error('Failed to load balance summary:', e);
+      }
     } else {
       await fetchLeaveRequests();
     }
@@ -90,6 +120,10 @@ const loadData = async () => {
 
 const submitLeaveRequest = async () => {
   submitError.value = '';
+  if (selectedBalance.value && requestedDays.value > Number(selectedBalance.value.available)) {
+    submitError.value = `Only ${selectedBalance.value.available} days available for ${selectedBalance.value.leave_type}`;
+    return;
+  }
   submitting.value = true;
   try {
     const formData = {
@@ -492,37 +526,40 @@ onMounted(() => {
           <div v-if="loading" class="text-center py-8">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           </div>
-          <div v-else-if="leaveBalances.length === 0" class="text-center py-8 text-gray-400">
+          <div v-else-if="myBalanceSummary.length === 0" class="text-center py-8 text-gray-400">
             No leave balances found.
           </div>
           <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div
-              v-for="balance in leaveBalances"
-              :key="balance.code"
-              class="bg-gray-800 border rounded-lg p-6"
+              v-for="balance in myBalanceSummary"
+              :key="balance.leave_type_id"
+              class="bg-gray-800 border border-gray-700 rounded-lg p-6"
             >
               <div class="flex items-center justify-between">
                 <div>
                   <h3 class="text-lg font-medium text-white">{{ balance.leave_type }}</h3>
-                  <p class="text-sm text-gray-400">{{ balance.code }}</p>
+                  <p class="text-xs text-gray-500 uppercase tracking-wider">{{ balance.code }}</p>
                 </div>
                 <div class="text-right">
-                  <p class="text-2xl font-bold text-blue-600">{{ balance.available }}</p>
-                  <p class="text-sm text-gray-400">Available</p>
+                  <p
+                    class="text-2xl font-bold"
+                    :class="Number(balance.available) <= 2 ? 'text-yellow-400' : 'text-blue-500'"
+                  >{{ balance.available }}</p>
+                  <p class="text-xs text-gray-400">Available</p>
                 </div>
               </div>
               <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p class="text-gray-400">Balance</p>
-                  <p class="font-medium">{{ balance.balance }}</p>
+                  <p class="text-xs text-gray-400 uppercase tracking-wider">Total</p>
+                  <p class="font-medium text-white">{{ balance.balance }}</p>
                 </div>
                 <div>
-                  <p class="text-gray-400">Used</p>
-                  <p class="font-medium">{{ balance.used }}</p>
+                  <p class="text-xs text-gray-400 uppercase tracking-wider">Used</p>
+                  <p class="font-medium text-white">{{ balance.used }}</p>
                 </div>
                 <div>
-                  <p class="text-gray-400">Pending</p>
-                  <p class="font-medium">{{ balance.pending }}</p>
+                  <p class="text-xs text-gray-400 uppercase tracking-wider">Pending</p>
+                  <p class="font-medium text-white">{{ balance.pending }}</p>
                 </div>
               </div>
             </div>
@@ -547,17 +584,26 @@ onMounted(() => {
               <select
                 v-model="requestForm.leave_type_id"
                 required
-                class="mt-1 block w-full border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 rounded-md focus:border-blue-500 focus:outline-none"
               >
-                <option value="">Select leave type</option>
+                <option :value="null">Select leave type</option>
                 <option
-                  v-for="type in leaveTypes"
-                  :key="type.id"
-                  :value="type.id"
+                  v-for="bal in myBalanceSummary"
+                  :key="bal.leave_type_id"
+                  :value="bal.leave_type_id"
+                  :disabled="Number(bal.available) === 0"
+                  :class="Number(bal.available) <= 2 ? 'text-yellow-400' : ''"
                 >
-                  {{ type.name }}
+                  {{ bal.leave_type }} ({{ bal.code }}) — {{ bal.available }} available
                 </option>
               </select>
+              <p
+                v-if="selectedBalance"
+                class="mt-1 text-xs"
+                :class="Number(selectedBalance.available) <= 2 ? 'text-yellow-400' : 'text-gray-400'"
+              >
+                {{ selectedBalance.available }} available · {{ selectedBalance.used }} used / {{ selectedBalance.balance }} total
+              </p>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -637,6 +683,10 @@ onMounted(() => {
               </label>
             </div>
 
+            <div v-if="balanceWarning" class="text-xs text-yellow-400">
+              ⚠ {{ balanceWarning }} (requesting {{ requestedDays }} days)
+            </div>
+
             <div class="flex justify-end space-x-3 pt-4">
               <button
                 type="button"
@@ -647,7 +697,7 @@ onMounted(() => {
               </button>
               <button
                 type="submit"
-                :disabled="submitting"
+                :disabled="submitting || !!balanceWarning"
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 {{ submitting ? 'Submitting...' : 'Submit Request' }}

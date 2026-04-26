@@ -72,6 +72,16 @@ export interface LeaveBalance {
   available: number;
 }
 
+export interface LeaveBalanceSummary {
+  leave_type_id: number;
+  leave_type: string;
+  code: string;
+  balance: number;
+  used: number;
+  pending: number;
+  available: number;
+}
+
 export interface Holiday {
   id: number;
   name: string;
@@ -333,6 +343,16 @@ class LeaveService {
   async getMyLeaveBalances(): Promise<LeaveBalance[]> {
     const response = await api.get('/my-leave-balances');
     return response.data;
+  }
+
+  async getMyBalanceSummary(): Promise<LeaveBalanceSummary[]> {
+    const response = await api.get('/my-leave-balances');
+    return response.data ?? [];
+  }
+
+  async getEmployeeBalanceSummary(employeeId: string | number): Promise<LeaveBalanceSummary[]> {
+    const response = await api.get(`/employees/${employeeId}/leave-balances`);
+    return response.data ?? [];
   }
 
   // Leave Policies

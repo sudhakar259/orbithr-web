@@ -66,7 +66,7 @@ const tabs = [
 ]
 
 const form = ref({
-  title: '', type: 'company', start_date: '', end_date: '', start_time: '', end_time: '',
+  title: '', event_type: 'company', start_date: '', end_date: '', start_time: '', end_time: '',
   venue: '', meeting_link: '', max_capacity: null as number | null,
   rsvp_deadline: '', description: '',
 })
@@ -124,7 +124,7 @@ async function createEvent() {
     await api.post('/events', payload)
     toast.success('Event created')
     showCreate.value = false
-    form.value = { title: '', type: 'company', start_date: '', end_date: '', start_time: '', end_time: '', venue: '', meeting_link: '', max_capacity: null, rsvp_deadline: '', description: '' }
+    form.value = { title: '', event_type: 'company', start_date: '', end_date: '', start_time: '', end_time: '', venue: '', meeting_link: '', max_capacity: null, rsvp_deadline: '', description: '' }
     await loadEvents()
   } catch {
     toast.error('Failed to create event')
@@ -179,10 +179,13 @@ onMounted(() => {
           <div class="field-row">
             <div class="field">
               <label>Type</label>
-              <select v-model="form.type">
+              <select v-model="form.event_type">
                 <option value="company">Company</option>
                 <option value="training">Training</option>
                 <option value="holiday">Holiday</option>
+                <option value="birthday">Birthday</option>
+                <option value="anniversary">Anniversary</option>
+                <option value="other">Other</option>
               </select>
             </div>
             <div class="field">

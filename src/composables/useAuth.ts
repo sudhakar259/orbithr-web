@@ -63,13 +63,44 @@ export function useAuth() {
     return []
   }
 
-  /** Check if user has a specific permission.
-   *  Normalises to hyphen-case so "view attendance" matches "view-attendance"
-   *  (sidebar uses spaces; Spatie stores with hyphens). */
+  /**
+   * Check if user has a specific permission.
+   *
+   * Supports three formats:
+   *   1. Scoped RBAC  `view.own.leave`     → exact match
+   *   2. Module-dot   `leave.requests.view` → exact match
+   *   3. Legacy       `view attendance`     → normalised to `view-attendance`
+   *
+   * Wildcard helper: `hasPermission('view.*.leave')` returns true if the user
+   * has view.own.leave OR view.team.leave OR view.all.leave.
+   */
   function hasPermission(permission: string) {
-    const norm = (p: string) => p.toLowerCase().replace(/\s+/g, '-').trim()
-    const target = norm(permission)
-    return permissions().some(p => norm(p) === target)
+    const p = permission.toLowerCase().trim()
+    if (p.includes('.*.')  ) {
+      const [action, , resource] = p.split('.')
+      return ['own', 'team', 'all'].some(
+        scope => permissions().some(x => typeof x === 'string' && x.toLowerCase() === `${action}.${scope}.${resource}`)
+      )
+    }
+    if (p.includes('.')) return permissions().some(x => typeof x === 'string' && x.toLowerCase() === p)
+    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, '-').trim()
+    return permissions().some(x => typeof x === 'string' && norm(x) === norm(p))
+  }
+
+  /**
+   * Returns the highest scope the user has for a given action + resource.
+   * e.g. `permissionScope('view', 'leave')` → 'all' | 'team' | 'own' | null
+   */
+  function permissionScope(action: string, resource: string): 'all' | 'team' | 'own' | null {
+    for (const scope of ['all', 'team', 'own'] as const) {
+      if (hasPermission(`${action}.${scope}.${resource}`)) return scope
+    }
+    return null
+  }
+
+  /** True if user has permission over at least their own data for this action+resource. */
+  function canAct(action: string, resource: string) {
+    return permissionScope(action, resource) !== null
   }
 
   async function register(payload: {
@@ -158,6 +189,8 @@ export function useAuth() {
     hasRole,
     permissions,
     hasPermission,
+    permissionScope,
+    canAct,
     requestOtp,
     loginWithOtp,
     registerWithOtp,

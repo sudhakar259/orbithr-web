@@ -46,7 +46,7 @@ export interface RegularizationRequest {
 }
 
 export interface CreateRegularizationPayload {
-  attendance_id: number
+  attendance_id: string
   regularization_type: string
   reason: string
   notes?: string | null
@@ -74,7 +74,7 @@ class RegularizationService {
   /**
    * Get pending regularization requests for manager/team lead
    */
-  async getPendingRequests(params?: Record<string, any>) {
+  async getPendingRequests(params?: Record<string, unknown>) {
     const response = await api.get(`${this.basePath}/pending`, { params })
     return {
       data: response.data?.data || [],
@@ -85,7 +85,7 @@ class RegularizationService {
   /**
    * Get regularization requests for current employee
    */
-  async getMyRequests(params?: Record<string, any>) {
+  async getMyRequests(params?: Record<string, unknown>) {
     const response = await api.get(`${this.basePath}/my`, { params })
     return {
       data: response.data?.data || [],

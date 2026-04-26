@@ -133,7 +133,7 @@ async function fetchAll() {
     fetchDashboardToday(),
 
     // Calendar leaves for current month
-    hasPermission('view-leaves') ? fetchCalendarLeaves() : Promise.resolve(),
+    hasPermission('leave.requests.view') ? fetchCalendarLeaves() : Promise.resolve(),
   ])
 }
 
@@ -200,7 +200,7 @@ const calGrid = computed<CalDay[]>(() => {
 // ── KPI cards ───────────────────────────────────────
 const kpiStats = computed(() => {
   const stats = []
-  if (hasPermission('view-employee')) {
+  if (hasPermission('employee.directory.view')) {
     stats.push({
       id: 'emp', icon: '\u{1F465}', label: 'Total Employees',
       value: loadingEmp.value ? '\u2026' : (employees.value.length || 0),
@@ -331,10 +331,10 @@ const upcomingEvents = computed(() =>
 // ── Quick actions (permission-gated) ────────────────
 const quickActions = computed(() => {
   const actions = []
-  if (hasPermission('view-payroll')) {
+  if (hasPermission('payroll.payroll.view')) {
     actions.push({ icon: '\u{1F4C4}', label: 'Generate Payslip', to: '/app/payslips' })
   }
-  if (hasPermission('view-employee')) {
+  if (hasPermission('employee.directory.view')) {
     actions.push({ icon: '\u{1F464}', label: 'Add Employee', to: '/app/employees/new' })
   }
   actions.push(
@@ -409,7 +409,7 @@ const greeting = computed(() => {
       <div class="col-l">
 
         <!-- Headcount Chart (gated) -->
-        <div v-if="hasPermission('view-employee')" class="card">
+        <div v-if="hasPermission('employee.directory.view')" class="card">
           <div class="card-head">
             <div>
               <div class="ct">Headcount Overview</div>
@@ -446,7 +446,7 @@ const greeting = computed(() => {
         </div>
 
         <!-- Monthly Leave Calendar (gated) -->
-        <div v-if="hasPermission('view-leaves')" class="card">
+        <div v-if="hasPermission('leave.requests.view')" class="card">
           <div class="card-head">
             <div>
               <div class="ct">Leave Calendar</div>
@@ -554,7 +554,7 @@ const greeting = computed(() => {
         </div>
 
         <!-- Who's On Leave Today (gated) -->
-        <div v-if="hasPermission('view-leaves')" class="card">
+        <div v-if="hasPermission('leave.requests.view')" class="card">
           <div class="card-head">
             <div>
               <div class="ct">On Leave Today</div>
@@ -577,7 +577,7 @@ const greeting = computed(() => {
         </div>
 
         <!-- Team Attendance / Today's Punch-ins (gated) -->
-        <div v-if="hasPermission('view-attendance')" class="card">
+        <div v-if="hasPermission('attendance.records.view')" class="card">
           <div class="card-head">
             <div>
               <div class="ct">Team Attendance</div>
@@ -628,7 +628,7 @@ const greeting = computed(() => {
         </div>
 
         <!-- Leave Approvals (gated) -->
-        <div v-if="hasPermission('view-leaves') || hasPermission('view-leave-requests')" class="card">
+        <div v-if="hasPermission('leave.requests.view') || hasPermission('leave.requests.view')" class="card">
           <div class="card-head">
             <div>
               <div class="ct">Leave Requests</div>

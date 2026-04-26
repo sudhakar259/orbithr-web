@@ -60,19 +60,19 @@
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label class="block text-sm font-medium text-gray-300">Name</label>
-              <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500" required />
+              <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" required />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300">Short Code</label>
-              <input v-model="form.code" type="text" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500" maxlength="10" required />
+              <input v-model="form.code" type="text" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" maxlength="10" required />
             </div>
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-300">Description</label>
-              <textarea v-model="form.description" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500" rows="2"></textarea>
+              <textarea v-model="form.description" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" rows="2"></textarea>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300">Category</label>
-              <select v-model="form.leave_type" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500">
+              <select v-model="form.leave_type" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                 <option value="paid">Paid</option>
                 <option value="unpaid">Unpaid</option>
                 <option value="other">Special</option>
@@ -80,7 +80,7 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300">Accrual Frequency</label>
-              <select v-model="form.accrual_frequency" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500">
+              <select v-model="form.accrual_frequency" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                 <option value="monthly">Monthly</option>
                 <option value="quarterly">Quarterly</option>
                 <option value="annually">Annually</option>
@@ -88,22 +88,22 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300">Maximum Allowed Per Year</label>
-              <input v-model.number="form.max_days_per_year" type="number" min="0" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500" />
+              <input v-model.number="form.max_days_per_year" type="number" min="0" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300">Max Consecutive Days</label>
-              <input v-model.number="form.max_consecutive_days" type="number" min="0" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500" placeholder="No limit" />
+              <input v-model.number="form.max_consecutive_days" type="number" min="0" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="No limit" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300">Notice Period (days)</label>
-              <input v-model.number="form.notice_period_days" type="number" min="0" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500" />
+              <input v-model.number="form.notice_period_days" type="number" min="0" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300">Carry Forward</label>
               <div class="mt-1 flex items-center gap-3">
                 <input id="cf" type="checkbox" v-model="form.can_carry_forward" class="rounded border-gray-600 text-brand-600 focus:ring-brand-500" />
                 <label for="cf" class="text-sm text-gray-300">Allow</label>
-                <input v-if="form.can_carry_forward" v-model.number="form.carry_forward_limit" type="number" min="0" placeholder="Limit" class="ml-2 w-28 rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500" />
+                <input v-if="form.can_carry_forward" v-model.number="form.carry_forward_limit" type="number" min="0" placeholder="Limit" class="ml-2 w-28 rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
               </div>
             </div>
             <div>
@@ -112,7 +112,7 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300">Applicable To</label>
-              <select v-model="form.applicable_to" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500">
+              <select v-model="form.applicable_to" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                 <option value="all">All</option>
                 <option value="departments">Specific Departments</option>
                 <option value="roles">Specific Roles</option>
@@ -120,11 +120,11 @@
             </div>
             <div v-if="form.applicable_to === 'departments'" class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-300">Departments (comma separated)</label>
-              <input v-model="applicableDepartmentsText" type="text" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500" />
+              <input v-model="applicableDepartmentsText" type="text" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
             </div>
             <div v-if="form.applicable_to === 'roles'" class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-300">Roles (comma separated)</label>
-              <input v-model="applicableRolesText" type="text" class="mt-1 w-full rounded-md border-gray-600 focus:border-brand-500 focus:ring-brand-500" />
+              <input v-model="applicableRolesText" type="text" class="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 text-white placeholder-gray-400 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
             </div>
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-300">Requires Documentation</label>
@@ -136,7 +136,7 @@
           <p v-if="formSuccess" class="mt-4 rounded-md bg-green-900/30 p-3 text-sm text-green-400">{{ formSuccess }}</p>
 
           <div class="mt-6 flex items-center justify-end gap-3">
-            <button type="button" class="rounded-md border px-4 py-2" @click="close()" :disabled="saving">Cancel</button>
+            <button type="button" class="rounded-md border border-gray-600 px-4 py-2 text-gray-300 hover:text-white" @click="close()" :disabled="saving">Cancel</button>
             <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700 disabled:opacity-50" :disabled="saving">
               {{ saving ? 'Saving...' : 'Save' }}
             </button>

@@ -179,7 +179,7 @@ const { hasPermission, roles, user } = useAuth()
 const employeeId = computed(() => props.employeeId || user.value?.employee_id || 1)
 
 const canRegularize = computed(() => {
-  if (hasPermission('regularize attendance')) return true
+  if (hasPermission('attendance.regularization.create')) return true
   const roleNames = roles()
     .map(role => (typeof role === 'string' ? role : String(role?.name ?? role)))
     .map(role => role.toLowerCase())
@@ -225,14 +225,14 @@ const calendarDays = computed(() => {
     dayDate.setHours(0, 0, 0, 0)
 
     if (attendance && attendance.status === 'absent' && dayDate >= todayNorm) {
-      attendance = undefined as any
+      attendance = undefined
     }
 
     const holiday = isCompanyHoliday(currentDate)
     const isWeekOff = isEmployeeWeekOff(currentDate, employeeId.value)
 
     if (attendance && attendance.status === 'absent' && (isWeekOff || (holiday && holiday.length))) {
-      attendance = undefined as any
+      attendance = undefined
     }
 
     const leaveRecord = isDateOnLeave(dateStr)

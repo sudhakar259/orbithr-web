@@ -280,6 +280,85 @@ function initials(name: string) {
   return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() || '?'
 }
 
+// ── Permission Matrix ─────────────────────────────────────────────────
+const activeView      = ref<'roles' | 'matrix'>('roles')
+const matrixLoading   = ref(false)
+const matrixRoles     = ref<{ id: number; name: string; permIds: Set<number> }[]>([])
+const matrixFilter    = ref('')
+const savingRoleIds   = ref<Set<number>>(new Set())
+const saveTimers      = new Map<number, ReturnType<typeof setTimeout>>()
+
+const filteredGroups = computed(() => {
+  const q = matrixFilter.value.toLowerCase().trim()
+  if (!q) return groupedPermissions.value
+  return groupedPermissions.value
+    .map(g => ({
+      ...g,
+      permissions: g.permissions.filter(
+        (p: any) => g.module.toLowerCase().includes(q) || p.action.toLowerCase().includes(q)
+      ),
+    }))
+    .filter(g => g.module.toLowerCase().includes(q) || g.permissions.length > 0)
+})
+
+async function loadMatrixData() {
+  if (matrixRoles.value.length) return
+  matrixLoading.value = true
+  try {
+    const { data } = await roleApi.list({ per_page: 100 })
+    const roleList: any[] = Array.isArray(data) ? data : data.data || []
+    const details = await Promise.all(roleList.map((r: any) => api.get(`/roles/${r.id}`).then(res => res.data)))
+    matrixRoles.value = details.map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      permIds: new Set<number>((d.permissions || []).map((p: any) => Number(p.id))),
+    }))
+  } finally {
+    matrixLoading.value = false
+  }
+}
+
+function switchView(v: 'roles' | 'matrix') {
+  activeView.value = v
+  if (v === 'matrix') Promise.all([loadPermissionsOnce(), loadMatrixData()])
+}
+
+function hasPerm(roleIdx: number, permId: number) {
+  return matrixRoles.value[roleIdx]?.permIds.has(permId) ?? false
+}
+
+function toggleMatrixPerm(roleIdx: number, permId: number) {
+  const role = matrixRoles.value[roleIdx]
+  if (!role) return
+  const next = new Set(role.permIds)
+  if (next.has(permId)) next.delete(permId)
+  else next.add(permId)
+  matrixRoles.value = matrixRoles.value.map((r, i) => i === roleIdx ? { ...r, permIds: next } : r)
+  scheduleSave(role.id, roleIdx)
+}
+
+function scheduleSave(roleId: number, roleIdx: number) {
+  if (saveTimers.has(roleId)) clearTimeout(saveTimers.get(roleId)!)
+  saveTimers.set(roleId, setTimeout(async () => {
+    saveTimers.delete(roleId)
+    const role = matrixRoles.value[roleIdx]
+    if (!role) return
+    savingRoleIds.value = new Set([...savingRoleIds.value, roleId])
+    try {
+      const perms = sanitizePermissionsForSave(Array.from(role.permIds))
+      await roleApi.update(roleId, { permissions: perms })
+      toast.success(`${formatRoleName(role.name)} saved`)
+      load()
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to save')
+    } finally {
+      const s = new Set(savingRoleIds.value)
+      s.delete(roleId)
+      savingRoleIds.value = s
+    }
+  }, 800))
+}
+
 onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
 </script>
 
@@ -288,7 +367,10 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
 
     <!-- Header -->
     <div class="rp-header">
-      <p class="rp-sub">Manage roles and control what each role can access.</p>
+      <div class="rp-view-tabs">
+        <button :class="['rp-view-tab', activeView === 'roles' ? 'rp-view-tab-active' : '']" @click="switchView('roles')">Roles</button>
+        <button :class="['rp-view-tab', activeView === 'matrix' ? 'rp-view-tab-active' : '']" @click="switchView('matrix')">Permission Matrix</button>
+      </div>
       <div class="rp-header-right">
         <div class="rp-search-wrap">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" class="rp-search-icon">
@@ -306,8 +388,59 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
       </div>
     </div>
 
+    <!-- Permission Matrix View -->
+    <div v-if="activeView === 'matrix'" class="mx-card">
+      <div class="mx-toolbar">
+        <input v-model="matrixFilter" type="text" placeholder="Filter by module or permission…" class="mx-filter" />
+        <span class="mx-hint">Click a cell to toggle. Changes auto-save after 0.8s.</span>
+      </div>
+      <div v-if="matrixLoading" class="mx-state">
+        <span class="spinner spinner-lg" /> Loading matrix…
+      </div>
+      <div v-else-if="!matrixRoles.length" class="mx-state">No roles found.</div>
+      <div v-else class="mx-scroll">
+        <table class="mx-table">
+          <thead>
+            <tr>
+              <th class="mx-th-perm">Permission</th>
+              <th v-for="r in matrixRoles" :key="r.id" class="mx-th-role">
+                <div class="mx-role-head">
+                  <div class="role-icon" style="width:22px;height:22px;font-size:9px;margin:0 auto 3px">{{ initials(formatRoleName(r.name)) }}</div>
+                  <span>{{ formatRoleName(r.name) }}</span>
+                  <span v-if="savingRoleIds.has(r.id)" class="mx-saving">saving…</span>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="group in filteredGroups" :key="group.module">
+              <tr class="mx-group-row">
+                <td :colspan="matrixRoles.length + 1" class="mx-group-label">{{ group.module.replace(/-/g, ' ') }}</td>
+              </tr>
+              <tr v-for="perm in group.permissions" :key="perm.id" class="mx-perm-row">
+                <td class="mx-perm-name">
+                  <span class="mx-perm-label">{{ perm.action }}</span>
+                  <code class="mx-perm-code">{{ perm.name }}</code>
+                </td>
+                <td v-for="(r, rIdx) in matrixRoles" :key="r.id" class="mx-cell" @click="toggleMatrixPerm(rIdx, perm.id)">
+                  <span :class="['mx-dot', hasPerm(rIdx, perm.id) ? 'mx-dot-on' : 'mx-dot-off']">
+                    <svg v-if="hasPerm(rIdx, perm.id)" width="10" height="10" viewBox="0 0 12 12" fill="currentColor">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                </td>
+              </tr>
+            </template>
+            <tr v-if="!filteredGroups.length || filteredGroups.every(g => !g.permissions.length)">
+              <td :colspan="matrixRoles.length + 1" class="mx-state">No permissions match your filter.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Master-detail layout -->
-    <div class="rp-layout" :class="{ 'panel-open': panelMode !== 'none' }">
+    <div v-if="activeView === 'roles'" class="rp-layout" :class="{ 'panel-open': panelMode !== 'none' }">
 
       <!-- Left: roles list -->
       <div class="rp-list-col">
@@ -864,4 +997,73 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
 .slide-panel-leave-active { transition: opacity .15s, transform .15s; }
 .slide-panel-enter-from  { opacity: 0; transform: translateX(20px); }
 .slide-panel-leave-to    { opacity: 0; transform: translateX(20px); }
+
+/* View tabs */
+.rp-view-tabs { display: flex; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+.rp-view-tab  {
+  padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 500;
+  color: var(--muted); background: none; border: none; cursor: pointer; transition: all .15s;
+}
+.rp-view-tab:hover { color: var(--text); }
+.rp-view-tab-active { background: var(--surface3); color: var(--text); border: 1px solid var(--border-hi); }
+
+/* Matrix */
+.mx-card   { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.mx-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+}
+.mx-filter {
+  height: 34px; padding: 0 10px; font-size: 13px; width: 260px;
+  background: var(--surface2); border: 1px solid var(--border-hi);
+  border-radius: 7px; color: var(--text); outline: none; transition: border-color .15s;
+}
+.mx-filter::placeholder { color: var(--muted); }
+.mx-filter:focus { border-color: var(--accent); }
+.mx-hint  { font-size: 11px; color: var(--muted); }
+.mx-state { padding: 40px; text-align: center; color: var(--muted); font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.mx-scroll { overflow-x: auto; max-height: calc(100vh - 220px); overflow-y: auto; }
+
+.mx-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.mx-th-perm {
+  position: sticky; left: 0; z-index: 2; top: 0;
+  background: var(--surface2); padding: 9px 14px;
+  text-align: left; font-size: 10px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+  border-bottom: 1px solid var(--border-hi); min-width: 180px;
+}
+.mx-th-role {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--surface2); padding: 9px 8px;
+  text-align: center; border-bottom: 1px solid var(--border-hi);
+  min-width: 80px;
+}
+.mx-role-head { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; font-weight: 600; color: var(--dim); white-space: nowrap; }
+.mx-saving { font-size: 9px; color: var(--accent); font-weight: 500; }
+
+.mx-group-row { background: var(--surface3); }
+.mx-group-label {
+  position: sticky; left: 0;
+  padding: 6px 14px; font-size: 10px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.8px; border-top: 1px solid var(--border);
+}
+.mx-perm-row { border-bottom: 1px solid var(--border); transition: background .1s; }
+.mx-perm-row:hover { background: var(--surface2); }
+.mx-perm-row:last-child { border-bottom: none; }
+.mx-perm-name {
+  position: sticky; left: 0; z-index: 1; background: inherit;
+  padding: 6px 14px; white-space: nowrap;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.mx-perm-row:hover .mx-perm-name { background: var(--surface2); }
+.mx-perm-label { font-size: 12px; color: var(--dim); }
+.mx-perm-code  { font-family: monospace; font-size: 10px; color: var(--muted); letter-spacing: 0; }
+.mx-cell { text-align: center; padding: 6px 8px; cursor: pointer; }
+.mx-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 6px; transition: all .15s;
+}
+.mx-dot-on  { background: rgba(54,211,153,.15); border: 1px solid rgba(54,211,153,.4); color: #36d399; }
+.mx-dot-off { background: var(--surface2); border: 1px solid var(--border); color: transparent; }
+.mx-cell:hover .mx-dot-off { border-color: var(--border-hi); background: var(--surface3); }
 </style>

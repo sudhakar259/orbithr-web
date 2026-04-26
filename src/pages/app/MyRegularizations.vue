@@ -417,7 +417,7 @@ async function submitForm() {
   submitError.value = ''
   try {
     await regularizationService.createRequest({
-      attendance_id: Number(attendanceRecord.value.id),
+      attendance_id: attendanceRecord.value.id,
       regularization_type: form.value.regularization_type,
       reason: form.value.reason,
       notes: form.value.notes || null,

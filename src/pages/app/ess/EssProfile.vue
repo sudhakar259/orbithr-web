@@ -4,6 +4,10 @@ import { ref, computed, onMounted } from 'vue'
 import { essService, type EssProfile } from '@/services/essService'
 import { attendanceService } from '@/services/attendance'
 import api from '@/services/api'
+import EmpAvatar from '@/components/employee/EmpAvatar.vue'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
+
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // ── Profile ───────────────────────────────────────────────────────────────────
 const loading  = ref(true)
@@ -28,6 +32,7 @@ async function loadProfile() {
         emergency_contact_phone: profile.value.emergency_contact_phone ?? '',
         emergency_contact_relationship: profile.value.emergency_contact_relationship ?? '',
       }
+      setBreadcrumbs([{ label: 'My Profile' }])
     }
   } catch {
     errMsg.value = 'Failed to load profile'
@@ -126,7 +131,7 @@ function isDayOn(d: string) {
 }
 
 const formatDate = (d?: string | null) =>
-  d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'
+  d ? new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'
 
 const formatAgo = (d?: string | null) => {
   if (!d) return ''
@@ -143,12 +148,29 @@ const formatAgo = (d?: string | null) => {
 const formatTime = (t?: string | null) => {
   if (!t) return '—'
   const ts = t.includes('T') ? t : `1970-01-01T${t}`
-  return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+  return new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
 const annTypeColor: Record<string, string> = {
   general: 'tag-blue', urgent: 'tag-red', event: 'tag-purple', hr: 'tag-green',
 }
+
+const DEPT_COLORS: Record<string, string> = {
+  engineering: '#6B5BFF', design: '#E8A63C', hr: '#2FB872', people: '#2FB872',
+  finance: '#4CC2FF', sales: '#F07A7A', ops: '#B28DFF', operations: '#B28DFF', gtm: '#FF8A65',
+}
+
+const deptColor = computed(() => {
+  const key = (profile.value?.employee?.department || '').toLowerCase().replace(/\s+/g, '')
+  return DEPT_COLORS[key] || '#6B5BFF'
+})
+
+const statusColor = computed(() => {
+  const s = profile.value?.employee?.status
+  if (s === 'Active') return '#2FB872'
+  if (s === 'On Leave') return '#E8A63C'
+  return '#7A8299'
+})
 
 // ── Image upload ──────────────────────────────────────────────────────────────
 const avatarInput = ref<HTMLInputElement | null>(null)
@@ -192,315 +214,307 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="prof-wrap">
+  <div class="ess-wrap">
 
-    <!-- ── Skeleton ──────────────────────────────────────────────────────── -->
+    <!-- ── Skeleton ──────────────────────────────────────────────────────────── -->
     <template v-if="loading">
-      <div class="skel-hero"></div>
-      <div class="prof-body">
-        <div class="skel-block" style="height:200px"></div>
-        <div class="skel-block" style="height:400px"></div>
+      <div class="ess-skel-hero"/>
+      <div class="ess-skel-bar"/>
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;margin-top:4px">
+        <div class="ess-skel-block" style="height:300px"/>
+        <div class="ess-skel-block" style="height:300px"/>
       </div>
     </template>
 
     <template v-else-if="profile">
 
-      <!-- ── Hero banner ────────────────────────────────────────────────── -->
+      <!-- ── Hero banner ────────────────────────────────────────────────────── -->
       <div
-        class="hero"
-        :style="profile.banner_url ? `background-image:url('${profile.banner_url}')` : ''"
+        class="ess-hero"
+        :class="profile.banner_url ? 'ess-hero--photo' : 'ess-hero--gradient'"
+        :style="profile.banner_url ? { backgroundImage: `url('${profile.banner_url}')` } : {}"
       >
-        <!-- bottom gradient scrim so text is readable over any banner -->
-        <div class="hero-scrim"></div>
-
-        <!-- banner upload pill (top-right, appears on hover) -->
-        <button class="banner-upload-btn" @click.stop="bannerInput?.click()">
-          <div v-if="uploadingBanner" class="mini-spin"></div>
-          <svg v-else width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
-          {{ uploadingBanner ? 'Uploading…' : 'Change Banner' }}
-          <input ref="bannerInput" type="file" accept="image/*" class="file-input-hidden" @change="onBannerChange" />
+        <div class="ess-hero-overlay"/>
+        <!-- banner upload (top-right, on hover) -->
+        <button class="ess-banner-btn" @click.stop="bannerInput?.click()">
+          <div v-if="uploadingBanner" class="ess-spin"/>
+          <svg v-else width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+          </svg>
+          {{ uploadingBanner ? 'Uploading…' : 'Change banner' }}
+          <input ref="bannerInput" type="file" accept="image/*" class="ess-file-hidden" @change="onBannerChange"/>
         </button>
 
-        <!-- hero content sits on the banner, z above scrim -->
-        <div class="hero-content">
-          <div class="hero-avatar" @click="avatarInput?.click()">
-            <img v-if="profile.avatar_url" :src="profile.avatar_url" class="avatar-img" :alt="profile.name" />
-            <span v-else>{{ initials(profile.name) }}</span>
-            <div class="avatar-overlay">
-              <div v-if="uploadingAvatar" class="mini-spin mini-spin--sm"></div>
-              <svg v-else width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+        <!-- hero content at bottom -->
+        <div class="ess-hero-content">
+          <div class="ess-av-wrap" @click="avatarInput?.click()">
+            <EmpAvatar :name="profile.name" :size="80" :src="profile.avatar_url || undefined"/>
+            <div class="ess-av-overlay">
+              <div v-if="uploadingAvatar" class="ess-spin ess-spin--sm"/>
+              <svg v-else width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+              </svg>
             </div>
-            <input ref="avatarInput" type="file" accept="image/*" class="file-input-hidden" @change="onAvatarChange" />
+            <input ref="avatarInput" type="file" accept="image/*" class="ess-file-hidden" @change="onAvatarChange"/>
           </div>
-          <div class="hero-info">
-            <h1 class="hero-name">{{ profile.name }}</h1>
-            <p class="hero-role">
+
+          <div class="ess-hero-info">
+            <div class="ess-hero-row1">
+              <h1 class="ess-name">{{ profile.name }}</h1>
+              <span
+                v-if="profile.employee?.status"
+                class="ess-badge"
+                :style="{ background: statusColor + '22', color: statusColor }"
+              >{{ profile.employee.status }}</span>
+              <span
+                v-if="profile.employee?.department"
+                class="ess-badge"
+                :style="{ background: deptColor + '22', color: deptColor }"
+              >{{ profile.employee.department }}</span>
+            </div>
+            <p class="ess-hero-role">
               <span v-if="profile.employee?.designation">{{ profile.employee.designation }}</span>
-              <span v-if="profile.employee?.designation && profile.employee?.department" class="hero-sep">·</span>
-              <span v-if="profile.employee?.department">{{ profile.employee.department }}</span>
+              <span v-if="profile.employee?.designation && profile.employee?.department" class="ess-sep"> · </span>
+              <span v-if="profile.employee?.department && !profile.employee?.designation">{{ profile.employee.department }}</span>
             </p>
-            <div class="hero-meta">
-              <span v-if="profile.employee?.employee_id" class="hero-chip">
-                <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 000 6h.75l.75 3H8a1 1 0 100 2h4a1 1 0 100-2h-.5l.75-3H13a3 3 0 000-6h3a1 1 0 010 2h-3a1 1 0 00-1 1v.5a1 1 0 001 1h.5a1 1 0 010 2h-.5a1 1 0 00-.97.757L11.5 14h-3l-.53-2.243A1 1 0 007 11h-.5a1 1 0 010-2H7a1 1 0 001-1V7a1 1 0 00-1-1H4a1 1 0 010-2z" clip-rule="evenodd"/></svg>
+            <div class="ess-hero-meta">
+              <span v-if="profile.employee?.employee_id" class="ess-chip">
                 {{ profile.employee.employee_id }}
               </span>
-              <span v-if="profile.employee?.hire_date" class="hero-chip">
-                <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
+              <span v-if="profile.employee?.hire_date" class="ess-chip">
                 Joined {{ formatDate(profile.employee.hire_date) }}
               </span>
-              <span v-if="tenure" class="hero-chip hero-chip--accent">
-                <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
-                {{ tenure }}
-              </span>
-              <span class="hero-chip" :class="punchedIn ? 'hero-chip--green' : 'hero-chip--muted'">
-                <span class="dot" :class="punchedIn ? 'dot-green' : 'dot-muted'"></span>
-                {{ punchedIn ? 'Currently Working' : 'Not Punched In' }}
+              <span v-if="tenure" class="ess-chip ess-chip--accent">{{ tenure }}</span>
+              <span class="ess-chip" :class="punchedIn ? 'ess-chip--green' : 'ess-chip--muted'">
+                <span class="ess-dot" :class="punchedIn ? 'ess-dot--green' : ''"/>
+                {{ punchedIn ? 'Currently working' : 'Not punched in' }}
               </span>
             </div>
           </div>
-          <button class="edit-btn" @click="editing = !editing">
-            <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
-            {{ editing ? 'Cancel' : 'Edit Profile' }}
+
+          <button class="ess-edit-hero-btn" @click="editing = !editing">
+            <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+            </svg>
+            {{ editing ? 'Cancel' : 'Edit profile' }}
           </button>
         </div>
       </div>
 
-      <!-- ── Stats bar ───────────────────────────────────────────────────── -->
-      <div class="stats-bar">
-        <div class="stat">
-          <span class="stat-n stat-green">{{ attSummary.present_days }}</span>
-          <span class="stat-l">Present this month</span>
+      <!-- ── Stats bar ──────────────────────────────────────────────────────── -->
+      <div class="ess-stats-bar">
+        <div class="ess-stat">
+          <span class="ess-stat-n" style="color:#2FB872">{{ attSummary.present_days }}</span>
+          <span class="ess-stat-l">Present this month</span>
         </div>
-        <div class="stat-div"></div>
-        <div class="stat">
-          <span class="stat-n stat-yellow">{{ attSummary.late_days }}</span>
-          <span class="stat-l">Late arrivals</span>
+        <div class="ess-stat-div"/>
+        <div class="ess-stat">
+          <span class="ess-stat-n" style="color:#E8A63C">{{ attSummary.late_days }}</span>
+          <span class="ess-stat-l">Late arrivals</span>
         </div>
-        <div class="stat-div"></div>
-        <div class="stat">
-          <span class="stat-n stat-red">{{ attSummary.absent_days }}</span>
-          <span class="stat-l">Absent days</span>
+        <div class="ess-stat-div"/>
+        <div class="ess-stat">
+          <span class="ess-stat-n" style="color:#E5484D">{{ attSummary.absent_days }}</span>
+          <span class="ess-stat-l">Absent days</span>
         </div>
-        <div class="stat-div"></div>
-        <div class="stat">
-          <span class="stat-n stat-accent">{{ leaveBalances.reduce((s, b) => s + (b.current_balance || 0), 0) }}</span>
-          <span class="stat-l">Leave balance</span>
+        <div class="ess-stat-div"/>
+        <div class="ess-stat">
+          <span class="ess-stat-n" style="color:#8979FF">{{ leaveBalances.reduce((s, b) => s + (b.current_balance || 0), 0) }}</span>
+          <span class="ess-stat-l">Leave balance</span>
         </div>
-        <div class="stat-div"></div>
-        <div class="stat">
-          <span class="stat-n">{{ todayRec ? formatTime(todayRec.check_in) : '—' }}</span>
-          <span class="stat-l">Today check-in</span>
+        <div class="ess-stat-div"/>
+        <div class="ess-stat">
+          <span class="ess-stat-n">{{ todayRec ? formatTime(todayRec.check_in) : '—' }}</span>
+          <span class="ess-stat-l">Today check-in</span>
         </div>
-        <div class="stat-div"></div>
-        <div class="stat">
-          <span class="stat-n">{{ todayRec ? formatTime(todayRec.check_out) : '—' }}</span>
-          <span class="stat-l">Today check-out</span>
+        <div class="ess-stat-div"/>
+        <div class="ess-stat">
+          <span class="ess-stat-n">{{ todayRec ? formatTime(todayRec.check_out) : '—' }}</span>
+          <span class="ess-stat-l">Today check-out</span>
         </div>
       </div>
 
-      <!-- ── Success / error banner ─────────────────────────────────────── -->
-      <div v-if="success" class="flash flash-ok">{{ success }}</div>
-      <div v-if="errMsg"  class="flash flash-err">{{ errMsg }}</div>
+      <!-- ── Flash messages ─────────────────────────────────────────────────── -->
+      <div v-if="success" class="ess-flash ess-flash--ok">{{ success }}</div>
+      <div v-if="errMsg"  class="ess-flash ess-flash--err">{{ errMsg }}</div>
 
-      <!-- ── Edit form (inline, collapsible) ───────────────────────────── -->
-      <div v-if="editing" class="edit-panel">
-        <h3 class="edit-title">Edit Profile</h3>
-        <div class="edit-grid">
-          <div class="field">
-            <label class="label">Full Name</label>
-            <input v-model="form.name" type="text" class="input" placeholder="Your full name" />
+      <!-- ── Edit form ──────────────────────────────────────────────────────── -->
+      <div v-if="editing" class="ess-edit-panel">
+        <div class="ess-card-head">Edit Profile</div>
+        <div class="ess-edit-grid">
+          <div class="ess-field">
+            <label class="ess-label">Full Name</label>
+            <input v-model="form.name" type="text" class="ess-input" placeholder="Your full name"/>
           </div>
-          <div class="field">
-            <label class="label">Phone</label>
-            <input v-model="form.phone" type="tel" class="input" placeholder="+91 XXXXX XXXXX" />
+          <div class="ess-field">
+            <label class="ess-label">Phone</label>
+            <input v-model="form.phone" type="tel" class="ess-input" placeholder="+91 XXXXX XXXXX"/>
           </div>
-          <div class="field field-full">
-            <label class="label">Address</label>
-            <input v-model="form.address" type="text" class="input" placeholder="Your address" />
+          <div class="ess-field ess-field--full">
+            <label class="ess-label">Address</label>
+            <input v-model="form.address" type="text" class="ess-input" placeholder="Your address"/>
           </div>
-          <div class="field">
-            <label class="label">Emergency Contact Name</label>
-            <input v-model="form.emergency_contact_name" type="text" class="input" />
+          <div class="ess-field">
+            <label class="ess-label">Emergency Contact Name</label>
+            <input v-model="form.emergency_contact_name" type="text" class="ess-input"/>
           </div>
-          <div class="field">
-            <label class="label">Emergency Contact Phone</label>
-            <input v-model="form.emergency_contact_phone" type="tel" class="input" />
+          <div class="ess-field">
+            <label class="ess-label">Emergency Contact Phone</label>
+            <input v-model="form.emergency_contact_phone" type="tel" class="ess-input"/>
           </div>
-          <div class="field">
-            <label class="label">Relationship</label>
-            <input v-model="form.emergency_contact_relationship" type="text" class="input" placeholder="e.g. Spouse, Parent" />
+          <div class="ess-field">
+            <label class="ess-label">Relationship</label>
+            <input v-model="form.emergency_contact_relationship" type="text" class="ess-input" placeholder="e.g. Spouse, Parent"/>
           </div>
         </div>
-        <div class="edit-actions">
-          <button class="btn-save" :disabled="saving" @click="save">
-            <div v-if="saving" class="mini-spin"></div>
-            {{ saving ? 'Saving…' : 'Save Changes' }}
+        <div class="ess-edit-actions">
+          <button class="ess-btn-save" :disabled="saving" @click="save">
+            <div v-if="saving" class="ess-spin"/>
+            {{ saving ? 'Saving…' : 'Save changes' }}
           </button>
-          <button class="btn-discard" @click="editing = false">Discard</button>
+          <button class="ess-btn-discard" @click="editing = false">Discard</button>
         </div>
       </div>
 
-      <!-- ── Main 2-col layout ──────────────────────────────────────────── -->
-      <div class="prof-body">
+      <!-- ── 2-col body ─────────────────────────────────────────────────────── -->
+      <div class="ess-body">
 
-        <!-- LEFT: Feed ─────────────────────────────────────────────────── -->
-        <div class="feed-col">
+        <!-- LEFT: Activity + Announcements -->
+        <div class="ess-col-main">
 
-          <!-- Today's activity card -->
-          <div class="card today-card">
-            <div class="card-head">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
-              Today's Activity
+          <!-- Today's activity -->
+          <div class="ess-card">
+            <div class="ess-card-head">Today's Activity</div>
+            <div v-if="todayRec" class="ess-today-row">
+              <div class="ess-today-item">
+                <span class="ess-today-label">Check In</span>
+                <span class="ess-today-val" style="color:#2FB872">{{ formatTime(todayRec.check_in) }}</span>
+              </div>
+              <div class="ess-today-sep"/>
+              <div class="ess-today-item">
+                <span class="ess-today-label">Check Out</span>
+                <span class="ess-today-val">{{ formatTime(todayRec.check_out) }}</span>
+              </div>
+              <div class="ess-today-sep"/>
+              <div class="ess-today-item">
+                <span class="ess-today-label">Hours</span>
+                <span class="ess-today-val" style="color:#8979FF">{{ todayRec.working_hours ? todayRec.working_hours + 'h' : '—' }}</span>
+              </div>
+              <div class="ess-today-sep"/>
+              <div class="ess-today-item">
+                <span class="ess-today-label">Status</span>
+                <span
+                  class="ess-today-val"
+                  :style="{ color: todayRec.status === 'present' ? '#2FB872' : todayRec.status === 'late' ? '#E8A63C' : '#EEF0F4' }"
+                >{{ todayRec.status ?? '—' }}</span>
+              </div>
             </div>
-            <div v-if="todayRec" class="today-row">
-              <div class="today-item">
-                <span class="today-label">Check In</span>
-                <span class="today-val today-green">{{ formatTime(todayRec.check_in) }}</span>
-              </div>
-              <div class="today-sep"></div>
-              <div class="today-item">
-                <span class="today-label">Check Out</span>
-                <span class="today-val">{{ formatTime(todayRec.check_out) }}</span>
-              </div>
-              <div class="today-sep"></div>
-              <div class="today-item">
-                <span class="today-label">Hours</span>
-                <span class="today-val today-accent">{{ todayRec.working_hours ? todayRec.working_hours + 'h' : '—' }}</span>
-              </div>
-              <div class="today-sep"></div>
-              <div class="today-item">
-                <span class="today-label">Status</span>
-                <span class="today-val" :class="{ 'today-green': todayRec.status === 'present', 'today-yellow': todayRec.status === 'late' }">{{ todayRec.status ?? '—' }}</span>
-              </div>
-            </div>
-            <p v-else class="today-empty">No attendance record for today yet.</p>
+            <p v-else class="ess-empty-sm">No attendance record for today yet.</p>
           </div>
 
-          <!-- Announcements feed -->
-          <div class="card-head mt-feed">
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z"/></svg>
-            Company Announcements
+          <!-- Announcements -->
+          <div class="ess-section-label">Company Announcements</div>
+          <div v-if="annLoading" class="ess-loading-row">
+            <div class="ess-spin"/>
+            Loading…
           </div>
-
-          <div v-if="annLoading" class="ann-loading">
-            <div class="mini-spin"></div> Loading…
-          </div>
-          <div v-else-if="announcements.length === 0" class="empty-state">No announcements yet.</div>
-          <div v-else class="ann-list">
-            <div v-for="ann in announcements" :key="ann.id" class="ann-card">
-              <div class="ann-head">
-                <div class="ann-avatar">
-                  {{ ann.user?.name ? initials(ann.user.name) : 'HR' }}
+          <div v-else-if="announcements.length === 0" class="ess-empty">No announcements yet.</div>
+          <div v-else class="ess-ann-list">
+            <div v-for="ann in announcements" :key="ann.id" class="ess-card ess-ann-card">
+              <div class="ess-ann-head">
+                <div class="ess-ann-av">{{ ann.user?.name ? initials(ann.user.name) : 'HR' }}</div>
+                <div class="ess-ann-meta">
+                  <span class="ess-ann-author">{{ ann.user?.name ?? 'HR Team' }}</span>
+                  <span class="ess-ann-time">{{ formatAgo(ann.published_at) }}</span>
                 </div>
-                <div class="ann-meta">
-                  <span class="ann-author">{{ ann.user?.name ?? 'HR Team' }}</span>
-                  <span class="ann-time">{{ formatAgo(ann.published_at) }}</span>
-                </div>
-                <span v-if="ann.is_pinned" class="pin-badge">
-                  <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><path d="M9.243 3.03a1 1 0 01.727 1.213L9.53 6h2.94l.56-2.243a1 1 0 111.94.486L14.53 6H17a1 1 0 110 2h-.427l.196 2.763a1 1 0 01-.98 1.063 1 1 0 01-.037 0h-.004l-.022.003L14.5 12H11v5a1 1 0 11-2 0v-5H5.5l-1.226-.172a1 1 0 01-.858-1.086L3.627 8H3a1 1 0 110-2h2.47l-.44-1.757a1 1 0 111.94-.486L7.53 6h2.94l-.44-1.757a1 1 0 01.213-.727z"/></svg>
-                  Pinned
-                </span>
-                <span v-if="ann.type" :class="['type-tag', annTypeColor[ann.type] ?? 'tag-blue']">{{ ann.type }}</span>
+                <span v-if="ann.is_pinned" class="ess-pin-badge">Pinned</span>
+                <span v-if="ann.type" :class="['ess-type-tag', annTypeColor[ann.type] ?? 'tag-blue']">{{ ann.type }}</span>
               </div>
-              <h4 class="ann-title">{{ ann.title }}</h4>
-              <p class="ann-body">{{ ann.body }}</p>
-              <div class="ann-footer">
-                <span v-if="ann.views" class="ann-views">
-                  <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
-                  {{ ann.views }} views
-                </span>
+              <h4 class="ess-ann-title">{{ ann.title }}</h4>
+              <p class="ess-ann-body">{{ ann.body }}</p>
+              <div v-if="ann.views" class="ess-ann-footer">
+                <span class="ess-ann-views">{{ ann.views }} views</span>
               </div>
             </div>
           </div>
-
         </div>
 
-        <!-- RIGHT: Sidebar ─────────────────────────────────────────────── -->
-        <div class="side-col">
+        <!-- RIGHT: Sidebar -->
+        <div class="ess-col-side">
 
-          <!-- About card -->
-          <div class="card">
-            <div class="card-head">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-              About
-            </div>
-            <div class="about-list">
-              <div v-if="profile.email" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+          <!-- About -->
+          <div class="ess-card">
+            <div class="ess-card-head">About</div>
+            <div class="ess-about-list">
+              <div v-if="profile.email" class="ess-about-row">
+                <svg class="ess-about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
                 <span>{{ profile.email }}</span>
               </div>
-              <div v-if="profile.phone" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+              <div v-if="profile.phone" class="ess-about-row">
+                <svg class="ess-about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
                 <span>{{ profile.phone }}</span>
               </div>
-              <div v-if="profile.address" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+              <div v-if="profile.address" class="ess-about-row">
+                <svg class="ess-about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
                 <span>{{ profile.address }}</span>
               </div>
-              <div v-if="profile.employee?.gender" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-                <span class="capitalize">{{ profile.employee.gender }}</span>
+              <div v-if="profile.employee?.gender" class="ess-about-row">
+                <svg class="ess-about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+                <span style="text-transform:capitalize">{{ profile.employee.gender }}</span>
               </div>
-              <div v-if="profile.employee?.date_of_birth" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
+              <div v-if="profile.employee?.date_of_birth" class="ess-about-row">
+                <svg class="ess-about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
                 <span>{{ formatDate(profile.employee.date_of_birth) }}</span>
               </div>
-              <div v-if="profile.employee?.employment_type" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
-                <span class="capitalize">{{ profile.employee.employment_type.replace('_', ' ') }}</span>
+              <div v-if="profile.employee?.employment_type" class="ess-about-row">
+                <svg class="ess-about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                <span style="text-transform:capitalize">{{ profile.employee.employment_type.replace('_', ' ') }}</span>
               </div>
-              <div v-if="profile.employee?.role" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
-                <span class="capitalize">{{ profile.employee.role }}</span>
+              <div v-if="profile.employee?.role" class="ess-about-row">
+                <svg class="ess-about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+                <span style="text-transform:capitalize">{{ profile.employee.role }}</span>
               </div>
-              <div v-if="profile.employee?.team" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+              <div v-if="profile.employee?.team" class="ess-about-row">
+                <svg class="ess-about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
                 <span>{{ profile.employee.team }}</span>
               </div>
-              <div v-if="profile.employee?.location" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+              <div v-if="profile.employee?.location" class="ess-about-row">
+                <svg class="ess-about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
                 <span>{{ profile.employee.location }}</span>
-              </div>
-              <div v-if="profile.nationality" class="about-row">
-                <svg class="about-icon" width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 7l2.55 2.4A1 1 0 0116 11H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>
-                <span>{{ profile.nationality }}</span>
               </div>
             </div>
 
             <!-- Emergency contact -->
-            <div v-if="profile.emergency_contact_name" class="emergency-block">
-              <p class="emg-label">Emergency Contact</p>
-              <p class="emg-name">{{ profile.emergency_contact_name }}</p>
-              <p v-if="profile.emergency_contact_phone" class="emg-sub">{{ profile.emergency_contact_phone }}</p>
-              <p v-if="profile.emergency_contact_relationship" class="emg-sub">{{ profile.emergency_contact_relationship }}</p>
+            <div v-if="profile.emergency_contact_name" class="ess-emg-block">
+              <div class="ess-emg-label">Emergency Contact</div>
+              <div class="ess-emg-name">{{ profile.emergency_contact_name }}</div>
+              <div v-if="profile.emergency_contact_phone" class="ess-emg-sub">{{ profile.emergency_contact_phone }}</div>
+              <div v-if="profile.emergency_contact_relationship" class="ess-emg-sub">{{ profile.emergency_contact_relationship }}</div>
             </div>
           </div>
 
           <!-- Working schedule -->
-          <div class="card">
-            <div class="card-head">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
-              Work Schedule
-            </div>
-            <div class="days-row">
+          <div class="ess-card">
+            <div class="ess-card-head">Work Schedule</div>
+            <div class="ess-days-row">
               <div
                 v-for="d in ALL_DAYS" :key="d"
-                :class="['day-chip', isDayOn(d) ? 'day-on' : 'day-off']"
+                :class="['ess-day-chip', isDayOn(d) ? 'ess-day-chip--on' : '']"
               >{{ d.slice(0, 1) }}</div>
             </div>
-            <p class="days-label">{{ workingDays.length }} days / week</p>
+            <p class="ess-days-label">{{ workingDays.length }} days / week</p>
           </div>
 
           <!-- Leave balances -->
-          <div v-if="leaveBalances.length" class="card">
-            <div class="card-head">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z"/></svg>
-              Leave Balances
-            </div>
-            <div class="bal-list">
-              <div v-for="b in leaveBalances" :key="b.leave_type_id" class="bal-row">
-                <span class="bal-name">{{ b.leave_type_name ?? 'Leave' }}</span>
-                <span class="bal-num">{{ b.current_balance }} <span class="bal-unit">days</span></span>
+          <div v-if="leaveBalances.length" class="ess-card">
+            <div class="ess-card-head">Leave Balances</div>
+            <div class="ess-bal-list">
+              <div v-for="b in leaveBalances" :key="b.leave_type_id" class="ess-bal-row">
+                <span class="ess-bal-name">{{ b.leave_type_name ?? 'Leave' }}</span>
+                <span class="ess-bal-num">
+                  {{ b.current_balance }}
+                  <span class="ess-bal-unit">days</span>
+                </span>
               </div>
             </div>
           </div>
@@ -510,222 +524,210 @@ onMounted(() => {
 
     </template>
 
-    <div v-else class="empty-state">Could not load profile. Please refresh.</div>
+    <div v-else class="ess-empty">Could not load profile. Please refresh.</div>
   </div>
 </template>
 
 <style scoped>
-/* ── Design tokens ──────────────────────────────────────────────────────────── */
-/* Uses the project CSS variables: --bg, --surface, --surface2, --surface3,
-   --accent, --green, --yellow, --red, --purple, --text, --muted             */
+/* ── Tokens ── */
+/* ink: 900=#0B0D12 800=#161A23 750=#1C212C 700=#232936 500=#3A4254 300=#7A8299 200=#A8AEC0 50=#EEF0F4 0=#FAFBFC */
+/* accent: 500=#6B5BFF 400=#8979FF */
 
-.prof-wrap { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.ess-wrap { display: flex; flex-direction: column; gap: 12px; color: #EEF0F4; }
 
-/* ── Hero ────────────────────────────────────────────────────────────────── */
-.hero {
-  border-radius: 14px; overflow: hidden;
-  border: 1px solid var(--surface3);
-  background: linear-gradient(135deg, #1a2550 0%, #0e1a3d 40%, #1a1030 70%, #0e0e20 100%);
-  background-size: cover; background-position: center;
-  min-height: 220px;
+/* ── Skeleton ── */
+.ess-skel-hero  { height: 220px; background: #161A23; border-radius: 12px; animation: ess-pulse 1.4s infinite; }
+.ess-skel-bar   { height: 64px;  background: #161A23; border-radius: 12px; animation: ess-pulse 1.4s infinite; }
+.ess-skel-block { background: #161A23; border-radius: 12px; animation: ess-pulse 1.4s infinite; }
+@keyframes ess-pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+/* ── Hero banner ── */
+.ess-hero {
+  border-radius: 12px; overflow: hidden;
+  min-height: 220px; position: relative;
   display: flex; flex-direction: column; justify-content: flex-end;
-  position: relative;
+  background-size: cover; background-position: center;
 }
-/* subtle diagonal pattern when no banner image */
-.hero::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(79,126,255,.03) 30px, rgba(79,126,255,.03) 60px);
-  pointer-events: none;
+.ess-hero--gradient {
+  background-image: linear-gradient(115deg, #2A1B5C 0%, #6B5BFF 60%, #F5C16E 130%);
 }
-/* dark gradient scrim so text is readable over any banner */
-.hero-scrim {
-  position: absolute; inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,.05) 0%, rgba(0,0,0,.55) 100%);
-  pointer-events: none;
+.ess-hero--photo { background-color: #161A23; }
+
+.ess-hero-overlay {
+  position: absolute; inset: 0; pointer-events: none;
 }
-/* banner upload pill — hidden until hover */
-.banner-upload-btn {
+.ess-hero--gradient .ess-hero-overlay {
+  background: repeating-linear-gradient(45deg, transparent 0 12px, rgba(0,0,0,.07) 12px 14px);
+}
+.ess-hero--photo .ess-hero-overlay {
+  background: linear-gradient(to bottom, rgba(0,0,0,.15) 0%, rgba(11,13,18,.75) 100%);
+}
+
+/* Banner upload button */
+.ess-banner-btn {
   position: absolute; top: 12px; right: 12px; z-index: 10;
   display: flex; align-items: center; gap: 5px;
   padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 500;
   background: rgba(0,0,0,.55); color: #fff;
-  border: 1px solid rgba(255,255,255,.18);
-  cursor: pointer; backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.18); cursor: pointer;
   opacity: 0; transition: opacity .2s;
 }
-.hero:hover .banner-upload-btn { opacity: 1; }
-.hero-content {
+.ess-hero:hover .ess-banner-btn { opacity: 1; }
+
+/* Hero content (bottom row) */
+.ess-hero-content {
   position: relative; z-index: 5;
-  display: flex; align-items: flex-end; gap: 20px;
-  padding: 0 24px 22px;
-  flex-wrap: wrap;
+  display: flex; align-items: flex-end; gap: 16px;
+  padding: 0 20px 20px; flex-wrap: wrap;
 }
-.hero-avatar {
-  width: 80px; height: 80px; border-radius: 50%;
-  background: var(--accent); color: #fff;
-  font-size: 26px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  border: 3px solid rgba(255,255,255,.15); flex-shrink: 0;
-  position: relative; cursor: pointer; overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+
+/* Avatar with upload overlay */
+.ess-av-wrap {
+  position: relative; cursor: pointer; flex-shrink: 0;
+  border: 3px solid #0B0D12; border-radius: 50%; line-height: 0;
 }
-.avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.avatar-overlay {
+.ess-av-overlay {
   position: absolute; inset: 0; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.5); opacity: 0; transition: opacity .2s; color: #fff;
+  background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center;
+  color: #fff; opacity: 0; transition: opacity .2s;
 }
-.hero-avatar:hover .avatar-overlay { opacity: 1; }
-.file-input-hidden { display: none; }
-.mini-spin--sm { width: 10px; height: 10px; border-width: 1.5px; }
-.hero-info { flex: 1; min-width: 0; }
-.hero-name { font-size: 20px; font-weight: 700; color: #fff; margin: 0 0 2px; text-shadow: 0 1px 4px rgba(0,0,0,.4); }
-.hero-role { font-size: 13px; color: rgba(255,255,255,.7); margin: 0 0 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.hero-sep  { color: rgba(255,255,255,.3); }
-.hero-meta { display: flex; flex-wrap: wrap; gap: 6px; }
-.hero-chip {
+.ess-av-wrap:hover .ess-av-overlay { opacity: 1; }
+.ess-file-hidden { display: none; }
+
+/* Hero name & meta */
+.ess-hero-info { flex: 1; min-width: 0; padding-bottom: 2px; }
+.ess-hero-row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ess-name {
+  margin: 0;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 28px; font-weight: 400; color: #FAFBFC;
+  letter-spacing: -0.02em; line-height: 1.1;
+}
+.ess-badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 9999px; font-size: 11px; font-weight: 600;
+  letter-spacing: .03em;
+}
+.ess-hero-role { font-size: 13px; color: rgba(255,255,255,.65); margin: 3px 0 6px; }
+.ess-sep { color: rgba(255,255,255,.35); }
+.ess-hero-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.ess-chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 8px; border-radius: 20px; font-size: 11px;
   background: rgba(0,0,0,.35); color: rgba(255,255,255,.75);
-  backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.1);
 }
-.hero-chip--accent { background: rgba(79,126,255,.3); color: #a8c0ff; border-color: rgba(79,126,255,.3); }
-.hero-chip--green  { background: rgba(54,211,153,.25); color: #6eefc3; border-color: rgba(54,211,153,.25); }
-.hero-chip--muted  { background: rgba(0,0,0,.35); color: rgba(255,255,255,.5); }
-.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-.dot-green { background: var(--green); }
-.dot-muted { background: rgba(255,255,255,.35); }
-.edit-btn {
-  margin-left: auto; padding: 7px 14px;
-  background: rgba(0,0,0,.4); color: #fff;
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer;
-  display: flex; align-items: center; gap: 5px; transition: background .15s;
-  align-self: flex-end; backdrop-filter: blur(6px);
+.ess-chip--accent { background: rgba(107,91,255,.3); color: #c4baff; border-color: rgba(107,91,255,.3); }
+.ess-chip--green  { background: rgba(47,184,114,.25); color: #6eefc3; border-color: rgba(47,184,114,.25); }
+.ess-chip--muted  { background: rgba(0,0,0,.35); color: rgba(255,255,255,.45); }
+.ess-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.35); }
+.ess-dot--green { background: #2FB872; }
+
+.ess-edit-hero-btn {
+  padding: 7px 14px; background: rgba(0,0,0,.4); color: #fff;
+  border: 1px solid rgba(255,255,255,.18); border-radius: 8px;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  align-self: flex-end;
 }
-.edit-btn:hover { background: rgba(0,0,0,.6); }
+.ess-edit-hero-btn:hover { background: rgba(0,0,0,.6); }
 
-/* ── Stats bar ───────────────────────────────────────────────────────────── */
-.stats-bar {
-  display: flex; align-items: center; gap: 0;
-  background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px;
-  padding: 0; overflow-x: auto;
+/* ── Stats bar ── */
+.ess-stats-bar {
+  display: flex; align-items: center;
+  background: #161A23; border: 1px solid #232936; border-radius: 12px;
+  overflow-x: auto;
 }
-.stat { display: flex; flex-direction: column; align-items: center; padding: 14px 20px; min-width: 100px; }
-.stat-n { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; }
-.stat-l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; text-align: center; }
-.stat-green  { color: var(--green); }
-.stat-yellow { color: var(--yellow); }
-.stat-red    { color: var(--red); }
-.stat-accent { color: var(--accent); }
-.stat-div    { width: 1px; height: 36px; background: var(--surface3); flex-shrink: 0; }
+.ess-stat { display: flex; flex-direction: column; align-items: center; padding: 14px 20px; min-width: 100px; }
+.ess-stat-n { font-size: 20px; font-weight: 700; color: #EEF0F4; line-height: 1; font-family: 'Instrument Serif', Georgia, serif; }
+.ess-stat-l { font-size: 10px; color: #7A8299; text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; text-align: center; }
+.ess-stat-div { width: 1px; height: 36px; background: #232936; flex-shrink: 0; }
 
-/* ── Flash ───────────────────────────────────────────────────────────────── */
-.flash { padding: 10px 16px; border-radius: 8px; font-size: 13px; }
-.flash-ok  { background: rgba(54,211,153,.12); color: var(--green); border: 1px solid rgba(54,211,153,.25); }
-.flash-err { background: rgba(255,107,107,.12); color: var(--red);  border: 1px solid rgba(255,107,107,.25); }
+/* ── Flash ── */
+.ess-flash { padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+.ess-flash--ok  { background: rgba(47,184,114,.12); color: #2FB872; border: 1px solid rgba(47,184,114,.25); }
+.ess-flash--err { background: rgba(229,72,77,.12);  color: #E5484D; border: 1px solid rgba(229,72,77,.25); }
 
-/* ── Edit panel ──────────────────────────────────────────────────────────── */
-.edit-panel {
-  background: var(--surface); border: 1px solid var(--surface3);
-  border-radius: 12px; padding: 20px;
+/* ── Edit panel ── */
+.ess-edit-panel {
+  background: #161A23; border: 1px solid #232936;
+  border-radius: 12px; padding: 18px;
 }
-.edit-title { font-size: 13px; font-weight: 600; color: var(--text); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 16px; }
-.edit-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.field-full { grid-column: 1 / -1; }
-.label      { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
-.input      { width: 100%; background: var(--surface2); border: 1px solid var(--surface3); color: var(--text); border-radius: 7px; padding: 8px 10px; font-size: 13px; outline: none; box-sizing: border-box; }
-.input:focus { border-color: var(--accent); }
-.edit-actions { display: flex; gap: 8px; margin-top: 16px; }
-.btn-save    { padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-.btn-save:disabled { opacity: .6; cursor: not-allowed; }
-.btn-discard { padding: 8px 14px; background: var(--surface3); color: var(--muted); border: none; border-radius: 7px; font-size: 13px; cursor: pointer; }
+.ess-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.ess-field--full { grid-column: 1 / -1; }
+.ess-label { display: block; font-size: 11px; font-weight: 600; color: #7A8299; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
+.ess-input { width: 100%; background: #1C212C; border: 1px solid #2E3544; color: #EEF0F4; border-radius: 7px; padding: 8px 10px; font-size: 13px; outline: none; box-sizing: border-box; }
+.ess-input:focus { border-color: #6B5BFF; }
+.ess-edit-actions { display: flex; gap: 8px; margin-top: 14px; }
+.ess-btn-save { padding: 8px 18px; background: #6B5BFF; color: #fff; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.ess-btn-save:disabled { opacity: .6; cursor: not-allowed; }
+.ess-btn-discard { padding: 8px 14px; background: #1C212C; border: 1px solid #2E3544; color: #7A8299; border-radius: 7px; font-size: 13px; cursor: pointer; }
 
-/* ── 2-col layout ────────────────────────────────────────────────────────── */
-.prof-body { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start; }
-@media (max-width: 800px) { .prof-body { grid-template-columns: 1fr; } }
+/* ── Body 2-col ── */
+.ess-body { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+@media (max-width: 800px) { .ess-body { grid-template-columns: 1fr; } }
+.ess-col-main, .ess-col-side { display: flex; flex-direction: column; gap: 14px; }
 
-/* ── Cards ───────────────────────────────────────────────────────────────── */
-.card { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-.card-head {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 600; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px;
-}
-.mt-feed { margin-top: 4px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; display: flex; align-items: center; gap: 6px; }
+/* ── Card ── */
+.ess-card { background: #161A23; border: 1px solid #232936; border-radius: 12px; padding: 16px; }
+.ess-card-head { font-size: 11px; font-weight: 600; color: #7A8299; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+.ess-section-label { font-size: 11px; font-weight: 600; color: #7A8299; text-transform: uppercase; letter-spacing: .06em; }
 
-/* ── Today card ──────────────────────────────────────────────────────────── */
-.today-card { margin-bottom: 14px; }
-.today-row  { display: flex; gap: 0; }
-.today-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
-.today-sep  { width: 1px; background: var(--surface3); margin: 0 4px; }
-.today-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.today-val   { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 2px; }
-.today-green  { color: var(--green); }
-.today-accent { color: var(--accent); }
-.today-yellow { color: var(--yellow); }
-.today-empty  { font-size: 13px; color: var(--muted); text-align: center; padding: 8px 0; }
+/* ── Today activity ── */
+.ess-today-row { display: flex; gap: 0; }
+.ess-today-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.ess-today-sep { width: 1px; background: #232936; margin: 0 4px; }
+.ess-today-label { font-size: 10px; color: #7A8299; text-transform: uppercase; letter-spacing: .04em; }
+.ess-today-val { font-size: 16px; font-weight: 600; color: #EEF0F4; margin-top: 3px; font-family: 'Instrument Serif', Georgia, serif; }
+.ess-empty-sm { font-size: 13px; color: #7A8299; text-align: center; padding: 8px 0; }
 
-/* ── Announcements ───────────────────────────────────────────────────────── */
-.ann-loading { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); padding: 16px 0; }
-.ann-list    { display: flex; flex-direction: column; gap: 12px; }
-.ann-card {
-  background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 14px;
-  transition: border-color .15s;
-}
-.ann-card:hover { border-color: var(--accent); }
-.ann-head   { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.ann-avatar {
-  width: 30px; height: 30px; border-radius: 50%; background: var(--surface3);
-  color: var(--accent); font-size: 11px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.ann-meta   { flex: 1; min-width: 0; }
-.ann-author { font-size: 12px; font-weight: 600; color: var(--text); display: block; }
-.ann-time   { font-size: 11px; color: var(--muted); }
-.pin-badge  { display: flex; align-items: center; gap: 3px; font-size: 10px; color: var(--yellow); background: rgba(249,168,37,.1); padding: 2px 7px; border-radius: 10px; }
-.ann-title  { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 5px; }
-.ann-body   { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.ann-footer { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--surface3); }
-.ann-views  { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
-.type-tag   { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; text-transform: capitalize; }
-.tag-blue   { background: rgba(79,126,255,.15); color: var(--accent); }
-.tag-red    { background: rgba(255,107,107,.15); color: var(--red); }
-.tag-purple { background: rgba(155,110,255,.15); color: var(--purple); }
-.tag-green  { background: rgba(54,211,153,.15);  color: var(--green); }
+/* ── Announcements ── */
+.ess-loading-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #7A8299; padding: 12px 0; }
+.ess-ann-list { display: flex; flex-direction: column; gap: 10px; }
+.ess-ann-card { transition: border-color .15s; }
+.ess-ann-card:hover { border-color: #6B5BFF; }
+.ess-ann-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ess-ann-av { width: 28px; height: 28px; border-radius: 50%; background: #232936; color: #8979FF; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ess-ann-meta { flex: 1; min-width: 0; }
+.ess-ann-author { font-size: 12px; font-weight: 600; color: #EEF0F4; display: block; }
+.ess-ann-time { font-size: 11px; color: #7A8299; }
+.ess-pin-badge { font-size: 10px; color: #E8A63C; background: rgba(232,166,60,.1); padding: 2px 7px; border-radius: 10px; }
+.ess-ann-title { font-size: 13.5px; font-weight: 600; color: #EEF0F4; margin: 0 0 5px; }
+.ess-ann-body { font-size: 12.5px; color: #7A8299; line-height: 1.5; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ess-ann-footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid #232936; }
+.ess-ann-views { font-size: 11px; color: #7A8299; }
+.ess-type-tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; text-transform: capitalize; }
+.tag-blue   { background: rgba(107,91,255,.15); color: #8979FF; }
+.tag-red    { background: rgba(229,72,77,.15);  color: #E5484D; }
+.tag-purple { background: rgba(155,110,255,.15); color: #B28DFF; }
+.tag-green  { background: rgba(47,184,114,.15);  color: #2FB872; }
 
-/* ── About ───────────────────────────────────────────────────────────────── */
-.about-list  { display: flex; flex-direction: column; gap: 8px; }
-.about-row   { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text); }
-.about-icon  { color: var(--muted); flex-shrink: 0; margin-top: 1px; }
-.emergency-block { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--surface3); }
-.emg-label   { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 4px; }
-.emg-name    { font-size: 13px; font-weight: 600; color: var(--text); margin: 0 0 2px; }
-.emg-sub     { font-size: 12px; color: var(--muted); margin: 0; }
+/* ── About ── */
+.ess-about-list { display: flex; flex-direction: column; gap: 8px; }
+.ess-about-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: #EEF0F4; }
+.ess-about-icon { color: #7A8299; flex-shrink: 0; margin-top: 1px; }
+.ess-emg-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid #232936; }
+.ess-emg-label { font-size: 10px; font-weight: 600; color: #7A8299; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.ess-emg-name { font-size: 13px; font-weight: 600; color: #EEF0F4; margin-bottom: 2px; }
+.ess-emg-sub { font-size: 12px; color: #7A8299; }
 
-/* ── Work schedule ───────────────────────────────────────────────────────── */
-.days-row  { display: flex; gap: 6px; }
-.day-chip  { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
-.day-on    { background: rgba(79,126,255,.2); color: var(--accent); border: 1px solid rgba(79,126,255,.4); }
-.day-off   { background: var(--surface3); color: var(--muted); border: 1px solid transparent; }
-.days-label { font-size: 11px; color: var(--muted); margin-top: 8px; }
+/* ── Schedule ── */
+.ess-days-row { display: flex; gap: 6px; }
+.ess-day-chip { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; background: #1C212C; border: 1px solid #232936; color: #7A8299; }
+.ess-day-chip--on { background: rgba(107,91,255,.15); color: #8979FF; border-color: rgba(107,91,255,.35); }
+.ess-days-label { font-size: 11px; color: #7A8299; margin-top: 8px; }
 
-/* ── Leave balances ──────────────────────────────────────────────────────── */
-.bal-list { display: flex; flex-direction: column; gap: 6px; }
-.bal-row  { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--surface3); }
-.bal-row:last-child { border-bottom: none; }
-.bal-name { font-size: 13px; color: var(--text); }
-.bal-num  { font-size: 15px; font-weight: 700; color: var(--accent); }
-.bal-unit { font-size: 10px; font-weight: 400; color: var(--muted); }
+/* ── Leave balances ── */
+.ess-bal-list { display: flex; flex-direction: column; gap: 2px; }
+.ess-bal-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #232936; }
+.ess-bal-row:last-child { border-bottom: none; }
+.ess-bal-name { font-size: 13px; color: #EEF0F4; }
+.ess-bal-num { font-size: 15px; font-weight: 700; color: #8979FF; font-family: 'Instrument Serif', Georgia, serif; }
+.ess-bal-unit { font-size: 10px; font-weight: 400; color: #7A8299; }
 
-/* ── Misc ────────────────────────────────────────────────────────────────── */
-.empty-state { text-align: center; color: var(--muted); font-size: 13px; padding: 32px; }
-.skel-hero   { height: 160px; background: var(--surface2); border-radius: 14px; animation: pulse 1.4s infinite; }
-.skel-block  { background: var(--surface2); border-radius: 12px; animation: pulse 1.4s infinite; }
-.mini-spin   { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
-@keyframes spin  { to { transform: rotate(360deg); } }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
-.capitalize { text-transform: capitalize; }
-
+/* ── Misc ── */
+.ess-empty { text-align: center; color: #7A8299; font-size: 13px; padding: 32px; }
+.ess-spin { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: ess-spin .6s linear infinite; }
+.ess-spin--sm { width: 12px; height: 12px; border-width: 1.5px; }
+@keyframes ess-spin { to { transform: rotate(360deg); } }
 </style>

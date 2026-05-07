@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'EssAttendance' })
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { attendanceService, type AttendanceRecord } from '@/services/attendance'
 import { regularizationService, type RegularizationRequest } from '@/services/regularization'
 import { leaveService, type LeaveType, type LeaveRequest } from '@/services/leave'
@@ -104,10 +104,6 @@ function dateStr(day: number) {
   return `${viewYear.value}-${String(viewMonth.value).padStart(2,'0')}-${String(day).padStart(2,'0')}`
 }
 
-function cellRecord(day: number): AttendanceRecord | null {
-  return attendanceMap.value[dateStr(day)] ?? null
-}
-
 function cellStatus(day: number): string {
   const d = dateStr(day)
   if (leaveMap.value[d]) return 'leave'
@@ -120,22 +116,36 @@ function cellStatus(day: number): string {
 function isToday(day: number) { return dateStr(day) === todayStr }
 function isFuture(day: number) { return dateStr(day) > todayStr }
 
-function cellClass(day: number) {
+function isWeekendDay(day: number): boolean {
+  const dow = new Date(viewYear.value, viewMonth.value - 1, day).getDay()
+  return dow === 0 || dow === 6
+}
+
+
+function cellClass2(day: number): string {
+  if (isToday(day)) return 'cell2--today'
+  if (isWeekendDay(day)) return 'cell2--weekend'
+  if (isFuture(day)) return 'cell2--future'
   const s = cellStatus(day)
-  const statusCls: Record<string, string> = {
-    present:     'cell--present',
-    late:        'cell--late',
-    absent:      'cell--absent',
-    leave:       'cell--leave',
-    holiday:     'cell--holiday',
-    half_day:    'cell--half',
-    regularized: 'cell--regularized',
-    none:        '',
+  if (s === 'none') return ''
+  return `cell2--${s}`
+}
+
+function statusDotColor(status: string): string {
+  const colors: Record<string, string> = {
+    present: '#4DD39A', late: '#F5C16E', absent: '#F38288',
+    leave: '#8979FF', holiday: '#7ED7FF', half_day: '#8979FF',
+    regularized: '#9B6EFF',
   }
-  const cls = ['cal-cell', statusCls[s] ?? '']
-  if (isToday(day)) cls.push('cell--today')
-  if (isFuture(day)) cls.push('cell--future')
-  return cls.filter(Boolean).join(' ')
+  return colors[status] ?? '#6B7280'
+}
+
+function statusCode(status: string): string {
+  const codes: Record<string, string> = {
+    present: 'P', late: 'L', absent: 'A', leave: 'LV',
+    holiday: 'H', half_day: 'HD', regularized: 'R',
+  }
+  return codes[status] ?? ''
 }
 
 // ── Click handler ─────────────────────────────────────────────────────────────
@@ -157,7 +167,7 @@ const regLookup     = ref(false)
 const regLookupDone = ref(false)
 const regSubmitting = ref(false)
 const regError      = ref('')
-const regBlocked    = ref('')  // non-empty = already regularized, show message
+const regBlocked    = ref('')
 
 // ── Punch ─────────────────────────────────────────────────────────────────
 const todayRecord   = ref<AttendanceRecord | null>(null)
@@ -198,6 +208,58 @@ async function doPunch() {
   }
 }
 
+// ── Live timer ────────────────────────────────────────────────────────────────
+const clockTick = ref(Date.now())
+let tickInterval: ReturnType<typeof setInterval>
+
+const clockDisplay = computed(() => {
+  if (isPunchedIn.value) {
+    const logs = todayRecord.value?.punch_logs ?? []
+    const lastIn = [...logs].reverse().find(l => l.type === 'check_in')
+    if (!lastIn) return { hm: '00:00', s: '00' }
+    const elapsed = Math.max(0, Math.floor((clockTick.value - new Date(lastIn.timestamp).getTime()) / 1000))
+    const h = Math.floor(elapsed / 3600)
+    const m = Math.floor((elapsed % 3600) / 60)
+    const s = elapsed % 60
+    return { hm: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, s: String(s).padStart(2,'0') }
+  }
+  const wh = todayRecord.value?.working_hours
+  if (!wh) return { hm: '--:--', s: '--' }
+  const h = Math.floor(wh)
+  const m = Math.round((wh - h) * 60)
+  return { hm: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, s: '00' }
+})
+
+// ── KPI cards ─────────────────────────────────────────────────────────────────
+const kpiCards = computed(() => [
+  { label: 'Present days',  value: String(summary.value.present_days), color: '#4DD39A' },
+  { label: 'Late arrivals', value: String(summary.value.late_days),    color: '#F5C16E' },
+  { label: 'Absent days',   value: String(summary.value.absent_days),  color: '#F38288' },
+  { label: 'Leave days',    value: String(summary.value.leave_days),   color: '#8979FF' },
+])
+
+// ── Today's log ───────────────────────────────────────────────────────────────
+const todayLog = computed(() => {
+  const logs = todayRecord.value?.punch_logs ?? []
+  return logs.map(l => ({
+    time:  formatTime(l.timestamp),
+    label: l.type === 'check_in' ? 'Check in' : 'Check out',
+    tone:  l.type === 'check_in' ? '#4DD39A' : '#F38288',
+  }))
+})
+
+// ── My pending regularizations (right rail) ───────────────────────────────────
+const myRegRequests = ref<RegularizationRequest[]>([])
+
+async function loadMyRegs() {
+  try {
+    const res = await regularizationService.getMyRequests({ status: 'pending', per_page: 5 })
+    myRegRequests.value = (res.data as RegularizationRequest[]) ?? []
+  } catch {
+    myRegRequests.value = []
+  }
+}
+
 // ── All Staff (admin/hr) ──────────────────────────────────────────────────
 const staffLoading  = ref(false)
 const staffError    = ref('')
@@ -212,7 +274,6 @@ async function loadStaffAttendance() {
       params: { year: viewYear.value, month: viewMonth.value, include_summary: true, per_page: 100 },
     })
     const raw = res.data?.data ?? res.data ?? []
-    // Group by employee
     const map: Record<string, typeof staffRecords.value[0]> = {}
     const records: AttendanceRecord[] = Array.isArray(raw) ? raw : (raw.records ?? [])
     records.forEach((r: AttendanceRecord & { employee?: { id: string; full_name: string; employee_id: string } }) => {
@@ -278,6 +339,7 @@ async function submitReg() {
     regModal.value = false
     await loadCalendar()
     if (isTeamLead.value) loadTeamData()
+    loadMyRegs()
   } catch (err: unknown) {
     const e = err as { response?: { data?: { error?: string; message?: string } } }
     regError.value = e.response?.data?.error || e.response?.data?.message || 'Failed to submit request'
@@ -455,14 +517,20 @@ onMounted(() => {
   loadCalendar()
   loadToday()
   loadTeamData()
+  loadMyRegs()
   if (isAdmin.value) loadStaffAttendance()
+  tickInterval = setInterval(() => { clockTick.value = Date.now() }, 1000)
+})
+
+onUnmounted(() => {
+  clearInterval(tickInterval)
 })
 </script>
 
 <template>
   <div class="ess-att">
 
-    <!-- ── Main tab switcher (Calendar / Team) ────────────────────────────── -->
+    <!-- ── Main tab switcher ────────────────────────────────────────────────── -->
     <div class="main-tabs" v-if="isTeamLead">
       <button :class="['mtab', mainTab === 'calendar' && 'mtab--active']" @click="mainTab = 'calendar'">
         My Calendar
@@ -483,79 +551,178 @@ onMounted(() => {
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <template v-if="mainTab === 'calendar'">
 
-      <!-- Today punch card -->
-      <div class="punch-card">
-        <div class="punch-info">
-          <span class="punch-label">Today</span>
-          <span class="punch-times">
-            <span>In: {{ formatTime(todayRecord?.check_in) }}</span>
-            <span>Out: {{ formatTime(todayRecord?.check_out) }}</span>
-          </span>
-        </div>
-        <div class="punch-right">
-          <span v-if="punchSuccess" class="punch-msg punch-ok">{{ punchSuccess }}</span>
-          <span v-if="punchError" class="punch-msg punch-err">{{ punchError }}</span>
-          <button class="punch-btn" :class="isPunchedIn ? 'punch-btn--out' : 'punch-btn--in'" :disabled="punchLoading" @click="doPunch">
-            <div v-if="punchLoading" class="mini-spin"></div>
-            {{ isPunchedIn ? 'Check Out' : 'Check In' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Summary strip -->
-      <div class="summary-row">
-        <div class="stat-card"><p class="stat-label">Present</p><p class="stat-val stat-green">{{ summary.present_days }}</p></div>
-        <div class="stat-card"><p class="stat-label">Absent</p><p class="stat-val stat-red">{{ summary.absent_days }}</p></div>
-        <div class="stat-card"><p class="stat-label">Late</p><p class="stat-val stat-yellow">{{ summary.late_days }}</p></div>
-        <div class="stat-card"><p class="stat-label">On Leave</p><p class="stat-val stat-blue">{{ summary.leave_days }}</p></div>
-      </div>
-
-      <!-- Calendar header -->
-      <div class="cal-header">
-        <button class="nav-btn" @click="prevMonth">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <span class="cal-month">{{ monthLabel }}</span>
-        <button class="nav-btn" @click="nextMonth">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/></svg>
-        </button>
-      </div>
-
-      <!-- Legend -->
-      <div class="legend">
-        <span class="leg-item"><i class="leg-dot dot-present"></i>Present</span>
-        <span class="leg-item"><i class="leg-dot dot-late"></i>Late</span>
-        <span class="leg-item"><i class="leg-dot dot-absent"></i>Absent</span>
-        <span class="leg-item"><i class="leg-dot dot-leave"></i>Leave</span>
-        <span class="leg-item"><i class="leg-dot dot-reg"></i>Regularized</span>
-        <span class="leg-hint">Click past date → Regularize &nbsp;|&nbsp; Click future date → Apply Leave</span>
-      </div>
-
       <div v-if="calError" class="alert-error">{{ calError }}</div>
 
-      <!-- Calendar grid -->
-      <div :class="['cal-grid', calLoading && 'cal-loading']">
-        <div v-for="d in ['Su','Mo','Tu','We','Th','Fr','Sa']" :key="d" class="cal-dow">{{ d }}</div>
-        <template v-if="calLoading">
-          <div v-for="i in 35" :key="i" class="cal-cell cal-skel"></div>
-        </template>
-        <template v-else>
-          <div
-            v-for="(day, idx) in calCells"
-            :key="idx"
-            :class="day ? cellClass(day) : 'cal-cell cell--empty'"
-            @click="day ? onDayClick(day) : undefined"
-          >
-            <template v-if="day">
-              <span class="cell-day">{{ day }}</span>
-              <span v-if="cellRecord(day)?.is_regularized" class="cell-reg-badge">R</span>
-              <span v-else-if="cellRecord(day)" class="cell-time">{{ formatTime(cellRecord(day)!.check_in) }}</span>
-              <span v-else-if="leaveMap[dateStr(day)]" class="cell-leave-label">{{ leaveMap[dateStr(day)] }}</span>
-              <span v-if="!isFuture(day)" class="cell-hint">{{ cellRecord(day)?.is_regularized ? 'View' : 'Regularize' }}</span>
-              <span v-else class="cell-hint">Apply Leave</span>
-            </template>
+      <div class="att-layout">
+
+        <!-- ── LEFT COLUMN ─────────────────────────────────────────────── -->
+        <div class="att-left">
+
+          <!-- KPI Strip -->
+          <div class="kpi-strip">
+            <div v-for="k in kpiCards" :key="k.label" class="kpi-card">
+              <div class="kpi-label">{{ k.label }}</div>
+              <div class="kpi-value" :style="{ color: k.color }">{{ k.value }}</div>
+            </div>
           </div>
-        </template>
+
+          <!-- Calendar Card -->
+          <div class="cal-card">
+            <!-- Header: month nav + legend -->
+            <div class="cal-card-head">
+              <div class="cal-head-left">
+                <span class="cal-month-title">{{ monthLabel }}</span>
+                <div class="cal-nav-pair">
+                  <button class="nav-btn" @click="prevMonth">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
+                  </button>
+                  <button class="nav-btn" @click="nextMonth">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="cal-legend2">
+                <span v-for="[l, c] in [['P','#4DD39A'],['L','#F5C16E'],['A','#F38288'],['LV','#8979FF'],['WFH','#7ED7FF']]" :key="l" class="leg2-item">
+                  <i class="leg2-dot" :style="{ background: c }"></i>{{ l }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Day labels + Grid -->
+            <div class="cal-card-body">
+              <div class="cal-dows">
+                <div v-for="d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']" :key="d" class="cal-dow2">{{ d }}</div>
+              </div>
+              <div :class="['cal-grid2', calLoading && 'cal-loading']">
+                <template v-if="calLoading">
+                  <div v-for="i in 35" :key="i" class="cal-cell2 cal-skel"></div>
+                </template>
+                <template v-else>
+                  <div
+                    v-for="(day, idx) in calCells"
+                    :key="idx"
+                    :class="['cal-cell2', day ? cellClass2(day) : 'cell2--empty']"
+                    @click="day ? onDayClick(day) : undefined"
+                  >
+                    <template v-if="day">
+                      <div class="cell2-day" :class="isToday(day) && 'cell2-day--today'">{{ day }}</div>
+                      <template v-if="isToday(day)">
+                        <div class="cell2-today-badge">TODAY</div>
+                      </template>
+                      <template v-else-if="!isWeekendDay(day) && !isFuture(day)">
+                        <div class="cell2-status">
+                          <div class="cell2-dot" :style="{ background: statusDotColor(leaveMap[dateStr(day)] ? 'leave' : cellStatus(day)) }"></div>
+                          <span class="cell2-code">{{ leaveMap[dateStr(day)] ? 'LV' : statusCode(cellStatus(day)) }}</span>
+                        </div>
+                      </template>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Today's log -->
+          <div class="todays-log-card" v-if="todayLog.length > 0">
+            <div class="log-head">
+              <span class="log-title">Today's Activity</span>
+              <span class="log-date">{{ new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) }}</span>
+            </div>
+            <div class="log-timeline">
+              <div v-for="(item, i) in todayLog" :key="i" class="log-row">
+                <div class="log-time">{{ item.time }}</div>
+                <div class="log-spine">
+                  <div v-if="i < todayLog.length - 1" class="log-line"></div>
+                  <div class="log-dot" :style="{ background: item.tone }"></div>
+                </div>
+                <div class="log-content" :style="{ paddingBottom: i < todayLog.length - 1 ? '14px' : '0' }">
+                  <div class="log-event">{{ item.label }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── RIGHT RAIL ──────────────────────────────────────────────── -->
+        <div class="att-right">
+
+          <!-- Check-in Widget -->
+          <div class="check-widget">
+            <div class="check-widget-top">
+              <div class="check-status-label">
+                {{ isPunchedIn ? 'CURRENTLY WORKING' : todayRecord?.check_in ? 'SHIFT ENDED' : 'NOT CHECKED IN' }}
+              </div>
+              <div class="check-timer">
+                {{ clockDisplay.hm }}<span class="check-timer-s">:{{ clockDisplay.s }}</span>
+              </div>
+              <div class="check-since">
+                <template v-if="isPunchedIn">Since {{ formatTime(todayRecord?.check_in) }}</template>
+                <template v-else-if="todayRecord?.check_in">Today's total</template>
+                <template v-else>&nbsp;</template>
+              </div>
+            </div>
+
+            <div class="check-times-row" v-if="todayRecord?.check_in">
+              <div class="check-time-chip">
+                <span class="ctc-label">IN</span>
+                <span class="ctc-val">{{ formatTime(todayRecord?.check_in) }}</span>
+              </div>
+              <div class="check-time-chip" v-if="todayRecord?.check_out">
+                <span class="ctc-label">OUT</span>
+                <span class="ctc-val">{{ formatTime(todayRecord?.check_out) }}</span>
+              </div>
+            </div>
+
+            <span v-if="punchSuccess" class="punch-msg punch-ok">{{ punchSuccess }}</span>
+            <span v-if="punchError" class="punch-msg punch-err">{{ punchError }}</span>
+
+            <button
+              class="punch-big-btn"
+              :class="isPunchedIn ? 'punch-big-btn--out' : 'punch-big-btn--in'"
+              :disabled="punchLoading"
+              @click="doPunch"
+            >
+              <div v-if="punchLoading" class="mini-spin btn-spin"></div>
+              {{ isPunchedIn ? 'Check out' : 'Check in' }}
+            </button>
+          </div>
+
+          <!-- My Pending Regularizations -->
+          <div class="pending-reg-card" v-if="myRegRequests.length > 0">
+            <div class="pr-head">
+              <span class="pr-title">Pending Regularizations</span>
+              <span class="pr-badge">{{ myRegRequests.length }}</span>
+            </div>
+            <div class="pr-list">
+              <div v-for="r in myRegRequests" :key="r.id" class="pr-item">
+                <div class="pr-item-name">{{ REG_TYPES[r.regularization_type] ?? r.regularization_type }}</div>
+                <div class="pr-item-sub">{{ formatDate(r.attendance?.attendance_date) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hint card if no regularizations -->
+          <div class="hint-card" v-else>
+            <div class="hint-card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path stroke="#7A8299" stroke-width="1.5" stroke-linecap="round" d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div class="hint-card-text">No pending regularizations</div>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="quick-actions">
+            <button class="qa-btn" @click="openRegModal(todayStr)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+              Regularize
+            </button>
+            <button class="qa-btn" @click="openLeaveModal(todayStr, todayStr)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              Apply Leave
+            </button>
+          </div>
+
+        </div>
       </div>
 
     </template>
@@ -609,19 +776,11 @@ onMounted(() => {
                   placeholder="Approval/rejection notes (required to reject)…"
                 />
                 <div class="req-actions">
-                  <button
-                    class="btn-approve"
-                    :disabled="actionLoading === `reg-${req.id}`"
-                    @click="approveReg(req.id)"
-                  >
+                  <button class="btn-approve" :disabled="actionLoading === `reg-${req.id}`" @click="approveReg(req.id)">
                     <div v-if="actionLoading === `reg-${req.id}`" class="mini-spin"></div>
                     Approve
                   </button>
-                  <button
-                    class="btn-reject"
-                    :disabled="actionLoading === `reg-${req.id}` || !approveNotes[req.id]?.trim()"
-                    @click="rejectReg(req.id)"
-                  >
+                  <button class="btn-reject" :disabled="actionLoading === `reg-${req.id}` || !approveNotes[req.id]?.trim()" @click="rejectReg(req.id)">
                     Reject
                   </button>
                 </div>
@@ -659,19 +818,11 @@ onMounted(() => {
               </div>
               <p class="req-reason">{{ req.reason }}</p>
               <div v-if="req.status === 'pending'" class="req-actions">
-                <button
-                  class="btn-approve"
-                  :disabled="actionLoading === `leave-${req.id}`"
-                  @click="approveLeave(req.id)"
-                >
+                <button class="btn-approve" :disabled="actionLoading === `leave-${req.id}`" @click="approveLeave(req.id)">
                   <div v-if="actionLoading === `leave-${req.id}`" class="mini-spin"></div>
                   Approve
                 </button>
-                <button
-                  class="btn-reject"
-                  :disabled="actionLoading === `leave-${req.id}`"
-                  @click="rejectLeave(req.id)"
-                >
+                <button class="btn-reject" :disabled="actionLoading === `leave-${req.id}`" @click="rejectLeave(req.id)">
                   Reject
                 </button>
               </div>
@@ -741,13 +892,11 @@ onMounted(() => {
             <div v-else-if="regLookupDone && !regRecord" class="lookup-state lookup-error">
               No attendance record found for this date. Contact HR to create one first.
             </div>
-            <!-- Already regularized block -->
             <div v-else-if="regBlocked" class="lookup-state lookup-warn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M12 8v4M12 16h.01"/></svg>
               {{ regBlocked }}
             </div>
             <template v-else-if="regRecord">
-              <!-- Existing punch -->
               <div class="punch-summary">
                 <span class="punch-summary__label">
                   Existing record
@@ -869,218 +1018,309 @@ onMounted(() => {
 .ess-att { display: flex; flex-direction: column; gap: 20px; }
 
 /* ── main tabs ───────────────────────────────────────────────────────────── */
-.main-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--surface3); }
+.main-tabs { display: flex; gap: 4px; border-bottom: 1px solid #232936; }
 .mtab {
-  padding: 9px 20px; font-size: 13px; font-weight: 500; color: var(--muted);
+  padding: 9px 20px; font-size: 13px; font-weight: 500; color: #7A8299;
   background: none; border: none; border-bottom: 2px solid transparent;
   cursor: pointer; transition: color .15s, border-color .15s;
   display: flex; align-items: center; gap: 7px;
 }
-.mtab:hover { color: var(--text); }
-.mtab--active { color: var(--accent); border-bottom-color: var(--accent); }
-.mtab-badge {
-  font-size: 10px; font-weight: 700; background: var(--red); color: #fff;
-  padding: 1px 6px; border-radius: 10px;
-}
+.mtab:hover { color: #EEF0F4; }
+.mtab--active { color: #6B5BFF; border-bottom-color: #6B5BFF; }
+.mtab-badge { font-size: 10px; font-weight: 700; background: #F38288; color: #fff; padding: 1px 6px; border-radius: 10px; }
 
 /* ── sub tabs ────────────────────────────────────────────────────────────── */
-.sub-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--surface3); }
+.sub-tabs { display: flex; gap: 4px; border-bottom: 1px solid #232936; }
 .stab {
-  padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--muted);
+  padding: 8px 16px; font-size: 13px; font-weight: 500; color: #7A8299;
   background: none; border: none; border-bottom: 2px solid transparent;
   cursor: pointer; transition: color .15s; display: flex; align-items: center; gap: 6px;
 }
-.stab:hover { color: var(--text); }
-.stab--active { color: var(--accent); border-bottom-color: var(--accent); }
-.stab-badge {
-  font-size: 10px; font-weight: 700; background: var(--yellow); color: #000;
-  padding: 1px 5px; border-radius: 10px;
+.stab:hover { color: #EEF0F4; }
+.stab--active { color: #6B5BFF; border-bottom-color: #6B5BFF; }
+.stab-badge { font-size: 10px; font-weight: 700; background: #F9A825; color: #000; padding: 1px 5px; border-radius: 10px; }
+
+/* ── two-column layout ───────────────────────────────────────────────────── */
+.att-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start; }
+.att-left  { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.att-right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* ── KPI strip ───────────────────────────────────────────────────────────── */
+.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi-card  { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 14px; }
+.kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #7A8299; margin: 0; }
+.kpi-value { font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; letter-spacing: -0.02em; margin-top: 4px; font-variant-numeric: tabular-nums; line-height: 1; }
+
+/* ── calendar card ───────────────────────────────────────────────────────── */
+.cal-card { background: #161A23; border: 1px solid #232936; border-radius: 12px; overflow: hidden; }
+.cal-card-head {
+  padding: 14px 16px; display: flex; align-items: center;
+  justify-content: space-between; border-bottom: 1px solid #232936;
+  gap: 12px; flex-wrap: wrap;
+}
+.cal-head-left  { display: flex; align-items: center; gap: 10px; }
+.cal-month-title { font-size: 13.5px; font-weight: 600; color: #EEF0F4; }
+.cal-nav-pair { display: flex; gap: 3px; }
+.nav-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 6px;
+  background: #1C212C; border: 1px solid #232936; color: #7A8299;
+  cursor: pointer; transition: color .15s, background .15s;
+}
+.nav-btn:hover { color: #EEF0F4; background: #232936; }
+
+.cal-legend2 { display: flex; gap: 14px; font-size: 11px; flex-wrap: wrap; }
+.leg2-item { display: flex; align-items: center; gap: 5px; color: #7A8299; }
+.leg2-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+.cal-card-body { padding: 16px; }
+.cal-dows { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
+.cal-dow2 {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+  color: #7A8299; padding: 4px 6px; text-align: center;
 }
 
-/* ── summary strip ───────────────────────────────────────────────────────── */
-.summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.stat-card { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 14px 18px; }
-.stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin: 0; }
-.stat-val   { font-size: 26px; font-weight: 700; color: var(--text); margin: 4px 0 0; }
-.stat-green { color: #36D399; } .stat-red { color: #FF6B6B; } .stat-yellow { color: #F9A825; } .stat-blue { color: #4F7EFF; }
+/* ── new calendar grid ───────────────────────────────────────────────────── */
+.cal-grid2 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-grid2.cal-loading { opacity: .5; pointer-events: none; }
 
-/* ── calendar header ─────────────────────────────────────────────────────── */
-.cal-header { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 16px; }
-.cal-month { font-size: 15px; font-weight: 600; color: var(--text); }
-.nav-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 7px; background: var(--surface2); border: 1px solid var(--surface3); color: var(--muted); cursor: pointer; transition: color .15s, background .15s; }
-.nav-btn:hover { color: var(--text); background: var(--surface3); }
+.cal-cell2 {
+  aspect-ratio: 1 / 1; padding: 6px; border-radius: 6px;
+  background: #1C212C; border: 1px solid #232936;
+  display: flex; flex-direction: column; justify-content: space-between;
+  cursor: pointer; transition: border-color .12s, background .12s;
+}
+.cal-cell2:hover:not(.cell2--empty):not(.cell2--future):not(.cell2--weekend) {
+  border-color: #6B5BFF;
+}
+.cell2--empty   { background: transparent; border-color: transparent; cursor: default; }
+.cell2--weekend { background: transparent; opacity: .35; cursor: default; }
+.cell2--future  { background: transparent; opacity: .45; cursor: pointer; }
+.cell2--future:hover { opacity: .75; border-color: #8979FF; }
+.cell2--today   { background: rgba(107,91,255,.15); border-color: #6B5BFF; }
+.cell2--present { background: rgba(77,211,154,.08); border-color: rgba(77,211,154,.2); }
+.cell2--late    { background: rgba(245,193,110,.08); border-color: rgba(245,193,110,.2); }
+.cell2--absent  { background: rgba(243,130,136,.08); border-color: rgba(243,130,136,.2); }
+.cell2--leave   { background: rgba(139,121,255,.08); border-color: rgba(139,121,255,.2); }
+.cell2--holiday { background: rgba(126,215,255,.08); border-color: rgba(126,215,255,.2); }
+.cell2--regularized { background: rgba(155,110,255,.12); border-color: rgba(155,110,255,.4); }
 
-/* ── legend ──────────────────────────────────────────────────────────────── */
-.legend { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; font-size: 11px; color: var(--muted); }
-.leg-item { display: flex; align-items: center; gap: 5px; }
-.leg-dot  { display: inline-block; width: 9px; height: 9px; border-radius: 3px; }
-.dot-present { background: #36D399; } .dot-late { background: #F9A825; }
-.dot-absent  { background: #FF6B6B; } .dot-leave { background: #4F7EFF; }
-.dot-reg     { background: #9B6EFF; }
-.leg-hint { margin-left: auto; font-size: 11px; color: var(--muted); opacity: .7; }
+.cell2-day { font-size: 11px; font-weight: 400; color: #EEF0F4; font-variant-numeric: tabular-nums; line-height: 1; }
+.cell2-day--today { font-weight: 600; }
+.cell2-status { display: flex; align-items: center; gap: 3px; }
+.cell2-dot  { width: 6px; height: 6px; border-radius: 3px; flex-shrink: 0; }
+.cell2-code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; color: #7A8299; }
+.cell2-today-badge { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; color: #8979FF; font-weight: 600; }
 
-/* ── calendar grid ───────────────────────────────────────────────────────── */
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 14px; }
-.cal-dow  { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: center; padding: 6px 0 10px; }
-.cal-cell { position: relative; min-height: 68px; border-radius: 8px; padding: 7px 8px; display: flex; flex-direction: column; gap: 3px; border: 1px solid transparent; cursor: pointer; transition: background .12s, border-color .12s; overflow: hidden; }
-.cal-cell:hover .cell-hint { opacity: 1; }
-.cal-cell:hover { border-color: var(--surface3); }
-.cell--empty { cursor: default; }
+.cal-skel { aspect-ratio: 1/1; background: #1C212C; animation: pulse 1.4s ease infinite; border-radius: 6px; }
+@keyframes pulse { 0%,100% { opacity: .4; } 50% { opacity: .9; } }
 
-.cell--present     { background: rgba(54,211,153,.1);  border-color: rgba(54,211,153,.2); }
-.cell--late        { background: rgba(249,168,37,.1);  border-color: rgba(249,168,37,.2); }
-.cell--absent      { background: rgba(255,107,107,.1); border-color: rgba(255,107,107,.2); }
-.cell--leave       { background: rgba(79,126,255,.1);  border-color: rgba(79,126,255,.2); }
-.cell--holiday     { background: rgba(155,110,255,.1); border-color: rgba(155,110,255,.2); }
-.cell--half        { background: rgba(155,110,255,.08); border-color: rgba(155,110,255,.2); }
-.cell--regularized { background: rgba(155,110,255,.15); border-color: rgba(155,110,255,.4); }
-.cell--today       { border-color: var(--accent) !important; }
-.cell--future      { opacity: .75; }
-.cell--future:hover { opacity: 1; background: rgba(79,126,255,.07); }
+/* ── today's log ─────────────────────────────────────────────────────────── */
+.todays-log-card { background: #161A23; border: 1px solid #232936; border-radius: 12px; overflow: hidden; }
+.log-head { padding: 14px 16px; border-bottom: 1px solid #232936; display: flex; justify-content: space-between; align-items: center; }
+.log-title { font-size: 13.5px; font-weight: 600; color: #EEF0F4; }
+.log-date  { font-size: 11px; color: #7A8299; }
+.log-timeline { padding: 16px; display: flex; flex-direction: column; }
+.log-row  { display: flex; gap: 12px; }
+.log-time { width: 54px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; color: #7A8299; padding-top: 2px; flex-shrink: 0; }
+.log-spine { position: relative; width: 18px; flex-shrink: 0; }
+.log-line { position: absolute; left: 8px; top: 12px; bottom: -12px; width: 1px; background: #232936; }
+.log-dot  { position: absolute; left: 4px; top: 4px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid #161A23; }
+.log-content { flex: 1; }
+.log-event { font-size: 12px; color: #EEF0F4; font-weight: 500; }
 
-.cell-day       { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1; }
-.cell-time      { font-size: 10px; color: var(--muted); }
-.cell-leave-label { font-size: 10px; color: #4F7EFF; }
-.cell-reg-badge { font-size: 9px; font-weight: 700; color: #9B6EFF; background: rgba(155,110,255,.2); padding: 1px 4px; border-radius: 3px; width: fit-content; }
-.cell-hint      { position: absolute; bottom: 5px; left: 0; right: 0; text-align: center; font-size: 9px; font-weight: 600; color: var(--accent); opacity: 0; transition: opacity .15s; pointer-events: none; text-transform: uppercase; letter-spacing: .3px; }
+/* ── check-in widget ─────────────────────────────────────────────────────── */
+.check-widget {
+  background: #161A23; border: 1px solid #232936; border-radius: 12px; padding: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.check-widget-top { text-align: center; }
+.check-status-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10.5px; color: #7A8299; letter-spacing: .1em;
+}
+.check-timer {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 44px; color: #FAFBFC; letter-spacing: -0.02em;
+  margin-top: 4px; font-variant-numeric: tabular-nums; line-height: 1;
+}
+.check-timer-s { font-size: 22px; color: #7A8299; }
+.check-since { font-size: 11px; color: #7A8299; margin-top: 4px; }
 
-.cal-skel { background: var(--surface2); animation: pulse 1.4s ease infinite; }
-@keyframes pulse { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+.check-times-row { display: flex; gap: 8px; }
+.check-time-chip {
+  flex: 1; background: #1C212C; border: 1px solid #232936;
+  border-radius: 7px; padding: 8px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.ctc-label { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #7A8299; }
+.ctc-val   { font-size: 13px; font-weight: 500; color: #EEF0F4; }
+
+.punch-big-btn {
+  width: 100%; height: 44px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: opacity .15s;
+}
+.punch-big-btn:disabled { opacity: .55; cursor: not-allowed; }
+.punch-big-btn--in {
+  background: linear-gradient(180deg, #4DD39A, #36C487);
+  color: #0a1a0a; border: 1px solid rgba(77,211,154,.5);
+  box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 4px 14px rgba(77,211,154,.2);
+}
+.punch-big-btn--out {
+  background: linear-gradient(180deg, #F38288, #E5484D);
+  color: #fff; border: 1px solid rgba(229,72,77,.5);
+  box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 4px 14px rgba(229,72,77,.25);
+}
+
+/* ── pending regs widget ─────────────────────────────────────────────────── */
+.pending-reg-card { background: #161A23; border: 1px solid #232936; border-radius: 12px; padding: 16px; }
+.pr-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.pr-title { font-size: 13px; font-weight: 600; color: #EEF0F4; }
+.pr-badge { font-size: 10px; font-weight: 700; background: rgba(249,168,37,.15); color: #F9A825; padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(249,168,37,.3); }
+.pr-list  { display: flex; flex-direction: column; }
+.pr-item  { padding: 8px 0; border-bottom: 1px solid #232936; }
+.pr-item:last-child { border-bottom: none; }
+.pr-item-name { font-size: 12px; color: #EEF0F4; font-weight: 500; }
+.pr-item-sub  { font-size: 11px; color: #7A8299; margin-top: 2px; }
+
+/* ── hint card ───────────────────────────────────────────────────────────── */
+.hint-card {
+  background: #161A23; border: 1px solid #232936; border-radius: 12px;
+  padding: 20px 16px; display: flex; flex-direction: column;
+  align-items: center; gap: 8px; text-align: center;
+}
+.hint-card-icon { opacity: .6; }
+.hint-card-text { font-size: 12px; color: #7A8299; }
+
+/* ── quick actions ───────────────────────────────────────────────────────── */
+.quick-actions { display: flex; gap: 8px; }
+.qa-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 12px; font-size: 12px; font-weight: 500;
+  background: #1C212C; border: 1px solid #232936; color: #7A8299;
+  border-radius: 8px; cursor: pointer; transition: color .15s, border-color .15s, background .15s;
+}
+.qa-btn:hover { color: #EEF0F4; border-color: #6B5BFF; background: rgba(107,91,255,.08); }
+
+/* ── punch messages ──────────────────────────────────────────────────────── */
+.punch-msg { font-size: 12px; text-align: center; }
+.punch-ok  { color: #4DD39A; }
+.punch-err { color: #F38288; }
 
 /* ── team request cards ──────────────────────────────────────────────────── */
 .req-list { display: flex; flex-direction: column; gap: 12px; }
-.req-card { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; overflow: hidden; }
-.req-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--surface2); gap: 10px; }
-.req-name { font-size: 14px; font-weight: 600; color: var(--text); }
-.req-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.req-card { background: #161A23; border: 1px solid #232936; border-radius: 12px; overflow: hidden; }
+.req-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #1C212C; gap: 10px; }
+.req-name { font-size: 14px; font-weight: 600; color: #EEF0F4; }
+.req-sub  { font-size: 12px; color: #7A8299; margin-top: 2px; }
 .req-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
 .req-meta { display: grid; grid-template-columns: auto 1fr auto 1fr auto 1fr; gap: 6px 14px; align-items: center; }
-.mk { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
-.mv { font-size: 13px; color: var(--text); }
-.req-reason { font-size: 13px; color: var(--text); background: var(--surface2); padding: 8px 12px; border-radius: 6px; margin: 0; line-height: 1.5; }
-.notes-input { background: var(--surface2); border: 1px solid var(--surface3); color: var(--text); border-radius: 7px; padding: 8px 12px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
-.notes-input:focus { border-color: var(--accent); }
+.mk { font-size: 11px; color: #7A8299; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.mv { font-size: 13px; color: #EEF0F4; }
+.req-reason { font-size: 13px; color: #EEF0F4; background: #1C212C; padding: 8px 12px; border-radius: 6px; margin: 0; line-height: 1.5; }
+.notes-input { background: #1C212C; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 8px 12px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+.notes-input:focus { border-color: #6B5BFF; }
 .req-actions { display: flex; gap: 8px; }
 .req-decided { font-size: 13px; padding: 8px 12px; border-radius: 6px; }
 .req-decided--approved { background: rgba(54,211,153,.08); color: #36D399; }
-.req-decided--rejected { background: rgba(255,107,107,.08); color: var(--red); }
+.req-decided--rejected { background: rgba(255,107,107,.08); color: #F38288; }
 
 .btn-approve { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; font-size: 13px; font-weight: 600; background: rgba(54,211,153,.15); color: #36D399; border: 1px solid rgba(54,211,153,.3); border-radius: 7px; cursor: pointer; transition: background .15s; }
 .btn-approve:hover:not(:disabled) { background: rgba(54,211,153,.25); }
 .btn-approve:disabled { opacity: .4; cursor: not-allowed; }
-.btn-reject  { padding: 7px 16px; font-size: 13px; font-weight: 600; background: rgba(255,107,107,.1); color: var(--red); border: 1px solid rgba(255,107,107,.25); border-radius: 7px; cursor: pointer; transition: background .15s; }
+.btn-reject  { padding: 7px 16px; font-size: 13px; font-weight: 600; background: rgba(255,107,107,.1); color: #F38288; border: 1px solid rgba(255,107,107,.25); border-radius: 7px; cursor: pointer; transition: background .15s; }
 .btn-reject:hover:not(:disabled) { background: rgba(255,107,107,.2); }
 .btn-reject:disabled { opacity: .4; cursor: not-allowed; }
 
 /* ── badges ──────────────────────────────────────────────────────────────── */
 .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; letter-spacing: .3px; text-transform: capitalize; }
-.badge--pending  { background: rgba(249,168,37,.12); color: var(--yellow); border: 1px solid rgba(249,168,37,.25); }
-.badge--approved { background: rgba(54,211,153,.12);  color: #36D399;       border: 1px solid rgba(54,211,153,.25); }
-.badge--rejected { background: rgba(255,107,107,.12); color: var(--red);    border: 1px solid rgba(255,107,107,.25); }
-.badge--cancelled { background: rgba(107,114,128,.12); color: var(--muted); border: 1px solid rgba(107,114,128,.25); }
+.badge--pending  { background: rgba(249,168,37,.12);  color: #F9A825; border: 1px solid rgba(249,168,37,.25); }
+.badge--approved { background: rgba(54,211,153,.12);  color: #36D399;  border: 1px solid rgba(54,211,153,.25); }
+.badge--rejected { background: rgba(255,107,107,.12); color: #F38288;  border: 1px solid rgba(255,107,107,.25); }
+.badge--cancelled { background: rgba(107,114,128,.12); color: #7A8299; border: 1px solid rgba(107,114,128,.25); }
 
 /* ── states ──────────────────────────────────────────────────────────────── */
 .state-center { display: flex; justify-content: center; padding: 48px; }
-.state-empty  { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 36px; color: var(--muted); background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; font-size: 13px; }
-.alert-error  { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.3); color: var(--red); padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+.state-empty  { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 36px; color: #7A8299; background: #161A23; border: 1px solid #232936; border-radius: 12px; font-size: 13px; }
+.alert-error  { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.3); color: #F38288; padding: 10px 14px; border-radius: 8px; font-size: 13px; }
 
 /* ── modal ───────────────────────────────────────────────────────────────── */
 .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 16px; }
-.modal { background: var(--surface); border: 1px solid var(--surface3); border-radius: 16px; width: 100%; max-width: 520px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,.5); }
-.modal-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 24px 14px; border-bottom: 1px solid var(--surface3); flex-shrink: 0; }
-.modal-title { font-size: 16px; font-weight: 600; color: var(--text); margin: 0; }
-.modal-sub   { font-size: 12px; color: var(--muted); margin: 3px 0 0; }
-.modal-close { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: none; border: none; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; flex-shrink: 0; }
-.modal-close:hover { background: var(--surface2); color: var(--text); }
+.modal { background: #161A23; border: 1px solid #232936; border-radius: 16px; width: 100%; max-width: 520px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,.5); }
+.modal-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 24px 14px; border-bottom: 1px solid #232936; flex-shrink: 0; }
+.modal-title { font-size: 16px; font-weight: 600; color: #EEF0F4; margin: 0; }
+.modal-sub   { font-size: 12px; color: #7A8299; margin: 3px 0 0; }
+.modal-close { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: none; border: none; color: #7A8299; cursor: pointer; transition: background .15s, color .15s; flex-shrink: 0; }
+.modal-close:hover { background: #1C212C; color: #EEF0F4; }
 .modal-body  { padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 
 /* ── form ────────────────────────────────────────────────────────────────── */
 .field     { display: flex; flex-direction: column; gap: 5px; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.label     { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
-.req       { color: var(--red); }
-.input     { background: var(--surface2); border: 1px solid var(--surface3); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13px; outline: none; transition: border-color .15s; width: 100%; box-sizing: border-box; }
-.input:focus { border-color: var(--accent); }
+.label     { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #7A8299; }
+.req       { color: #F38288; }
+.input     { background: #1C212C; border: 1px solid #232936; color: #EEF0F4; border-radius: 8px; padding: 9px 12px; font-size: 13px; outline: none; transition: border-color .15s; width: 100%; box-sizing: border-box; }
+.input:focus { border-color: #6B5BFF; }
 .textarea  { resize: vertical; min-height: 68px; font-family: inherit; line-height: 1.5; }
-.hint      { font-size: 11px; color: var(--muted); margin: 0; }
+.hint      { font-size: 11px; color: #7A8299; margin: 0; }
 .input[type="date"], .input[type="time"], select.input option { color-scheme: dark; }
 
 .lookup-state { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 12px 14px; border-radius: 8px; }
-.lookup-loading { background: var(--surface2); color: var(--muted); }
-.lookup-error { background: rgba(255,107,107,.08); border: 1px solid rgba(255,107,107,.2); color: var(--red); }
-.lookup-warn  { background: rgba(249,168,37,.08); border: 1px solid rgba(249,168,37,.2); color: var(--yellow); }
+.lookup-loading { background: #1C212C; color: #7A8299; }
+.lookup-error { background: rgba(255,107,107,.08); border: 1px solid rgba(255,107,107,.2); color: #F38288; }
+.lookup-warn  { background: rgba(249,168,37,.08); border: 1px solid rgba(249,168,37,.2); color: #F9A825; }
 
-.punch-summary { background: var(--surface2); border: 1px solid var(--surface3); border-radius: 8px; padding: 12px 14px; }
-.punch-summary__label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.punch-summary { background: #1C212C; border: 1px solid #232936; border-radius: 8px; padding: 12px 14px; }
+.punch-summary__label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #7A8299; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .reg-tag { background: rgba(155,110,255,.2); color: #9B6EFF; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
 .punch-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.pk { font-size: 11px; color: var(--muted); display: block; }
-.pv { font-size: 13px; font-weight: 500; color: var(--text); display: block; margin-top: 2px; }
+.pk { font-size: 11px; color: #7A8299; display: block; }
+.pv { font-size: 13px; font-weight: 500; color: #EEF0F4; display: block; margin-top: 2px; }
 
 .success-banner { display: flex; align-items: center; gap: 10px; background: rgba(54,211,153,.1); border: 1px solid rgba(54,211,153,.25); color: #36D399; padding: 14px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
-.btn-cancel { padding: 9px 18px; font-size: 13px; font-weight: 500; background: var(--surface2); color: var(--muted); border: 1px solid var(--surface3); border-radius: 8px; cursor: pointer; transition: color .15s, border-color .15s; }
-.btn-cancel:hover:not(:disabled) { color: var(--text); border-color: var(--text); }
+.btn-cancel { padding: 9px 18px; font-size: 13px; font-weight: 500; background: #1C212C; color: #7A8299; border: 1px solid #232936; border-radius: 8px; cursor: pointer; transition: color .15s, border-color .15s; }
+.btn-cancel:hover:not(:disabled) { color: #EEF0F4; border-color: #EEF0F4; }
 .btn-cancel:disabled { opacity: .5; cursor: not-allowed; }
-.btn-submit { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; font-size: 13px; font-weight: 600; background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; transition: opacity .15s; }
+.btn-submit { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; font-size: 13px; font-weight: 600; background: #6B5BFF; color: #fff; border: none; border-radius: 8px; cursor: pointer; transition: opacity .15s; }
 .btn-submit:hover:not(:disabled) { opacity: .88; }
 .btn-submit:disabled { opacity: .45; cursor: not-allowed; }
 
-.spinner   { width: 28px; height: 28px; border: 2.5px solid rgba(79,126,255,.2); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+.spinner   { width: 28px; height: 28px; border: 2.5px solid rgba(107,91,255,.2); border-top-color: #6B5BFF; border-radius: 50%; animation: spin .8s linear infinite; }
 .mini-spin { width: 13px; height: 13px; flex-shrink: 0; border: 2px solid rgba(255,255,255,.25); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
 .btn-spin  { border-top-color: #fff; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 600px) {
-  .summary-row { grid-template-columns: 1fr 1fr; }
-  .field-row   { grid-template-columns: 1fr; }
-  .punch-grid  { grid-template-columns: 1fr 1fr; }
-  .cal-cell    { min-height: 52px; padding: 5px 4px; }
-  .cell-day    { font-size: 12px; }
-  .cell-time   { display: none; }
-  .leg-hint    { display: none; }
-  .req-meta    { grid-template-columns: auto 1fr; }
-}
-
-/* ── punch card ──────────────────────────────────────────────────────────── */
-.punch-card {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--surface2); border: 1px solid var(--surface3);
-  border-radius: 10px; padding: 14px 18px;
-}
-.punch-info { display: flex; flex-direction: column; gap: 4px; }
-.punch-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-.punch-times { display: flex; gap: 16px; font-size: 13px; color: var(--text); }
-.punch-right { display: flex; align-items: center; gap: 12px; }
-.punch-msg { font-size: 12px; }
-.punch-ok  { color: var(--green); }
-.punch-err { color: var(--red); }
-.punch-btn {
-  padding: 8px 20px; border-radius: 7px; font-size: 13px; font-weight: 600;
-  border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;
-  transition: opacity .15s;
-}
-.punch-btn:disabled { opacity: .6; cursor: not-allowed; }
-.punch-btn--in  { background: var(--green);  color: #0a1a0a; }
-.punch-btn--out { background: var(--red);    color: #fff; }
-
 /* ── all staff table ─────────────────────────────────────────────────────── */
-.staff-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--surface3); }
+.staff-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #232936; }
 .staff-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.staff-table th {
-  background: var(--surface2); padding: 10px 14px; text-align: left;
-  font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
-  letter-spacing: .05em; border-bottom: 1px solid var(--surface3);
-}
-.staff-table td { padding: 10px 14px; border-bottom: 1px solid var(--surface3); color: var(--text); }
+.staff-table th { background: #1C212C; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #7A8299; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #232936; }
+.staff-table td { padding: 10px 14px; border-bottom: 1px solid #232936; color: #EEF0F4; }
 .staff-table tr:last-child td { border-bottom: none; }
-.staff-table tr:hover td { background: var(--surface2); }
+.staff-table tr:hover td { background: #1C212C; }
 .emp-name { font-weight: 500; }
-.emp-id   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.emp-id   { font-size: 11px; color: #7A8299; margin-top: 2px; }
 .td-num   { text-align: center; font-weight: 600; }
-.td-green  { color: var(--green); }
-.td-red    { color: var(--red); }
-.td-yellow { color: var(--yellow); }
+.td-green  { color: #36D399; }
+.td-red    { color: #F38288; }
+.td-yellow { color: #F9A825; }
 .td-blue   { color: #60a5fa; }
-.td-purple { color: var(--purple); }
+.td-purple { color: #9B6EFF; }
+
+@media (max-width: 900px) {
+  .att-layout { grid-template-columns: 1fr; }
+  .att-right  { flex-direction: row; flex-wrap: wrap; }
+  .check-widget { flex: 1 1 280px; }
+  .pending-reg-card, .hint-card { flex: 1 1 200px; }
+  .quick-actions { flex: 1 1 100%; }
+}
+@media (max-width: 600px) {
+  .kpi-strip  { grid-template-columns: 1fr 1fr; }
+  .field-row  { grid-template-columns: 1fr; }
+  .punch-grid { grid-template-columns: 1fr 1fr; }
+  .req-meta   { grid-template-columns: auto 1fr; }
+  .att-right  { flex-direction: column; }
+}
 </style>

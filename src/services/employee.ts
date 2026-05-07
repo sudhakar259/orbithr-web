@@ -53,5 +53,12 @@ export interface OrgChartNode {
 
 export async function getOrgChart(): Promise<OrgChartNode> {
   const res = await api.get('/employees/org-chart')
-  return res.data
+  const data = res.data
+  // API may return an array of root nodes — normalise to a single root
+  if (Array.isArray(data)) {
+    if (data.length === 0) return { id: 'root', name: 'Organisation', children: [] }
+    if (data.length === 1) return data[0] as OrgChartNode
+    return { id: 'root', name: 'Organisation', children: data as OrgChartNode[] }
+  }
+  return data as OrgChartNode
 }

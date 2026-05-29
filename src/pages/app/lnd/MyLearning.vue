@@ -37,45 +37,35 @@ onMounted(loadMyLearning)
 </script>
 
 <template>
-  <div>
-    <div
-      v-if="error"
-      class="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded-lg mb-4"
-    >
-      {{ error }}
-    </div>
+  <div class="my-learning">
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-4 gap-4 mb-6">
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-        <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Total Enrolled</p>
-        <p class="text-2xl font-bold text-white">{{ stats.total }}</p>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-label">Total Enrolled</p>
+        <p class="stat-value" style="color: #eef0f4">{{ stats.total }}</p>
       </div>
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-        <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">In Progress</p>
-        <p class="text-2xl font-bold text-blue-400">{{ stats.in_progress }}</p>
+      <div class="stat-card">
+        <p class="stat-label">In Progress</p>
+        <p class="stat-value" style="color: #6b5bff">{{ stats.in_progress }}</p>
       </div>
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-        <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Completed</p>
-        <p class="text-2xl font-bold text-green-400">{{ stats.completed }}</p>
+      <div class="stat-card">
+        <p class="stat-label">Completed</p>
+        <p class="stat-value" style="color: #4dd39a">{{ stats.completed }}</p>
       </div>
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-        <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Not Started</p>
-        <p class="text-2xl font-bold text-gray-400">{{ stats.not_started }}</p>
+      <div class="stat-card">
+        <p class="stat-label">Not Started</p>
+        <p class="stat-value" style="color: #7a8299">{{ stats.not_started }}</p>
       </div>
     </div>
 
     <!-- Filter tabs -->
-    <div class="flex gap-2 mb-6">
+    <div class="seg">
       <button
         v-for="tab in (['all', 'in_progress', 'completed'] as const)"
         :key="tab"
-        :class="
-          activeTab === tab
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-        "
-        class="px-3 py-1.5 rounded-lg text-sm"
+        :class="['seg-btn', { active: activeTab === tab }]"
         @click="activeTab = tab"
       >
         {{ tab === 'all' ? 'All' : tab === 'in_progress' ? 'In Progress' : 'Completed' }}
@@ -83,70 +73,307 @@ onMounted(loadMyLearning)
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="space-y-3">
-      <div
-        v-for="n in 4"
-        :key="n"
-        class="bg-gray-800 border border-gray-700 rounded-lg p-5 animate-pulse"
-      >
-        <div class="h-4 bg-gray-700 rounded w-1/3 mb-2" />
-        <div class="h-2 bg-gray-700 rounded w-full" />
+    <div v-if="loading" class="learning-list">
+      <div v-for="n in 4" :key="n" class="learning-card skeleton">
+        <div class="skeleton-line w-1-3" />
+        <div class="skeleton-line w-2-3" />
       </div>
     </div>
 
     <!-- List -->
-    <div v-else-if="filteredProgress.length" class="space-y-3">
+    <div v-else-if="filteredProgress.length" class="learning-list">
       <RouterLink
         v-for="item in filteredProgress"
         :key="item.id"
         :to="{ name: 'lnd.courses.show', params: { id: item.course_id } }"
-        class="bg-gray-800 border border-gray-700 rounded-lg p-5 block hover:border-gray-600 transition-colors"
+        class="learning-card"
       >
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-white font-semibold text-sm">
+        <div class="learning-header">
+          <h3 class="learning-title">
             {{ item.course?.title || 'Course' }}
           </h3>
           <span
-            class="text-xs px-2 py-0.5 rounded-full"
+            class="pill"
             :class="{
-              'bg-green-900/50 text-green-400': item.status === 'completed',
-              'bg-blue-900/50 text-blue-400': item.status === 'in_progress',
-              'bg-gray-700 text-gray-400': item.status === 'not_started',
+              'pill-green': item.status === 'completed',
+              'pill-purple': item.status === 'in_progress',
+              'pill-muted': item.status === 'not_started',
             }"
           >
             {{ item.status.replace('_', ' ') }}
           </span>
         </div>
-        <div class="flex items-center gap-3">
-          <div class="flex-1 bg-gray-700 rounded-full h-2">
+        <div class="learning-progress">
+          <div class="progress-bar">
             <div
-              class="h-2 rounded-full transition-all"
-              :class="item.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'"
-              :style="{ width: item.progress_percent + '%' }"
+              class="progress-fill"
+              :style="{
+                width: item.progress_percent + '%',
+                background: item.status === 'completed' ? '#4dd39a' : '#6b5bff',
+              }"
             />
           </div>
-          <span class="text-gray-400 text-sm w-12 text-right">
-            {{ item.progress_percent }}%
-          </span>
+          <span class="progress-pct">{{ item.progress_percent }}%</span>
         </div>
-        <div v-if="item.course" class="flex items-center gap-3 mt-2 text-xs text-gray-500">
+        <div v-if="item.course" class="learning-meta">
           <span>{{ item.course.difficulty_level }}</span>
+          <span>&middot;</span>
           <span>{{ item.course.duration_minutes }} min</span>
-          <span v-if="item.completed_at">
-            Completed: {{ new Date(item.completed_at).toLocaleDateString() }}
-          </span>
+          <template v-if="item.completed_at">
+            <span>&middot;</span>
+            <span>Completed {{ new Date(item.completed_at).toLocaleDateString() }}</span>
+          </template>
         </div>
       </RouterLink>
     </div>
 
-    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg px-6 py-12 text-center">
-      <p class="text-gray-400">No learning activity yet. Browse courses to get started.</p>
-      <RouterLink
-        :to="{ name: 'lnd.courses' }"
-        class="text-blue-400 hover:text-blue-300 text-sm mt-2 inline-block"
-      >
-        Browse Courses
+    <div v-else class="empty-card">
+      <p>No learning activity yet. Browse courses to get started.</p>
+      <RouterLink :to="{ name: 'lnd.courses' }" class="empty-link">
+        Browse Courses &rarr;
       </RouterLink>
     </div>
   </div>
 </template>
+
+<style scoped>
+.my-learning {
+  color: #eef0f4;
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.alert-error {
+  background: rgba(243, 130, 136, 0.12);
+  border: 1px solid rgba(243, 130, 136, 0.4);
+  color: #f38288;
+}
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.stat-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.stat-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+  margin: 0;
+}
+
+.stat-value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  margin: 4px 0 0;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+/* Segmented tabs */
+.seg {
+  display: inline-flex;
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+  margin-bottom: 18px;
+}
+
+.seg-btn {
+  background: transparent;
+  border: none;
+  color: #7a8299;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.seg-btn:hover {
+  color: #eef0f4;
+}
+
+.seg-btn.active {
+  background: #6b5bff;
+  color: #fff;
+}
+
+/* Learning list */
+.learning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.learning-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 16px 18px;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: border-color 0.15s ease;
+}
+
+.learning-card:hover {
+  border-color: #6b5bff;
+}
+
+.learning-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.learning-title {
+  font-size: 14px;
+  color: #eef0f4;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.005em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.learning-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: #232936;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #eef0f4;
+  width: 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.learning-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #7a8299;
+  text-transform: capitalize;
+}
+
+/* Pills */
+.pill {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.pill-green {
+  background: rgba(77, 211, 154, 0.14);
+  color: #4dd39a;
+}
+
+.pill-purple {
+  background: rgba(107, 91, 255, 0.16);
+  color: #6b5bff;
+}
+
+.pill-muted {
+  background: rgba(122, 130, 153, 0.16);
+  color: #7a8299;
+}
+
+.empty-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 13px;
+}
+
+.empty-card p {
+  margin: 0 0 8px;
+}
+
+.empty-link {
+  color: #6b5bff;
+  font-size: 13px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.empty-link:hover {
+  color: #8473ff;
+}
+
+/* Skeletons */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: #232936;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.w-1-3 {
+  width: 33%;
+}
+
+.w-2-3 {
+  width: 66%;
+}
+</style>

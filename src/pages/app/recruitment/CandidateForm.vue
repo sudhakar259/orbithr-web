@@ -95,102 +95,87 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="space-y-6 max-w-3xl">
-    <button
-      @click="router.push({ name: 'recruitment.candidates' })"
-      class="text-sm text-gray-400 hover:text-white transition-colors inline-flex items-center"
-    >
-      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-      </svg>
-      Back to Candidates
-    </button>
+  <div class="rcf-page">
+    <button class="rcf-back" @click="router.push({ name: 'recruitment.candidates' })">&#8592; Back to Candidates</button>
 
-    <div v-if="loading" class="bg-gray-800 border border-gray-700 rounded-lg p-8 animate-pulse">
-      <div class="h-6 bg-gray-700 rounded w-1/3 mb-4"></div>
-      <div class="space-y-3">
-        <div v-for="i in 6" :key="i" class="h-10 bg-gray-700 rounded"></div>
-      </div>
+    <div v-if="loading" class="rcf-loading">
+      <div v-for="i in 6" :key="i" class="rcf-skeleton"></div>
     </div>
 
     <template v-else>
-      <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4">
-        <p class="text-sm text-red-400">{{ error }}</p>
-      </div>
+      <div v-if="error" class="rcf-error">{{ error }}</div>
 
       <!-- Personal Info -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
-        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Personal Information</h2>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">First Name *</label>
-            <input v-model="form.first_name" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+      <div class="rcf-section">
+        <h2 class="rcf-section-title">Personal Information</h2>
+        <div class="rcf-grid-2">
+          <div class="rcf-field">
+            <label class="rcf-label">First Name <span class="rcf-req">*</span></label>
+            <input v-model="form.first_name" type="text" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Last Name *</label>
-            <input v-model="form.last_name" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">Last Name <span class="rcf-req">*</span></label>
+            <input v-model="form.last_name" type="text" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Email *</label>
-            <input v-model="form.email" type="email" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">Email <span class="rcf-req">*</span></label>
+            <input v-model="form.email" type="email" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Phone</label>
-            <input v-model="form.phone" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">Phone</label>
+            <input v-model="form.phone" type="text" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Location</label>
-            <input v-model="form.location" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">Location</label>
+            <input v-model="form.location" type="text" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Status</label>
-            <select v-model="form.status" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none">
+          <div class="rcf-field">
+            <label class="rcf-label">Status</label>
+            <select v-model="form.status" class="rcf-input">
               <option value="active">Active</option>
               <option value="passive">Passive</option>
               <option value="hired">Hired</option>
               <option value="blacklisted">Blacklisted</option>
             </select>
           </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">LinkedIn URL</label>
-            <input v-model="form.linkedin_url" type="url" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">LinkedIn URL</label>
+            <input v-model="form.linkedin_url" type="url" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Portfolio URL</label>
-            <input v-model="form.portfolio_url" type="url" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">Portfolio URL</label>
+            <input v-model="form.portfolio_url" type="url" class="rcf-input" />
           </div>
         </div>
       </div>
 
       <!-- Professional Info -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
-        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Professional Details</h2>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Current Company</label>
-            <input v-model="form.current_company" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+      <div class="rcf-section">
+        <h2 class="rcf-section-title">Professional Details</h2>
+        <div class="rcf-grid-2">
+          <div class="rcf-field">
+            <label class="rcf-label">Current Company</label>
+            <input v-model="form.current_company" type="text" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Current Title</label>
-            <input v-model="form.current_title" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">Current Title</label>
+            <input v-model="form.current_title" type="text" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Experience (years)</label>
-            <input v-model.number="form.total_experience_years" type="number" min="0" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">Experience (years)</label>
+            <input v-model.number="form.total_experience_years" type="number" min="0" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Expected Salary</label>
-            <input v-model.number="form.expected_salary" type="number" min="0" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">Expected Salary</label>
+            <input v-model.number="form.expected_salary" type="number" min="0" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Notice Period (days)</label>
-            <input v-model.number="form.notice_period_days" type="number" min="0" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+          <div class="rcf-field">
+            <label class="rcf-label">Notice Period (days)</label>
+            <input v-model.number="form.notice_period_days" type="number" min="0" class="rcf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Source</label>
-            <select v-model="form.source" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none">
+          <div class="rcf-field">
+            <label class="rcf-label">Source</label>
+            <select v-model="form.source" class="rcf-input">
               <option value="direct">Direct</option>
               <option value="referral">Referral</option>
               <option value="linkedin">LinkedIn</option>
@@ -204,59 +189,73 @@ onMounted(load)
       </div>
 
       <!-- Skills -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
-        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Skills</h2>
-        <div class="flex gap-2">
-          <input
-            v-model="newSkill.skill"
-            @keyup.enter="addSkill"
-            type="text"
-            placeholder="Skill name (e.g. React)"
-            class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 flex-1 focus:border-blue-500 focus:outline-none"
-          />
-          <select v-model="newSkill.proficiency_level" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 focus:border-blue-500 focus:outline-none">
+      <div class="rcf-section">
+        <h2 class="rcf-section-title">Skills</h2>
+        <div class="rcf-skill-add">
+          <input v-model="newSkill.skill" type="text" placeholder="Skill name (e.g. React)" class="rcf-input rcf-skill-name" @keyup.enter="addSkill" />
+          <select v-model="newSkill.proficiency_level" class="rcf-input rcf-skill-level">
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
             <option value="advanced">Advanced</option>
             <option value="expert">Expert</option>
           </select>
-          <button @click="addSkill" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Add</button>
+          <button class="rcf-btn-primary" @click="addSkill">Add</button>
         </div>
-        <div v-if="form.skills.length" class="flex flex-wrap gap-2">
-          <span
-            v-for="(s, idx) in form.skills"
-            :key="idx"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-900/50 text-blue-300"
-          >
-            {{ s.skill }} <span class="text-blue-400/70">({{ s.proficiency_level }})</span>
-            <button @click="removeSkill(idx)" class="text-blue-400 hover:text-white ml-0.5">×</button>
+        <div v-if="form.skills.length" class="rcf-skill-chips">
+          <span v-for="(s, idx) in form.skills" :key="idx" class="rcf-skill-chip">
+            {{ s.skill }}
+            <span class="rcf-skill-level-label">({{ s.proficiency_level }})</span>
+            <button class="rcf-skill-rm" @click="removeSkill(idx)">&#10005;</button>
           </span>
         </div>
       </div>
 
       <!-- Notes -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-3">
-        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Notes</h2>
-        <textarea
-          v-model="form.notes"
-          rows="3"
-          placeholder="Internal notes about this candidate..."
-          class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none"
-        />
+      <div class="rcf-section">
+        <h2 class="rcf-section-title">Notes</h2>
+        <textarea v-model="form.notes" rows="3" placeholder="Internal notes about this candidate…" class="rcf-input rcf-textarea" />
       </div>
 
       <!-- Actions -->
-      <div class="flex justify-end gap-3">
-        <button
-          @click="router.push({ name: 'recruitment.candidates' })"
-          class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors"
-        >Cancel</button>
-        <button
-          @click="save"
-          :disabled="saving"
-          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >{{ saving ? 'Saving...' : isEdit ? 'Update Candidate' : 'Create Candidate' }}</button>
+      <div class="rcf-footer">
+        <button class="rcf-btn-ghost" @click="router.push({ name: 'recruitment.candidates' })">Cancel</button>
+        <button class="rcf-btn-primary" :disabled="saving" @click="save">
+          {{ saving ? 'Saving…' : isEdit ? 'Update Candidate' : 'Create Candidate' }}
+        </button>
       </div>
     </template>
   </div>
 </template>
+
+<style scoped>
+.rcf-page { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+.rcf-back { font-size: 13px; color: #7A8299; background: none; border: none; cursor: pointer; text-align: left; padding: 0; }
+.rcf-back:hover { color: #EEF0F4; }
+.rcf-loading { display: flex; flex-direction: column; gap: 10px; }
+.rcf-skeleton { height: 44px; background: #232936; border-radius: 7px; animation: rcf-pulse 1.2s ease-in-out infinite; }
+@keyframes rcf-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.rcf-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.rcf-section { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.rcf-section-title { font-size: 11px; font-weight: 600; color: #7A8299; text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
+.rcf-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.rcf-field { display: flex; flex-direction: column; gap: 5px; }
+.rcf-label { font-size: 12px; font-weight: 500; color: #B6BED0; }
+.rcf-req { color: #F38288; }
+.rcf-input { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 8px 11px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+.rcf-input:focus { border-color: #6B5BFF; }
+.rcf-textarea { resize: vertical; min-height: 72px; }
+.rcf-skill-add { display: flex; gap: 8px; }
+.rcf-skill-name { flex: 1; }
+.rcf-skill-level { width: 140px; flex-shrink: 0; }
+.rcf-skill-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.rcf-skill-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(107,91,255,0.12); border: 1px solid rgba(107,91,255,0.2); color: #B28DFF; border-radius: 20px; padding: 3px 10px; font-size: 12px; }
+.rcf-skill-level-label { color: #8A7BFF; opacity: 0.7; }
+.rcf-skill-rm { background: none; border: none; color: #8A7BFF; cursor: pointer; font-size: 12px; padding: 0; line-height: 1; }
+.rcf-skill-rm:hover { color: #EEF0F4; }
+.rcf-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+.rcf-btn-primary { background: #6B5BFF; border: none; color: #fff; border-radius: 7px; padding: 8px 20px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.rcf-btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.rcf-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.rcf-btn-ghost { background: #232936; border: 1px solid #2D3448; color: #B6BED0; border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+.rcf-btn-ghost:hover { color: #EEF0F4; }
+</style>

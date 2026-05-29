@@ -1,26 +1,36 @@
 <template>
-  <div class="ef-wrap">
+  <div class="ef-page">
 
-    <!-- Step tabs -->
-    <div class="ef-tabs">
-      <button
-        v-for="(tab, i) in tabs"
-        :key="i"
-        type="button"
-        class="ef-tab"
-        :class="{ 'ef-tab--active': activeTab === i, 'ef-tab--done': i < activeTab }"
-        @click="goTo(i)"
-      >
-        <span class="ef-tab-num">
-          <svg v-if="i < activeTab" width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <template v-else>{{ i + 1 }}</template>
-        </span>
-        <span class="ef-tab-label">{{ tab }}</span>
-      </button>
+    <!-- Left sidebar: step tracker -->
+    <div class="ef-sidebar">
+      <!-- Progress header -->
+      <div class="ef-sidebar-head">
+        <div class="ef-sidebar-eyebrow">Setup</div>
+        <div class="ef-sidebar-progress-label">{{ activeTab + 1 }} of {{ tabs.length }} done</div>
+        <div class="ef-sidebar-bar-track">
+          <div class="ef-sidebar-bar-fill" :style="{ width: ((activeTab + 1) / tabs.length * 100) + '%' }"></div>
+        </div>
+      </div>
+      <!-- Step list -->
+      <div class="ef-step-list">
+        <div
+          v-for="(tab, i) in tabs"
+          :key="i"
+          :class="['ef-step', i === activeTab && 'ef-step--active', i < activeTab && 'ef-step--done']"
+          @click="goTo(i)"
+        >
+          <div :class="['ef-step-badge', i === activeTab && 'ef-step-badge--active', i < activeTab && 'ef-step-badge--done']">
+            <svg v-if="i < activeTab" width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <path stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 6l3 3 5-5"/>
+            </svg>
+            <template v-else>{{ i + 1 }}</template>
+          </div>
+          <span class="ef-step-label">{{ tab }}</span>
+        </div>
+      </div>
     </div>
 
+    <!-- Center: form -->
     <form @submit.prevent="submit" class="ef-form" novalidate>
 
       <!-- ── Step 0: Basic Information ───────────────────────────────── -->
@@ -32,6 +42,7 @@
             </svg>
           </div>
           <div>
+            <div class="ef-panel-eyebrow">Step 1 of 4</div>
             <div class="ef-panel-title">Basic Information</div>
             <div class="ef-panel-sub">Name, contact details and account email</div>
           </div>
@@ -63,6 +74,7 @@
           <div class="ef-field">
             <label class="ef-label">Phone <span class="req">*</span></label>
             <input v-model="form.phone" type="tel" required class="ef-input" placeholder="+91 98xxxxxxxx" />
+            <p v-if="errors.phone" class="ef-err">{{ errors.phone }}</p>
           </div>
         </div>
       </div>
@@ -77,6 +89,7 @@
             </svg>
           </div>
           <div>
+            <div class="ef-panel-eyebrow">Step 2 of 4</div>
             <div class="ef-panel-title">Employment Details</div>
             <div class="ef-panel-sub">Role, department, schedule and reporting structure</div>
           </div>
@@ -186,6 +199,7 @@
             </svg>
           </div>
           <div>
+            <div class="ef-panel-eyebrow">Step 3 of 4</div>
             <div class="ef-panel-title">Personal Information</div>
             <div class="ef-panel-sub">Date of birth, gender, address and nationality</div>
           </div>
@@ -225,6 +239,7 @@
             </svg>
           </div>
           <div>
+            <div class="ef-panel-eyebrow">Step 4 of 4</div>
             <div class="ef-panel-title">Banking & Emergency</div>
             <div class="ef-panel-sub">Bank account details and emergency contact</div>
           </div>
@@ -278,6 +293,7 @@
         </button>
         <div class="ef-actions-right">
           <button type="submit" class="ef-btn ef-btn--save" :disabled="loading">
+            <span v-if="loading" class="mini-spin"></span>
             {{ loading ? 'Saving…' : isEdit ? 'Update Employee' : 'Save Employee' }}
           </button>
           <button v-if="activeTab < tabs.length - 1" type="button" class="ef-btn ef-btn--primary" @click="goTo(activeTab + 1)">
@@ -286,6 +302,36 @@
         </div>
       </div>
     </form>
+
+    <!-- Right rail: live preview -->
+    <div class="ef-preview">
+      <!-- Live preview card -->
+      <div class="ef-prev-card">
+        <div class="ef-prev-eyebrow">Live preview</div>
+        <div class="ef-prev-avatar">
+          <EmpAvatar :name="previewName" :size="52" />
+        </div>
+        <div class="ef-prev-name">{{ previewName }}</div>
+        <div class="ef-prev-sub">{{ form.designation || 'Designation' }} · {{ form.department || 'Department' }}</div>
+        <div class="ef-prev-grid">
+          <div v-for="item in previewItems" :key="item.label" class="ef-prev-item">
+            <div class="ef-prev-item-label">{{ item.label }}</div>
+            <div class="ef-prev-item-val">{{ item.value }}</div>
+          </div>
+        </div>
+      </div>
+      <!-- What happens next card -->
+      <div class="ef-next-card">
+        <div class="ef-next-eyebrow">What happens next</div>
+        <div class="ef-next-list">
+          <div v-for="(item, i) in whatHappensNext" :key="i" class="ef-next-item">
+            <div class="ef-next-dot"></div>
+            <span>{{ item }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -294,6 +340,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { updateEmployee, createEmployee, listEmployees } from '@/services/employee'
 import api from '@/services/api'
+import EmpAvatar from '@/components/employee/EmpAvatar.vue'
 
 interface EmployeeData {
   id?: number | string
@@ -337,7 +384,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  (e: 'submit', data: EmployeeData): void
+  (e: 'success', data: EmployeeData): void
   (e: 'cancel'): void
 }>()
 
@@ -392,6 +439,24 @@ const teamLeads = computed(() =>
   )
 )
 
+const previewName = computed(() =>
+  [form.first_name, form.last_name].filter(Boolean).join(' ') || 'New Employee'
+)
+
+const previewItems = computed(() => [
+  { label: 'Joins',    value: form.hire_date || '—' },
+  { label: 'Location', value: form.location || '—' },
+  { label: 'Type',     value: form.employment_type || '—' },
+  { label: 'Status',   value: form.status || 'Active' },
+])
+
+const whatHappensNext = [
+  'Invite email sent to employee',
+  'Onboarding journey starts automatically',
+  'Default password set — employee must reset',
+  'Leave balances initialized',
+]
+
 function toggleWorkingDay(day: number) {
   const idx = form.working_days.indexOf(day)
   if (idx > -1) form.working_days.splice(idx, 1)
@@ -432,7 +497,7 @@ async function submit() {
     } else {
       await createEmployee(payload)
     }
-    emit('submit', form)
+    emit('success', form)
   } catch (e: any) {
     const d = e?.response?.data
     if (d?.errors) {
@@ -466,124 +531,389 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.ef-wrap { color: var(--text); display: flex; flex-direction: column; gap: 0; }
+/* ── Page layout ── */
+.ef-page {
+  display: grid;
+  grid-template-columns: 220px 1fr 260px;
+  gap: 0;
+  min-height: 0;
+}
 
-/* ── Tabs ── */
-.ef-tabs {
-  display: flex; gap: 0; border-bottom: 1px solid var(--border, rgba(255,255,255,.08));
-  margin-bottom: 20px; overflow-x: auto;
+/* ── Sidebar ── */
+.ef-sidebar {
+  background: #161A23;
+  border-right: 1px solid #232936;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
-.ef-tab {
-  display: flex; align-items: center; gap: 8px;
-  padding: 11px 18px; font-size: 13px; font-weight: 500;
-  background: none; border: none; border-bottom: 2px solid transparent;
-  color: var(--muted); cursor: pointer; white-space: nowrap;
-  transition: all .15s; margin-bottom: -1px;
+.ef-sidebar-head {
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid #232936;
 }
-.ef-tab:hover { color: var(--text); }
-.ef-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
-.ef-tab--done { color: var(--green, #36D399); }
-.ef-tab-num {
-  width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 700;
-  display: grid; place-items: center;
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+.ef-sidebar-eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #7A8299;
+}
+.ef-sidebar-progress-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #EEF0F4;
+  margin-top: 4px;
+}
+.ef-sidebar-bar-track {
+  height: 3px;
+  background: #232936;
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.ef-sidebar-bar-fill {
+  height: 100%;
+  background: #6B5BFF;
+  border-radius: 2px;
+  transition: width .3s;
+}
+
+.ef-step-list {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ef-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background .12s;
+}
+.ef-step:hover { background: rgba(255,255,255,.03); }
+.ef-step--active { background: rgba(107,91,255,.1); }
+.ef-step-badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
   flex-shrink: 0;
+  background: #232936;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #7A8299;
 }
-.ef-tab--active .ef-tab-num { background: rgba(79,126,255,.18); border-color: var(--accent); color: var(--accent); }
-.ef-tab--done  .ef-tab-num { background: rgba(54,211,153,.18); border-color: var(--green, #36D399); color: var(--green, #36D399); }
-.ef-tab-label { }
+.ef-step-badge--active { background: #6B5BFF; color: #fff; }
+.ef-step-badge--done   { background: #4DD39A; color: #fff; }
+.ef-step-label { font-size: 12.5px; color: #7A8299; }
+.ef-step--active .ef-step-label { color: #EEF0F4; }
+.ef-step--done  .ef-step-label  { color: #A0B0B0; }
 
-/* ── Form ── */
-.ef-form { display: flex; flex-direction: column; gap: 20px; }
-
-/* ── Panel ── */
+/* ── Center form ── */
+.ef-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+}
 .ef-panel {
-  background: var(--surface, #141720);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 12px;
-  padding: 20px;
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  flex: 1;
 }
-.ef-panel-head { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.ef-panel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #232936;
+}
+.ef-panel-eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #7A8299;
+}
 .ef-panel-icon {
-  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-  background: rgba(79,126,255,.12); border: 1px solid rgba(79,126,255,.2);
-  display: grid; place-items: center; color: var(--accent);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  background: rgba(107,91,255,.12);
+  border: 1px solid rgba(107,91,255,.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6B5BFF;
 }
-.ef-panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
-.ef-panel-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ef-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #EEF0F4;
+  margin-top: 2px;
+  letter-spacing: -0.01em;
+}
+.ef-panel-sub {
+  font-size: 12px;
+  color: #7A8299;
+  margin-top: 3px;
+}
 
 .ef-subsection-label {
-  font-size: 11px; font-weight: 600; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #7A8299;
+  text-transform: uppercase;
+  letter-spacing: .6px;
 }
-.ef-divider { height: 1px; background: rgba(255,255,255,.06); margin: 4px 0; }
+.ef-divider {
+  height: 1px;
+  background: #232936;
+  margin: 4px 0;
+}
 
-/* ── Grid ── */
-.ef-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-@media (max-width: 600px) { .ef-grid { grid-template-columns: 1fr; } }
-
-.ef-field { display: flex; flex-direction: column; gap: 5px; }
+.ef-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+.ef-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
 .ef-field--full { grid-column: 1 / -1; }
-
-/* ── Labels / inputs ── */
-.ef-label { font-size: 12px; font-weight: 500; color: var(--muted); }
-.req { color: var(--red, #FF6B6B); }
-
+.ef-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: #7A8299;
+}
+.req { color: #F38288; }
 .ef-input {
-  background: var(--surface2, #1C2030);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 7px; padding: 8px 12px;
-  font-size: 13px; color: var(--text);
-  outline: none; transition: border-color .15s;
-  width: 100%; box-sizing: border-box;
+  background: #1C212C;
+  border: 1px solid #232936;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #EEF0F4;
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+  box-sizing: border-box;
 }
-.ef-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,126,255,.1); }
-.ef-input--locked, .ef-input:disabled { opacity: .5; cursor: not-allowed; }
-.ef-textarea { resize: vertical; min-height: 64px; }
+.ef-input:focus {
+  border-color: #6B5BFF;
+  box-shadow: 0 0 0 3px rgba(107,91,255,.1);
+}
+.ef-input--locked,
+.ef-input:disabled { opacity: .5; cursor: not-allowed; }
+.ef-textarea {
+  resize: vertical;
+  min-height: 64px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+select.ef-input option { color-scheme: dark; }
+.ef-input[type="date"] { color-scheme: dark; }
 
-.ef-hint { font-size: 12px; color: var(--muted); }
-.ef-err  { font-size: 12px; color: var(--red, #FF6B6B); }
+.ef-code-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+.ef-code-badge--auto {
+  background: rgba(107,91,255,.08);
+  border: 1px solid rgba(107,91,255,.2);
+  color: #8979FF;
+}
+.ef-code-badge--locked {
+  background: #1C212C;
+  border: 1px solid #232936;
+  color: #7A8299;
+  font-family: 'JetBrains Mono', monospace;
+}
+.ef-hint { font-size: 11px; color: #7A8299; margin: 0; }
+.ef-err  { font-size: 11px; color: #F38288; margin: 0; }
 
-/* ── Working days ── */
-.days-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.days-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 4px;
+}
 .day-chip {
-  display: flex; align-items: center; gap: 4px;
-  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
-  cursor: pointer; user-select: none; transition: all .12s;
-  background: var(--surface2, #1C2030); border: 1px solid rgba(255,255,255,.08); color: var(--muted);
+  padding: 5px 13px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: all .12s;
+  background: #1C212C;
+  border: 1px solid #232936;
+  color: #7A8299;
 }
-.day-chip--on { background: rgba(79,126,255,.18); border-color: var(--accent); color: var(--accent); }
+.day-chip--on {
+  background: rgba(107,91,255,.15);
+  border-color: #6B5BFF;
+  color: #8979FF;
+}
 .day-chk { display: none; }
 
-/* ── Error box ── */
 .ef-error-box {
-  background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.25);
-  border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--red, #FF6B6B);
+  background: rgba(243,130,136,.1);
+  border: 1px solid rgba(243,130,136,.25);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #F38288;
+  margin: 0 24px;
 }
-
-/* ── Actions ── */
-.ef-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ef-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #232936;
+}
 .ef-actions-right { display: flex; gap: 8px; }
 .ef-btn {
-  display: inline-flex; align-items: center; border-radius: 8px;
-  padding: 9px 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity .15s;
 }
 .ef-btn:disabled { opacity: .5; cursor: not-allowed; }
-.ef-btn--primary { background: var(--accent); color: #fff; }
+.ef-btn--primary { background: #6B5BFF; color: #fff; }
 .ef-btn--primary:not(:disabled):hover { opacity: .88; }
 .ef-btn--save {
-  background: var(--surface2, #1C2030);
-  border: 1px solid rgba(79,126,255,.35);
-  color: var(--accent);
+  background: #1C212C;
+  border: 1px solid rgba(107,91,255,.35);
+  color: #6B5BFF;
 }
-.ef-btn--save:not(:disabled):hover { background: rgba(79,126,255,.12); }
+.ef-btn--save:not(:disabled):hover { background: rgba(107,91,255,.12); }
 .ef-btn--ghost {
-  background: var(--surface2, #1C2030);
-  border: 1px solid rgba(255,255,255,.1);
-  color: var(--text);
+  background: #1C212C;
+  border: 1px solid #232936;
+  color: #EEF0F4;
 }
-.ef-btn--ghost:hover { background: var(--surface3, #222840); }
+.ef-btn--ghost:hover { background: #232936; }
+
+.mini-spin {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ef-spin .7s linear infinite;
+}
+@keyframes ef-spin { to { transform: rotate(360deg); } }
+
+/* ── Right rail ── */
+.ef-preview {
+  background: #161A23;
+  border-left: 1px solid #232936;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.ef-prev-card {
+  background: #1C212C;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.ef-prev-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #7A8299;
+  align-self: flex-start;
+  margin-bottom: 6px;
+}
+.ef-prev-avatar  { margin-bottom: 6px; }
+.ef-prev-name    { font-family: 'Instrument Serif', Georgia, serif; font-size: 16px; color: #EEF0F4; }
+.ef-prev-sub     { font-size: 11px; color: #7A8299; margin-top: 2px; }
+.ef-prev-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #232936;
+  text-align: left;
+  width: 100%;
+}
+.ef-prev-item-label {
+  font-size: 9.5px;
+  color: #7A8299;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.ef-prev-item-val {
+  font-size: 11.5px;
+  color: #EEF0F4;
+  margin-top: 2px;
+}
+
+.ef-next-card {
+  background: #1C212C;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  padding: 16px;
+}
+.ef-next-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #7A8299;
+  margin-bottom: 10px;
+}
+.ef-next-list { display: flex; flex-direction: column; gap: 8px; }
+.ef-next-item { display: flex; gap: 8px; align-items: flex-start; }
+.ef-next-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 3px;
+  background: #6B5BFF;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.ef-next-item span { font-size: 11.5px; color: #7A8299; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .ef-page { grid-template-columns: 1fr; }
+  .ef-sidebar { border-right: none; border-bottom: 1px solid #232936; }
+  .ef-step-list { flex-direction: row; flex-wrap: wrap; }
+  .ef-preview { display: none; }
+}
 </style>

@@ -56,9 +56,7 @@ const credentialFields = computed<CredentialField[]>(() => {
       { key: 'partner_id', label: 'Partner ID', type: 'text' },
       { key: 'api_key', label: 'API Key', type: 'password' },
     ],
-    monster: [
-      { key: 'api_key', label: 'API Key', type: 'password' },
-    ],
+    monster: [{ key: 'api_key', label: 'API Key', type: 'password' }],
     custom: [
       { key: 'webhook_url', label: 'Webhook URL', type: 'text' },
       { key: 'api_key', label: 'API Key', type: 'password' },
@@ -106,94 +104,73 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- Modal backdrop -->
-  <div class="fixed inset-0 z-50 flex items-center justify-center">
-    <div class="absolute inset-0 bg-black/50" @click="emit('close')"></div>
+  <Teleport to="body">
+    <div class="ifm-overlay">
+      <div class="ifm-backdrop" @click="emit('close')"></div>
+      <div class="ifm-modal">
+        <!-- Header -->
+        <div class="ifm-head">
+          <h2 class="ifm-title">{{ isEdit ? 'Edit Integration' : 'Add Integration' }}</h2>
+          <button class="ifm-close" @click="emit('close')">&#10005;</button>
+        </div>
 
-    <div class="relative bg-gray-800 border border-gray-700 rounded-xl shadow-xl w-full max-w-md mx-4">
-      <!-- Header -->
-      <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-white">
-          {{ isEdit ? 'Edit Integration' : 'Add Integration' }}
-        </h2>
-        <button @click="emit('close')" class="text-gray-400 hover:text-white transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <!-- Body -->
+        <form class="ifm-body" @submit.prevent="save">
+          <div v-if="error" class="ifm-error">{{ error }}</div>
+
+          <div class="ifm-field">
+            <label class="ifm-label">Platform</label>
+            <select v-model="form.platform" :disabled="isEdit" class="ifm-input">
+              <option v-for="p in platforms" :key="p.value" :value="p.value">{{ p.label }}</option>
+            </select>
+          </div>
+
+          <div class="ifm-field">
+            <label class="ifm-label">Display Name</label>
+            <input v-model="form.display_name" type="text" required class="ifm-input" :placeholder="`e.g. My ${form.platform} Account`" />
+          </div>
+
+          <div v-for="field in credentialFields" :key="field.key" class="ifm-field">
+            <label class="ifm-label">{{ field.label }}</label>
+            <input v-model="form.credentials[field.key]" :type="field.type" class="ifm-input" :placeholder="field.label" />
+          </div>
+
+          <div class="ifm-field">
+            <label class="ifm-label">Webhook Secret (optional)</label>
+            <input v-model="form.webhook_secret" type="password" class="ifm-input" placeholder="Optional webhook secret" />
+          </div>
+
+          <div class="ifm-footer">
+            <button type="button" class="ifm-btn-ghost" @click="emit('close')">Cancel</button>
+            <button type="submit" :disabled="saving" class="ifm-btn-primary">
+              {{ saving ? 'Saving…' : 'Save' }}
+            </button>
+          </div>
+        </form>
       </div>
-
-      <!-- Body -->
-      <form @submit.prevent="save" class="px-6 py-4 space-y-4">
-        <!-- Error -->
-        <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-3">
-          <p class="text-sm text-red-400">{{ error }}</p>
-        </div>
-
-        <!-- Platform -->
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Platform</label>
-          <select
-            v-model="form.platform"
-            :disabled="isEdit"
-            class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
-          >
-            <option v-for="p in platforms" :key="p.value" :value="p.value">{{ p.label }}</option>
-          </select>
-        </div>
-
-        <!-- Display name -->
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Display Name</label>
-          <input
-            v-model="form.display_name"
-            type="text"
-            required
-            class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500"
-            :placeholder="`e.g. My ${form.platform} Account`"
-          />
-        </div>
-
-        <!-- Credentials -->
-        <div v-for="field in credentialFields" :key="field.key">
-          <label class="block text-sm font-medium text-gray-300 mb-1">{{ field.label }}</label>
-          <input
-            v-model="form.credentials[field.key]"
-            :type="field.type"
-            class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500"
-            :placeholder="field.label"
-          />
-        </div>
-
-        <!-- Webhook secret -->
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Webhook Secret (optional)</label>
-          <input
-            v-model="form.webhook_secret"
-            type="password"
-            class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500"
-            placeholder="Optional webhook secret"
-          />
-        </div>
-
-        <!-- Footer -->
-        <div class="flex justify-end space-x-3 pt-2">
-          <button
-            type="button"
-            @click="emit('close')"
-            class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            :disabled="saving"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {{ saving ? 'Saving...' : 'Save' }}
-          </button>
-        </div>
-      </form>
     </div>
-  </div>
+  </Teleport>
 </template>
+
+<style scoped>
+.ifm-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; }
+.ifm-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.55); }
+.ifm-modal { position: relative; background: #161A23; border: 1px solid #232936; border-radius: 12px; width: 100%; max-width: 440px; margin: 0 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.ifm-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #232936; }
+.ifm-title { font-size: 15px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.ifm-close { background: none; border: none; color: #7A8299; font-size: 15px; cursor: pointer; line-height: 1; }
+.ifm-close:hover { color: #EEF0F4; }
+.ifm-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.ifm-error { padding: 10px 14px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.ifm-field { display: flex; flex-direction: column; gap: 5px; }
+.ifm-label { font-size: 12px; font-weight: 500; color: #B6BED0; }
+.ifm-input { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 8px 11px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+.ifm-input:focus { border-color: #6B5BFF; }
+.ifm-input:disabled { opacity: 0.5; }
+.ifm-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+.ifm-btn-primary { background: #6B5BFF; border: none; color: #fff; border-radius: 7px; padding: 8px 20px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.ifm-btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.ifm-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.ifm-btn-ghost { background: #232936; border: 1px solid #2D3448; color: #B6BED0; border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+.ifm-btn-ghost:hover { color: #EEF0F4; }
+</style>

@@ -78,28 +78,28 @@ const activateStage = async (stageId: number) => {
   }
 }
 
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    draft: 'bg-gray-700 text-gray-300',
-    active: 'bg-green-900/50 text-green-400',
-    locked: 'bg-yellow-900/50 text-yellow-400',
-    completed: 'bg-blue-900/50 text-blue-400',
-    archived: 'bg-gray-700 text-gray-400',
+const getStatusTone = (status: string) => {
+  const map: Record<string, string> = {
+    draft: 'muted',
+    active: 'ok',
+    locked: 'warn',
+    completed: 'accent',
+    archived: 'muted',
   }
-  return colors[status] || 'bg-gray-700 text-gray-300'
+  return map[status] ?? 'muted'
 }
 
-const getAppraisalStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    not_started: 'bg-gray-700 text-gray-400',
-    in_progress: 'bg-blue-900/50 text-blue-400',
-    self_review_done: 'bg-indigo-900/50 text-indigo-400',
-    manager_review_done: 'bg-purple-900/50 text-purple-400',
-    calibration: 'bg-yellow-900/50 text-yellow-400',
-    completed: 'bg-green-900/50 text-green-400',
-    acknowledged: 'bg-teal-900/50 text-teal-400',
+const getAppraisalStatusTone = (status: string) => {
+  const map: Record<string, string> = {
+    not_started: 'muted',
+    in_progress: 'accent',
+    self_review_done: 'accent',
+    manager_review_done: 'accent',
+    calibration: 'warn',
+    completed: 'ok',
+    acknowledged: 'ok',
   }
-  return colors[status] || 'bg-gray-700 text-gray-300'
+  return map[status] ?? 'muted'
 }
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString()
@@ -108,85 +108,86 @@ onMounted(() => loadCycle())
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-    </div>
+  <div class="cd">
+    <div v-if="loading" class="state-block"><div class="spinner" /></div>
 
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="state-error">{{ error }}</div>
 
     <template v-else-if="cycle">
-      <div v-if="actionError" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ actionError }}</div>
+      <div v-if="actionError" class="state-error">{{ actionError }}</div>
 
       <!-- Header -->
-      <div class="flex items-start justify-between">
-        <div>
-          <div class="flex items-center gap-3">
-            <button @click="router.push({ name: 'performance.cycles' })" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <h2 class="text-xl font-semibold text-white">{{ cycle.name }}</h2>
-            <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getStatusColor(cycle.status)]">{{ cycle.status }}</span>
+      <div class="cd-head">
+        <div class="cd-head-left">
+          <button class="back-btn" @click="router.push({ name: 'performance.cycles' })" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <div>
+            <div class="cd-title-row">
+              <span class="eyebrow">Review cycle</span>
+              <span :class="['badge', `badge-${getStatusTone(cycle.status)}`]">{{ cycle.status }}</span>
+            </div>
+            <h2 class="cd-title">{{ cycle.name }}</h2>
+            <p class="cd-sub">{{ formatDate(cycle.start_date) }} – {{ formatDate(cycle.end_date) }}</p>
           </div>
-          <p class="mt-1 text-sm text-gray-400 ml-8">{{ formatDate(cycle.start_date) }} – {{ formatDate(cycle.end_date) }}</p>
         </div>
-        <div class="flex gap-2">
-          <button v-if="cycle.status === 'draft'" @click="handleActivate" class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">Activate</button>
-          <button v-if="cycle.status === 'active' && appraisals.length === 0" @click="handleInitialize" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Initialize Appraisals</button>
-          <button v-if="cycle.status === 'active'" @click="handleLock" class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors">Lock</button>
-          <button v-if="cycle.status === 'locked'" @click="handleComplete" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Complete</button>
-          <button @click="router.push({ name: 'performance.cycles.create', query: { edit: cycle.id } })" class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors">Edit</button>
+        <div class="cd-actions">
+          <button v-if="cycle.status === 'draft'" class="btn-success" @click="handleActivate">Activate</button>
+          <button v-if="cycle.status === 'active' && appraisals.length === 0" class="btn-primary" @click="handleInitialize">Initialize appraisals</button>
+          <button v-if="cycle.status === 'active'" class="btn-secondary" @click="handleLock">Lock</button>
+          <button v-if="cycle.status === 'locked'" class="btn-primary" @click="handleComplete">Complete</button>
+          <button class="btn-secondary" @click="router.push({ name: 'performance.cycles.create', query: { edit: cycle.id } })">Edit</button>
         </div>
       </div>
 
       <!-- Stats -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <p class="text-xs text-gray-400">Type</p>
-          <p class="mt-1 text-sm font-medium text-white">{{ cycle.cycle_type.replace('_', ' ') }}</p>
+      <div class="kpi-strip">
+        <div class="kpi">
+          <div class="eyebrow">Type</div>
+          <div class="kpi-val">{{ cycle.cycle_type.replace('_', ' ') }}</div>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <p class="text-xs text-gray-400">Rating Scale</p>
-          <p class="mt-1 text-sm font-medium text-white">1 – {{ cycle.rating_scale }}</p>
+        <div class="kpi">
+          <div class="eyebrow">Rating scale</div>
+          <div class="kpi-val mono">1 – {{ cycle.rating_scale }}</div>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <p class="text-xs text-gray-400">Total Appraisals</p>
-          <p class="mt-1 text-sm font-medium text-white">{{ appraisals.length }}</p>
+        <div class="kpi">
+          <div class="eyebrow">Appraisals</div>
+          <div class="kpi-val mono">{{ appraisals.length }}</div>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <p class="text-xs text-gray-400">Completed</p>
-          <p class="mt-1 text-sm font-medium text-white">{{ appraisals.filter(a => a.status === 'completed' || a.status === 'acknowledged').length }}</p>
+        <div class="kpi">
+          <div class="eyebrow">Completed</div>
+          <div class="kpi-val mono ok">{{ appraisals.filter(a => a.status === 'completed' || a.status === 'acknowledged').length }}</div>
         </div>
       </div>
 
       <!-- Stages -->
-      <div v-if="cycle.stages && cycle.stages.length > 0" class="bg-gray-800 border border-gray-700 rounded-lg">
-        <div class="p-5 border-b border-gray-700">
-          <h3 class="text-base font-medium text-white">Stages</h3>
+      <div v-if="cycle.stages && cycle.stages.length > 0" class="card pad0">
+        <div class="card-head pad">
+          <h3 class="card-title">Stages</h3>
         </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-700">
-            <thead class="bg-gray-800/50">
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
               <tr>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Stage</th>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Type</th>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Period</th>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                <th>Stage</th>
+                <th>Type</th>
+                <th>Period</th>
+                <th>Status</th>
+                <th class="th-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700">
+            <tbody>
               <tr v-for="stage in cycle.stages" :key="stage.id">
-                <td class="px-5 py-3 text-sm text-white">{{ stage.name }}</td>
-                <td class="px-5 py-3 text-sm text-gray-400">{{ stage.stage_type.replace(/_/g, ' ') }}</td>
-                <td class="px-5 py-3 text-sm text-gray-400">{{ stage.start_date ? formatDate(stage.start_date) : '—' }} – {{ stage.end_date ? formatDate(stage.end_date) : '—' }}</td>
-                <td class="px-5 py-3">
-                  <span v-if="stage.is_active" class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-green-900/50 text-green-400">Active</span>
-                  <span v-else-if="stage.is_locked" class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-700 text-gray-400">Locked</span>
-                  <span v-else class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-700 text-gray-400">Inactive</span>
+                <td><div class="cell-strong">{{ stage.name }}</div></td>
+                <td class="cell-muted">{{ stage.stage_type.replace(/_/g, ' ') }}</td>
+                <td class="cell-muted cell-mono">{{ stage.start_date ? formatDate(stage.start_date) : '—' }} – {{ stage.end_date ? formatDate(stage.end_date) : '—' }}</td>
+                <td>
+                  <span v-if="stage.is_active" class="badge badge-ok">Active</span>
+                  <span v-else-if="stage.is_locked" class="badge badge-muted">Locked</span>
+                  <span v-else class="badge badge-muted">Inactive</span>
                 </td>
-                <td class="px-5 py-3">
-                  <button v-if="!stage.is_active && cycle.status === 'active'" @click="activateStage(stage.id)" class="text-blue-400 hover:text-blue-300 text-xs font-medium">Activate</button>
+                <td class="th-right">
+                  <button v-if="!stage.is_active && cycle.status === 'active'" class="btn-link" @click="activateStage(stage.id)">Activate</button>
                 </td>
               </tr>
             </tbody>
@@ -195,34 +196,34 @@ onMounted(() => loadCycle())
       </div>
 
       <!-- Appraisals -->
-      <div v-if="appraisals.length > 0" class="bg-gray-800 border border-gray-700 rounded-lg">
-        <div class="p-5 border-b border-gray-700">
-          <h3 class="text-base font-medium text-white">Appraisals</h3>
+      <div v-if="appraisals.length > 0" class="card pad0">
+        <div class="card-head pad">
+          <h3 class="card-title">Appraisals</h3>
         </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-700">
-            <thead class="bg-gray-800/50">
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
               <tr>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Employee</th>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Final Score</th>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Rating</th>
-                <th class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                <th>Employee</th>
+                <th>Status</th>
+                <th>Final score</th>
+                <th>Rating</th>
+                <th class="th-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700">
-              <tr v-for="appraisal in appraisals" :key="appraisal.id" class="hover:bg-gray-700/30">
-                <td class="px-5 py-3">
-                  <p class="text-sm font-medium text-white">{{ appraisal.employee?.first_name }} {{ appraisal.employee?.last_name }}</p>
-                  <p class="text-xs text-gray-400">{{ appraisal.employee?.department }}</p>
+            <tbody>
+              <tr v-for="appraisal in appraisals" :key="appraisal.id">
+                <td>
+                  <div class="cell-strong">{{ appraisal.employee?.first_name }} {{ appraisal.employee?.last_name }}</div>
+                  <div class="cell-muted">{{ appraisal.employee?.department }}</div>
                 </td>
-                <td class="px-5 py-3">
-                  <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getAppraisalStatusColor(appraisal.status)]">{{ appraisal.status.replace(/_/g, ' ') }}</span>
+                <td>
+                  <span :class="['badge', `badge-${getAppraisalStatusTone(appraisal.status)}`]">{{ appraisal.status.replace(/_/g, ' ') }}</span>
                 </td>
-                <td class="px-5 py-3 text-sm text-white">{{ appraisal.final_score ?? '—' }}</td>
-                <td class="px-5 py-3 text-sm text-gray-400">{{ appraisal.final_rating ?? '—' }}</td>
-                <td class="px-5 py-3">
-                  <button @click="router.push({ name: 'performance.appraisals.show', params: { id: appraisal.id } })" class="text-blue-400 hover:text-blue-300 text-xs font-medium">View</button>
+                <td class="cell-mono">{{ appraisal.final_score ?? '—' }}</td>
+                <td class="cell-muted">{{ appraisal.final_rating ?? '—' }}</td>
+                <td class="th-right">
+                  <button class="btn-link" @click="router.push({ name: 'performance.appraisals.show', params: { id: appraisal.id } })">View →</button>
                 </td>
               </tr>
             </tbody>
@@ -232,3 +233,64 @@ onMounted(() => loadCycle())
     </template>
   </div>
 </template>
+
+<style scoped>
+.cd { display: flex; flex-direction: column; gap: 20px; color: #EEF0F4; }
+
+.state-block { display: flex; justify-content: center; padding: 56px 0; }
+.spinner { width: 28px; height: 28px; border: 2px solid #232936; border-top-color: #6B5BFF; border-radius: 50%; animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.state-error { background: rgba(243,130,136,.08); border: 1px solid rgba(243,130,136,.3); color: #F38288; padding: 14px 16px; border-radius: 10px; font-size: 13px; }
+
+.cd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cd-head-left { display: flex; align-items: flex-start; gap: 12px; }
+.back-btn { width: 32px; height: 32px; padding: 0; background: #161A23; border: 1px solid #232936; border-radius: 8px; color: #7A8299; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: color .15s, border-color .15s; }
+.back-btn:hover { color: #EEF0F4; border-color: #6B5BFF; }
+.back-btn svg { width: 16px; height: 16px; }
+.eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A8299; }
+.cd-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.cd-title { font-family: 'Instrument Serif', serif; font-size: 30px; letter-spacing: -0.02em; color: #EEF0F4; margin: 0; line-height: 1.1; }
+.cd-sub { font-size: 13px; color: #7A8299; margin: 4px 0 0; }
+
+.cd-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-primary, .btn-secondary, .btn-success { padding: 8px 16px; font-size: 12.5px; font-weight: 600; border-radius: 8px; cursor: pointer; font-family: inherit; transition: opacity .15s, border-color .15s; border: 1px solid transparent; }
+.btn-primary { background: #6B5BFF; color: #fff; }
+.btn-primary:hover { opacity: .9; }
+.btn-secondary { background: #161A23; border-color: #232936; color: #EEF0F4; }
+.btn-secondary:hover { border-color: #6B5BFF; }
+.btn-success { background: #4DD39A; color: #0D0F17; }
+.btn-success:hover { opacity: .9; }
+.btn-link { background: transparent; border: none; color: #6B5BFF; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; padding: 0; }
+.btn-link:hover { color: #8B7EFF; }
+
+.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi { background: #161A23; border: 1px solid #232936; border-radius: 12px; padding: 14px 16px; }
+.kpi-val { font-family: 'Instrument Serif', serif; font-size: 22px; color: #EEF0F4; letter-spacing: -0.01em; margin-top: 4px; text-transform: capitalize; }
+.kpi-val.mono { font-family: 'JetBrains Mono', monospace; font-size: 20px; }
+.kpi-val.ok { color: #4DD39A; }
+
+.card { background: #161A23; border: 1px solid #232936; border-radius: 12px; padding: 20px; }
+.card.pad0 { padding: 0; overflow: hidden; }
+.card-head { margin-bottom: 14px; }
+.card-head.pad { padding: 16px 20px; border-bottom: 1px solid #232936; margin-bottom: 0; }
+.card-title { font-family: 'Instrument Serif', serif; font-size: 18px; color: #EEF0F4; letter-spacing: -0.01em; margin: 0; }
+
+.table-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; min-width: 720px; }
+.tbl th { padding: 11px 16px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #7A8299; text-align: left; background: #0D0F17; border-bottom: 1px solid #232936; }
+.tbl th.th-right { text-align: right; }
+.tbl td { padding: 13px 16px; font-size: 12.5px; color: #EEF0F4; border-bottom: 1px solid #232936; vertical-align: top; }
+.tbl td.th-right { text-align: right; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tbody tr:hover td { background: rgba(107,91,255,.04); }
+.cell-strong { color: #EEF0F4; font-weight: 500; }
+.cell-muted { color: #7A8299; font-size: 11.5px; margin-top: 2px; }
+.cell-mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+.badge { display: inline-flex; align-items: center; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+.badge-muted { background: rgba(122,130,153,.12); color: #7A8299; border-color: rgba(122,130,153,.25); }
+.badge-accent { background: rgba(107,91,255,.12); color: #6B5BFF; border-color: rgba(107,91,255,.3); }
+.badge-warn { background: rgba(245,166,35,.12); color: #F5A623; border-color: rgba(245,166,35,.3); }
+.badge-ok { background: rgba(77,211,154,.12); color: #4DD39A; border-color: rgba(77,211,154,.25); }
+</style>

@@ -128,85 +128,92 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-4xl space-y-6">
-    <div class="flex items-center gap-3">
-      <button class="text-gray-400 hover:text-white" @click="router.back()">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
+  <div class="claim-form">
+    <header class="form-head">
+      <button class="back-btn" @click="router.back()">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+        </svg>
       </button>
-      <h1 class="text-2xl font-bold text-white">{{ isEdit ? 'Edit Claim' : 'New Claim' }}</h1>
-    </div>
+      <div>
+        <span class="eyebrow">{{ isEdit ? 'Editing' : 'New entry' }} · expense claim</span>
+        <h1 class="page-title">{{ isEdit ? 'Edit claim' : 'New claim' }}</h1>
+      </div>
+    </header>
 
-    <!-- Loading -->
-    <div v-if="loading" class="bg-gray-800 border border-gray-700 rounded-lg p-8 animate-pulse">
-      <div v-for="i in 4" :key="i" class="h-4 bg-gray-700 rounded mb-4" />
+    <div v-if="loading" class="card skeleton-card">
+      <div v-for="i in 4" :key="i" class="skeleton-row" />
     </div>
 
     <template v-else>
-      <!-- Error -->
-      <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-400">{{ error }}</div>
+      <div v-if="error" class="alert alert--err">{{ error }}</div>
 
-      <!-- Claim details -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">Title</label>
-          <input v-model="form.title" type="text" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none" placeholder="Business trip, office supplies..." />
+      <section class="card card--pad">
+        <h2 class="section-title">Claim details</h2>
+        <div class="field-grid">
+          <div class="field field--full">
+            <label class="field__label">Title</label>
+            <input v-model="form.title" type="text" class="input" placeholder="Business trip, office supplies..." />
+          </div>
+          <div class="field field--full">
+            <label class="field__label">Description</label>
+            <textarea v-model="form.description" rows="3" class="input textarea" placeholder="Optional description..." />
+          </div>
+          <div class="field">
+            <label class="field__label">Currency</label>
+            <select v-model="form.currency" class="input">
+              <option v-for="c in currencies" :key="c" :value="c">{{ c }}</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">Description</label>
-          <textarea v-model="form.description" rows="3" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none" placeholder="Optional description..." />
-        </div>
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">Currency</label>
-          <select v-model="form.currency" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none">
-            <option v-for="c in currencies" :key="c" :value="c">{{ c }}</option>
-          </select>
-        </div>
-      </div>
+      </section>
 
-      <!-- Items -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-white">Line Items</h2>
-          <button class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors" @click="addItem">
-            Add Item
-          </button>
-        </div>
+      <section class="card">
+        <header class="card__head">
+          <div>
+            <h2 class="card__title">Line items</h2>
+            <p class="card__sub">Add each receipt or expense line</p>
+          </div>
+          <button class="btn btn--ghost btn--sm" @click="addItem">+ Add item</button>
+        </header>
 
-        <div class="overflow-x-auto">
-          <table class="w-full">
+        <div class="table-wrap">
+          <table class="data-table">
             <thead>
-              <tr class="bg-gray-700/50">
-                <th class="text-left px-4 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Date</th>
-                <th class="text-left px-4 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Category</th>
-                <th class="text-left px-4 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Description</th>
-                <th class="text-left px-4 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Amount</th>
-                <th class="text-left px-4 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Merchant</th>
-                <th class="px-4 py-3" />
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th class="num">Amount</th>
+                <th>Merchant</th>
+                <th />
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700">
-              <tr v-for="(item, idx) in items" :key="idx" class="hover:bg-gray-700/30">
-                <td class="px-4 py-2">
-                  <input v-model="item.date" type="date" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-36" />
+            <tbody>
+              <tr v-for="(item, idx) in items" :key="idx">
+                <td>
+                  <input v-model="item.date" type="date" class="input input--inline" />
                 </td>
-                <td class="px-4 py-2">
-                  <select v-model="item.category_id" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-32">
-                    <option :value="null">Select...</option>
+                <td>
+                  <select v-model="item.category_id" class="input input--inline">
+                    <option :value="null">Select…</option>
                     <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                   </select>
                 </td>
-                <td class="px-4 py-2">
-                  <input v-model="item.description" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-40" placeholder="Description" />
+                <td>
+                  <input v-model="item.description" type="text" class="input input--inline" placeholder="Description" />
                 </td>
-                <td class="px-4 py-2">
-                  <input v-model="item.amount" type="number" step="0.01" min="0" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-28" placeholder="0.00" />
+                <td class="num">
+                  <input v-model="item.amount" type="number" step="0.01" min="0" class="input input--inline input--num" placeholder="0.00" />
                 </td>
-                <td class="px-4 py-2">
-                  <input v-model="item.merchant_name" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-32" placeholder="Merchant" />
+                <td>
+                  <input v-model="item.merchant_name" type="text" class="input input--inline" placeholder="Merchant" />
                 </td>
-                <td class="px-4 py-2">
-                  <button v-if="items.length > 1" class="text-red-400 hover:text-red-300" @click="removeItem(idx)">
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                <td class="action-col">
+                  <button v-if="items.length > 1" class="icon-btn" @click="removeItem(idx)" aria-label="Remove">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
                   </button>
                 </td>
               </tr>
@@ -214,29 +221,287 @@ onMounted(() => {
           </table>
         </div>
 
-        <!-- Total footer -->
-        <div class="px-5 py-3 border-t border-gray-700 flex justify-end">
-          <span class="text-lg font-semibold text-white">Total: {{ fmtCurrency(total) }}</span>
+        <div class="total-bar">
+          <span class="total-bar__label">Total</span>
+          <span class="total-bar__value mono">{{ fmtCurrency(total) }}</span>
         </div>
-      </div>
+      </section>
 
-      <!-- Action buttons -->
-      <div class="flex items-center gap-3 justify-end">
-        <button
-          :disabled="saving"
-          class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-40"
-          @click="save(false)"
-        >
-          {{ saving ? 'Saving...' : 'Save Draft' }}
+      <div class="actions-bar">
+        <button :disabled="saving" class="btn btn--ghost" @click="save(false)">
+          {{ saving ? 'Saving…' : 'Save draft' }}
         </button>
-        <button
-          :disabled="saving"
-          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40"
-          @click="save(true)"
-        >
-          {{ saving ? 'Submitting...' : 'Submit' }}
+        <button :disabled="saving" class="btn btn--primary" @click="save(true)">
+          {{ saving ? 'Submitting…' : 'Submit claim' }}
         </button>
       </div>
     </template>
   </div>
 </template>
+
+<style scoped>
+.claim-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1100px;
+}
+
+.form-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  color: #7A8299;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.back-btn:hover { color: #EEF0F4; border-color: #2F374A; }
+
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+}
+
+.page-title {
+  margin: 2px 0 0;
+  font-family: 'Instrument Serif', serif;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  color: #EEF0F4;
+  font-weight: 400;
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.alert--err {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #F38288;
+}
+
+.card {
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.card--pad { padding: 20px; }
+
+.skeleton-card { padding: 18px; }
+.skeleton-row {
+  height: 14px;
+  margin-bottom: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #1B1F2A 0%, #232936 50%, #1B1F2A 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.section-title {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #EEF0F4;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field--full { grid-column: 1 / -1; }
+
+.field__label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7A8299;
+}
+
+.input {
+  width: 100%;
+  padding: 9px 12px;
+  background: #0D0F17;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  color: #EEF0F4;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input::placeholder { color: #5A6378; }
+.input:focus { border-color: #6B5BFF; }
+.input.textarea { resize: vertical; min-height: 80px; }
+
+.input--inline {
+  padding: 7px 9px;
+  font-size: 12.5px;
+  background: #161A23;
+}
+
+.input--num {
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #232936;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #EEF0F4;
+}
+
+.card__sub {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: #7A8299;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn--primary { background: #6B5BFF; color: #fff; }
+.btn--primary:hover:not(:disabled) { background: #7C6CFF; }
+.btn--ghost { background: transparent; color: #C9CDD9; border-color: #232936; }
+.btn--ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.03); color: #EEF0F4; }
+.btn--sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.table-wrap { overflow-x: auto; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table thead th {
+  padding: 10px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid #232936;
+}
+
+.data-table thead th.num { text-align: right; }
+
+.data-table tbody td {
+  padding: 8px 14px;
+  border-bottom: 1px solid #1F2430;
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table td.num { text-align: right; }
+.data-table td.action-col { width: 36px; text-align: right; }
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #F38288;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: rgba(243, 130, 136, 0.1);
+  border-color: rgba(243, 130, 136, 0.3);
+}
+
+.total-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 14px 20px;
+  border-top: 1px solid #232936;
+  background: rgba(107, 91, 255, 0.04);
+}
+
+.total-bar__label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+}
+
+.total-bar__value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  color: #EEF0F4;
+}
+
+.actions-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+</style>

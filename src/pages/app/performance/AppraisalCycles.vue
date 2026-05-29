@@ -24,15 +24,15 @@ const loadCycles = async () => {
   }
 }
 
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    draft: 'bg-gray-700 text-gray-300',
-    active: 'bg-green-900/50 text-green-400',
-    locked: 'bg-yellow-900/50 text-yellow-400',
-    completed: 'bg-blue-900/50 text-blue-400',
-    archived: 'bg-gray-700 text-gray-400',
+const getStatusClass = (status: string) => {
+  const map: Record<string, string> = {
+    draft: 'badge-muted',
+    active: 'badge-ok',
+    locked: 'badge-warn',
+    completed: 'badge-accent',
+    archived: 'badge-muted',
   }
-  return colors[status] || 'bg-gray-700 text-gray-300'
+  return map[status] || 'badge-muted'
 }
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString()
@@ -41,55 +41,326 @@ onMounted(() => loadCycles())
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <select v-model="filterStatus" @change="loadCycles()" class="bg-gray-800 border border-gray-700 text-gray-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none">
-          <option value="">All Status</option>
-          <option value="draft">Draft</option>
-          <option value="active">Active</option>
-          <option value="locked">Locked</option>
-          <option value="completed">Completed</option>
-          <option value="archived">Archived</option>
-        </select>
-      </div>
-      <button @click="router.push({ name: 'performance.cycles.create' })" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-        <svg class="-ml-1 mr-2 h-5 w-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-        New Cycle
+  <div class="cycles">
+    <div class="toolbar">
+      <select v-model="filterStatus" class="select" @change="loadCycles()">
+        <option value="">All status</option>
+        <option value="draft">Draft</option>
+        <option value="active">Active</option>
+        <option value="locked">Locked</option>
+        <option value="completed">Completed</option>
+        <option value="archived">Archived</option>
+      </select>
+      <button
+        class="btn btn-primary"
+        @click="router.push({ name: 'performance.cycles.create' })"
+      >
+        + New cycle
       </button>
     </div>
 
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+    <div v-if="loading" class="state-block">
+      <div class="spinner"></div>
     </div>
 
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="state-error">{{ error }}</div>
 
-    <div v-else-if="cycles.length === 0" class="text-center py-12 text-gray-500">No appraisal cycles found.</div>
+    <div v-else-if="cycles.length === 0" class="empty-pad">No appraisal cycles found.</div>
 
-    <div v-else class="space-y-4">
-      <div v-for="cycle in cycles" :key="cycle.id" class="bg-gray-800 border border-gray-700 rounded-lg p-5 hover:border-gray-600 transition-colors cursor-pointer" @click="router.push({ name: 'performance.cycles.show', params: { id: cycle.id } })">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="flex items-center gap-3">
-              <h3 class="text-base font-semibold text-white">{{ cycle.name }}</h3>
-              <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getStatusColor(cycle.status)]">{{ cycle.status }}</span>
-              <span class="inline-flex px-2 py-0.5 text-xs rounded-full bg-indigo-900/50 text-indigo-400">{{ cycle.cycle_type.replace('_', ' ') }}</span>
+    <div v-else class="cycle-cards">
+      <div
+        v-for="cycle in cycles"
+        :key="cycle.id"
+        class="cycle-card"
+        @click="router.push({ name: 'performance.cycles.show', params: { id: cycle.id } })"
+      >
+        <div class="cycle-card-head">
+          <div class="cycle-main">
+            <div class="cycle-title-row">
+              <h3 class="cycle-title">{{ cycle.name }}</h3>
+              <span :class="['badge', getStatusClass(cycle.status)]">{{ cycle.status }}</span>
+              <span class="badge badge-accent">{{ cycle.cycle_type.replace('_', ' ') }}</span>
             </div>
-            <p v-if="cycle.description" class="mt-1 text-sm text-gray-400">{{ cycle.description }}</p>
-            <p class="mt-1 text-sm text-gray-400">{{ formatDate(cycle.start_date) }} – {{ formatDate(cycle.end_date) }}</p>
+            <p v-if="cycle.description" class="cycle-desc">{{ cycle.description }}</p>
+            <div class="cycle-window">
+              {{ formatDate(cycle.start_date) }} &mdash; {{ formatDate(cycle.end_date) }}
+            </div>
           </div>
-          <div class="text-right text-sm text-gray-400">
-            <p v-if="cycle.employee_appraisals_count !== undefined">{{ cycle.employee_appraisals_count }} appraisals</p>
+          <div v-if="cycle.employee_appraisals_count !== undefined" class="cycle-count">
+            <div class="count-value">{{ cycle.employee_appraisals_count }}</div>
+            <div class="count-label">appraisals</div>
           </div>
         </div>
-        <div class="mt-3 flex flex-wrap gap-2 text-xs">
-          <span v-if="cycle.is_goal_setting_enabled" class="px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full">Goals</span>
-          <span v-if="cycle.is_self_review_enabled" class="px-2 py-0.5 bg-blue-900/30 text-blue-400 rounded-full">Self Review</span>
-          <span v-if="cycle.is_manager_review_enabled" class="px-2 py-0.5 bg-purple-900/30 text-purple-400 rounded-full">Manager Review</span>
-          <span v-if="cycle.is_360_feedback_enabled" class="px-2 py-0.5 bg-yellow-900/30 text-yellow-400 rounded-full">360 Feedback</span>
+
+        <div class="cycle-flags">
+          <span v-if="cycle.is_goal_setting_enabled" class="chip chip-ok">Goals</span>
+          <span v-if="cycle.is_self_review_enabled" class="chip chip-accent">Self review</span>
+          <span v-if="cycle.is_manager_review_enabled" class="chip chip-purple">Manager review</span>
+          <span v-if="cycle.is_360_feedback_enabled" class="chip chip-warn">360 feedback</span>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.cycles {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.select {
+  background: #161a23;
+  border: 1px solid #232936;
+  color: #eef0f4;
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.select:focus {
+  border-color: #6b5bff;
+}
+
+.btn {
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn-primary {
+  background: #6b5bff;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #5a4ce6;
+}
+
+.state-block {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #232936;
+  border-top-color: #6b5bff;
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.state-error {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #f38288;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.empty-pad {
+  padding: 56px 16px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 13px;
+  background: #161a23;
+  border: 1px dashed #232936;
+  border-radius: 12px;
+}
+
+.cycle-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cycle-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 16px 18px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.cycle-card:hover {
+  border-color: rgba(107, 91, 255, 0.3);
+  background: rgba(107, 91, 255, 0.03);
+}
+
+.cycle-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cycle-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.cycle-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cycle-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+  color: #eef0f4;
+  margin: 0;
+  font-weight: 500;
+}
+
+.cycle-desc {
+  font-size: 12.5px;
+  color: #7a8299;
+  margin: 8px 0 0 0;
+  line-height: 1.5;
+  max-width: 70ch;
+}
+
+.cycle-window {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: #7a8299;
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.cycle-count {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.count-value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  color: #eef0f4;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.count-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7a8299;
+  margin-top: 4px;
+}
+
+.cycle-flags {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #1c2030;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge-muted {
+  background: rgba(122, 130, 153, 0.12);
+  color: #7a8299;
+  border-color: rgba(122, 130, 153, 0.25);
+}
+
+.badge-accent {
+  background: rgba(107, 91, 255, 0.12);
+  color: #6b5bff;
+  border-color: rgba(107, 91, 255, 0.3);
+}
+
+.badge-warn {
+  background: rgba(245, 166, 35, 0.12);
+  color: #f5a623;
+  border-color: rgba(245, 166, 35, 0.3);
+}
+
+.badge-ok {
+  background: rgba(77, 211, 154, 0.12);
+  color: #4dd39a;
+  border-color: rgba(77, 211, 154, 0.25);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.chip-ok {
+  background: rgba(77, 211, 154, 0.1);
+  color: #4dd39a;
+  border-color: rgba(77, 211, 154, 0.22);
+}
+
+.chip-accent {
+  background: rgba(107, 91, 255, 0.1);
+  color: #6b5bff;
+  border-color: rgba(107, 91, 255, 0.25);
+}
+
+.chip-purple {
+  background: rgba(155, 110, 255, 0.1);
+  color: #9b6eff;
+  border-color: rgba(155, 110, 255, 0.25);
+}
+
+.chip-warn {
+  background: rgba(245, 166, 35, 0.1);
+  color: #f5a623;
+  border-color: rgba(245, 166, 35, 0.25);
+}
+</style>

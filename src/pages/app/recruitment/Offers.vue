@@ -45,7 +45,16 @@ const submitOffer = async () => {
   try {
     await recruitmentService.createOffer(form.value)
     showForm.value = false
-    form.value = { application_id: undefined, candidate_name: '', position: '', salary: undefined, joining_date: '', expires_at: '', notes: '', template_id: undefined }
+    form.value = {
+      application_id: undefined,
+      candidate_name: '',
+      position: '',
+      salary: undefined,
+      joining_date: '',
+      expires_at: '',
+      notes: '',
+      template_id: undefined,
+    }
     await load()
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } } }
@@ -88,34 +97,49 @@ const downloadOffer = (id: number) => {
   window.open(`/api/v1/recruitment/offers/${id}/download`, '_blank')
 }
 
-const getStatusClasses = (status: string) => {
+const getStatusTone = (status: string) => {
   const map: Record<string, string> = {
-    draft: 'bg-gray-700 text-gray-300',
-    sent: 'bg-blue-900/50 text-blue-400',
-    accepted: 'bg-green-900/50 text-green-400',
-    rejected: 'bg-red-900/50 text-red-400',
-    expired: 'bg-yellow-900/50 text-yellow-400',
-    withdrawn: 'bg-gray-700 text-gray-400',
+    draft: 'neutral',
+    sent: 'accent',
+    accepted: 'ok',
+    rejected: 'danger',
+    expired: 'warn',
+    withdrawn: 'neutral',
   }
-  return map[status] ?? 'bg-gray-700 text-gray-300'
+  return map[status] ?? 'neutral'
 }
 
-const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+const formatDate = (d?: string) =>
+  d
+    ? new Date(d).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : '—'
 
 onMounted(load)
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <select
-          v-model="filterStatus"
-          @change="load"
-          class="bg-gray-800 border border-gray-700 text-gray-300 rounded-lg text-sm px-3 py-2 focus:border-blue-500 focus:outline-none"
-        >
-          <option value="">All Status</option>
+  <div class="off-page">
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="ph-text">
+        <div class="ph-eyebrow">Offer letters</div>
+        <h1 class="ph-title">Offers</h1>
+        <p class="ph-sub">
+          Draft, send and track offers across candidates. Manage templates and watch the
+          accept/reject status.
+        </p>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="filters">
+        <select v-model="filterStatus" class="input select" @change="load">
+          <option value="">All status</option>
           <option value="draft">Draft</option>
           <option value="sent">Sent</option>
           <option value="accepted">Accepted</option>
@@ -123,114 +147,141 @@ onMounted(load)
           <option value="expired">Expired</option>
         </select>
       </div>
-      <div class="flex gap-2">
+      <div class="action-group">
         <button
+          class="btn btn-secondary btn-sm"
           @click="router.push({ name: 'recruitment.offer-templates' })"
-          class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors"
-        >Templates</button>
-        <button
-          @click="showForm = !showForm"
-          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-          Create Offer
+          Templates
+        </button>
+        <button class="btn btn-primary btn-sm" @click="showForm = !showForm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 6v12m6-6H6"
+            />
+          </svg>
+          Create offer
         </button>
       </div>
     </div>
 
     <!-- Create Form -->
-    <div v-if="showForm" class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
-      <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">New Offer Letter</h3>
-      <div v-if="actionError" class="bg-red-900/30 border border-red-700 rounded-lg p-3">
-        <p class="text-sm text-red-400">{{ actionError }}</p>
+    <div v-if="showForm" class="card form-card">
+      <div class="form-head">New offer letter</div>
+      <div v-if="actionError" class="alert-error">{{ actionError }}</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Candidate name *</label>
+          <input v-model="form.candidate_name" type="text" class="input" />
+        </div>
+        <div class="field">
+          <label>Position *</label>
+          <input v-model="form.position" type="text" class="input" />
+        </div>
+        <div class="field">
+          <label>Salary</label>
+          <input v-model.number="form.salary" type="number" min="0" class="input" />
+        </div>
+        <div class="field">
+          <label>Joining date</label>
+          <input v-model="form.joining_date" type="date" class="input" />
+        </div>
+        <div class="field">
+          <label>Expires at</label>
+          <input v-model="form.expires_at" type="date" class="input" />
+        </div>
+        <div class="field">
+          <label>Application ID</label>
+          <input
+            v-model.number="form.application_id"
+            type="number"
+            class="input"
+            placeholder="Optional"
+          />
+        </div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Candidate Name *</label>
-          <input v-model="form.candidate_name" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Position *</label>
-          <input v-model="form.position" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Salary</label>
-          <input v-model.number="form.salary" type="number" min="0" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Joining Date</label>
-          <input v-model="form.joining_date" type="date" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Expires At</label>
-          <input v-model="form.expires_at" type="date" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Application ID</label>
-          <input v-model.number="form.application_id" type="number" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" placeholder="Optional" />
-        </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea v-model="form.notes" rows="2" class="input textarea"></textarea>
       </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-300 mb-1">Notes</label>
-        <textarea v-model="form.notes" rows="2" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
-      </div>
-      <div class="flex gap-3">
-        <button @click="submitOffer" :disabled="saving" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50">
-          {{ saving ? 'Creating...' : 'Create Offer' }}
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" :disabled="saving" @click="submitOffer">
+          {{ saving ? 'Creating...' : 'Create offer' }}
         </button>
-        <button @click="showForm = false" class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors">Cancel</button>
+        <button class="btn btn-secondary btn-sm" @click="showForm = false">Cancel</button>
       </div>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="bg-gray-800 border border-gray-700 rounded-lg p-8 animate-pulse">
-      <div class="space-y-3">
-        <div v-for="i in 4" :key="i" class="h-16 bg-gray-700 rounded"></div>
-      </div>
+    <div v-if="loading" class="card skeleton-card">
+      <div v-for="i in 4" :key="i" class="sk-line"></div>
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4">
-      <p class="text-sm text-red-400">{{ error }}</p>
-    </div>
+    <div v-else-if="error" class="alert-error">{{ error }}</div>
 
     <!-- Empty -->
-    <div v-else-if="offers.length === 0" class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center">
-      <p class="text-gray-500">No offers found.</p>
+    <div v-else-if="offers.length === 0" class="card empty-state">
+      <div class="empty-title">No offers found.</div>
     </div>
 
-    <!-- Offers List -->
-    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-700">
-        <thead class="bg-gray-700/50">
+    <!-- Offers Table -->
+    <div v-else class="card table-card">
+      <table class="data-table">
+        <thead>
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Candidate</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Position</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Salary</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Joining</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Expires</th>
-            <th class="px-6 py-3"></th>
+            <th>Candidate</th>
+            <th>Position</th>
+            <th>Salary</th>
+            <th>Joining</th>
+            <th>Status</th>
+            <th>Expires</th>
+            <th></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-700">
-          <tr v-for="offer in offers" :key="offer.id" class="hover:bg-gray-700/30 transition-colors">
-            <td class="px-6 py-4 text-sm font-medium text-white">{{ offer.candidate_name }}</td>
-            <td class="px-6 py-4 text-sm text-gray-300">{{ offer.position }}</td>
-            <td class="px-6 py-4 text-sm text-gray-300">{{ offer.salary ? offer.salary.toLocaleString() : '—' }}</td>
-            <td class="px-6 py-4 text-sm text-gray-400">{{ formatDate(offer.joining_date) }}</td>
-            <td class="px-6 py-4">
-              <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getStatusClasses(offer.status)]">
+        <tbody>
+          <tr v-for="offer in offers" :key="offer.id" class="row">
+            <td class="t-strong">{{ offer.candidate_name }}</td>
+            <td>{{ offer.position }}</td>
+            <td class="t-mono">
+              {{ offer.salary ? offer.salary.toLocaleString() : '—' }}
+            </td>
+            <td class="t-muted">{{ formatDate(offer.joining_date) }}</td>
+            <td>
+              <span :class="['badge', `badge-${getStatusTone(offer.status)}`]">
                 {{ offer.status }}
               </span>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-400">{{ formatDate(offer.expires_at) }}</td>
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-2">
-                <button v-if="offer.status === 'draft'" @click="sendOffer(offer.id)" class="text-xs text-blue-400 hover:text-blue-300 font-medium">Send</button>
-                <button v-if="offer.status === 'sent'" @click="acceptOffer(offer.id)" class="text-xs text-green-400 hover:text-green-300 font-medium">Accept</button>
-                <button v-if="offer.status === 'sent'" @click="rejectOffer(offer.id)" class="text-xs text-red-400 hover:text-red-300 font-medium">Reject</button>
-                <button @click="downloadOffer(offer.id)" class="text-xs text-gray-400 hover:text-white font-medium">PDF</button>
+            <td class="t-muted">{{ formatDate(offer.expires_at) }}</td>
+            <td>
+              <div class="row-actions">
+                <button
+                  v-if="offer.status === 'draft'"
+                  class="link-btn link-accent"
+                  @click="sendOffer(offer.id)"
+                >
+                  Send
+                </button>
+                <button
+                  v-if="offer.status === 'sent'"
+                  class="link-btn link-ok"
+                  @click="acceptOffer(offer.id)"
+                >
+                  Accept
+                </button>
+                <button
+                  v-if="offer.status === 'sent'"
+                  class="link-btn link-danger"
+                  @click="rejectOffer(offer.id)"
+                >
+                  Reject
+                </button>
+                <button class="link-btn link-muted" @click="downloadOffer(offer.id)">
+                  PDF
+                </button>
               </div>
             </td>
           </tr>
@@ -239,3 +290,344 @@ onMounted(load)
     </div>
   </div>
 </template>
+
+<style scoped>
+.off-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #eef0f4;
+}
+
+/* Page header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+}
+.ph-eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  color: #7a8299;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.ph-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: #eef0f4;
+  margin: 0 0 6px;
+  line-height: 1.1;
+}
+.ph-sub {
+  font-size: 13px;
+  color: #7a8299;
+  margin: 0;
+  max-width: 640px;
+  line-height: 1.55;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.action-group {
+  display: flex;
+  gap: 8px;
+}
+
+/* Inputs */
+.input {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 6px;
+  color: #eef0f4;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  font-family: inherit;
+  width: 100%;
+}
+.input:focus {
+  border-color: #6b5bff;
+}
+.input::placeholder {
+  color: #7a8299;
+}
+.select {
+  cursor: pointer;
+  padding-right: 28px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A8299' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 7px 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+  font-family: inherit;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn-sm {
+  padding: 7px 11px;
+  font-size: 12px;
+}
+.btn-primary {
+  background: #6b5bff;
+  color: #fff;
+  border-color: #6b5bff;
+}
+.btn-primary:hover {
+  background: #7d6fff;
+}
+.btn-secondary {
+  background: #161a23;
+  color: #eef0f4;
+  border-color: #232936;
+}
+.btn-secondary:hover {
+  border-color: #2c3242;
+  background: #1a1f2a;
+}
+
+/* Card */
+.card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 10px;
+}
+
+.skeleton-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sk-line {
+  height: 56px;
+  background: #1a1f2a;
+  border-radius: 6px;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.alert-error {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #f38288;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.empty-state {
+  padding: 56px 20px;
+  text-align: center;
+}
+.empty-title {
+  color: #7a8299;
+  font-size: 13px;
+}
+
+/* Form card */
+.form-card {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.form-head {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #c8ccd6;
+}
+.form-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+/* Table */
+.table-card {
+  overflow: hidden;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table thead th {
+  background: #1a1f2a;
+  border-bottom: 1px solid #232936;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+  padding: 10px 18px;
+}
+.data-table tbody td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #232936;
+  font-size: 13px;
+  color: #c8ccd6;
+  vertical-align: middle;
+}
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.row {
+  transition: background 0.12s ease;
+}
+.row:hover {
+  background: rgba(107, 91, 255, 0.04);
+}
+
+.t-strong {
+  color: #eef0f4;
+  font-weight: 500;
+}
+.t-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #c8ccd6;
+}
+.t-muted {
+  color: #7a8299;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.link-btn {
+  background: transparent;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+.link-accent {
+  color: #6b5bff;
+}
+.link-accent:hover {
+  color: #8a7dff;
+}
+.link-ok {
+  color: #4dd39a;
+}
+.link-ok:hover {
+  color: #6fdfac;
+}
+.link-danger {
+  color: #f38288;
+}
+.link-danger:hover {
+  color: #f59ba0;
+}
+.link-muted {
+  color: #7a8299;
+}
+.link-muted:hover {
+  color: #c8ccd6;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  text-transform: capitalize;
+}
+.badge-ok {
+  background: rgba(77, 211, 154, 0.12);
+  color: #4dd39a;
+  border-color: rgba(77, 211, 154, 0.25);
+}
+.badge-warn {
+  background: rgba(245, 166, 35, 0.12);
+  color: #f5a623;
+  border-color: rgba(245, 166, 35, 0.25);
+}
+.badge-danger {
+  background: rgba(243, 130, 136, 0.12);
+  color: #f38288;
+  border-color: rgba(243, 130, 136, 0.25);
+}
+.badge-accent {
+  background: rgba(107, 91, 255, 0.12);
+  color: #9b8eff;
+  border-color: rgba(107, 91, 255, 0.25);
+}
+.badge-neutral {
+  background: #1a1f2a;
+  color: #c8ccd6;
+  border-color: #232936;
+}
+</style>

@@ -2,15 +2,16 @@
   <div class="billing-page">
     <!-- Header -->
     <div class="page-header">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <h1 class="page-title">Billing & Subscription</h1>
-        <p class="page-subtitle">Manage your plan, view transactions and invoices.</p>
+      <div class="page-header-inner">
+        <div class="eyebrow">Subscription · billing · invoices</div>
+        <h1 class="page-title">Billing</h1>
+        <p class="page-subtitle">Plan, invoices, payment history and seat usage for your workspace.</p>
       </div>
     </div>
 
-    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="page-body">
       <!-- Loading -->
-      <div v-if="loading" class="space-y-6">
+      <div v-if="loading" class="space-stack">
         <div class="skeleton skeleton-lg"></div>
         <div class="skeleton skeleton-md"></div>
         <div class="skeleton skeleton-md"></div>
@@ -18,89 +19,148 @@
 
       <!-- Error -->
       <div v-else-if="error" class="error-banner">
-        <p class="font-medium">Failed to load billing information</p>
-        <p class="text-sm mt-1">{{ error }}</p>
+        <p class="error-title">Failed to load billing information</p>
+        <p class="error-text">{{ error }}</p>
         <button class="retry-btn" @click="loadAll">Retry</button>
       </div>
 
       <template v-else>
-        <!-- Current Plan Card -->
-        <section class="card mb-6">
-          <div class="card-header">
-            <h2 class="card-title">Current Plan</h2>
-            <span
-              v-if="subscription"
-              class="status-badge"
-              :class="subscriptionStatusClass"
-            >
-              {{ subscription.status }}
-            </span>
-          </div>
+        <!-- Top grid: Current plan + Payment / Auto-renew -->
+        <div class="top-grid">
+          <!-- Current Plan Card -->
+          <section class="card">
+            <div class="section-head">
+              <h2 class="section-title">Current plan</h2>
+              <span
+                v-if="subscription"
+                class="status-badge"
+                :class="subscriptionStatusClass"
+              >
+                {{ subscription.status }}
+              </span>
+            </div>
 
-          <div v-if="subscription" class="card-body">
-            <div class="plan-details-grid">
-              <!-- Plan name & price -->
-              <div>
-                <div class="plan-name">{{ subscription.plan?.name ?? 'N/A' }}</div>
-                <div class="plan-price-line">
-                  <span class="plan-price">${{ subscription.price_at_subscription ?? subscription.plan?.price ?? '0' }}</span>
-                  <span class="plan-cycle">/ {{ subscription.billing_cycle ?? subscription.plan?.billing_cycle ?? 'month' }}</span>
+            <div v-if="subscription" class="plan-hero">
+              <div class="plan-hero-row">
+                <div>
+                  <div class="plan-eyebrow">OrbitHR · {{ subscription.plan?.name ?? 'Plan' }}</div>
+                  <div class="plan-amount">
+                    <span class="plan-amount-value">${{ subscription.price_at_subscription ?? subscription.plan?.price ?? '0' }}</span>
+                    <span class="plan-amount-cycle">/ {{ subscription.billing_cycle ?? subscription.plan?.billing_cycle ?? 'mo' }}</span>
+                  </div>
+                  <div class="plan-amount-note">
+                    Up to {{ subscription.plan?.max_users ?? '—' }} seats · billed {{ subscription.billing_cycle ?? subscription.plan?.billing_cycle ?? 'monthly' }}
+                  </div>
                 </div>
               </div>
 
-              <!-- Meta info -->
-              <div class="plan-meta-grid">
-                <div class="meta-block">
-                  <span class="meta-label">Billing cycle</span>
-                  <span class="meta-value">{{ subscription.billing_cycle ?? subscription.plan?.billing_cycle ?? '-' }}</span>
+              <!-- Meta features -->
+              <div class="plan-features-grid">
+                <div v-if="subscription.expires_at" class="feature-row">
+                  <span class="feature-icon ok">✓</span>
+                  <span class="feature-text">Renews {{ formatDate(subscription.expires_at) }}</span>
                 </div>
-                <div class="meta-block">
-                  <span class="meta-label">Max users</span>
-                  <span class="meta-value">{{ subscription.plan?.max_users ?? '-' }}</span>
+                <div v-if="subscription.next_billing_date" class="feature-row">
+                  <span class="feature-icon ok">✓</span>
+                  <span class="feature-text">Next billing · {{ formatDate(subscription.next_billing_date) }}</span>
                 </div>
-                <div class="meta-block">
-                  <span class="meta-label">Active users</span>
-                  <span class="meta-value">{{ subscription.active_users_count ?? '-' }}</span>
+                <div class="feature-row">
+                  <span class="feature-icon ok">✓</span>
+                  <span class="feature-text">{{ subscription.active_users_count ?? 0 }} active users</span>
                 </div>
-                <div v-if="subscription.expires_at" class="meta-block">
-                  <span class="meta-label">Expires</span>
-                  <span class="meta-value">{{ formatDate(subscription.expires_at) }}</span>
+                <div v-if="subscription.is_on_trial" class="feature-row">
+                  <span class="feature-icon warn">⏱</span>
+                  <span class="feature-text trial-text">{{ subscription.trial_days_remaining }} days trial remaining</span>
                 </div>
-                <div v-if="subscription.next_billing_date" class="meta-block">
-                  <span class="meta-label">Next billing</span>
-                  <span class="meta-value">{{ formatDate(subscription.next_billing_date) }}</span>
-                </div>
-                <div v-if="subscription.is_on_trial" class="meta-block">
-                  <span class="meta-label">Trial ends</span>
-                  <span class="meta-value trial-text">
-                    {{ subscription.trial_days_remaining }} days remaining
-                  </span>
+                <div class="feature-row">
+                  <span class="feature-icon ok">✓</span>
+                  <span class="feature-text">{{ activeModules.length }} active modules</span>
                 </div>
               </div>
             </div>
+            <div v-else class="empty-plan">
+              <p>No active subscription found.</p>
+            </div>
+
+            <div v-if="subscription" class="seat-section">
+              <div class="seat-head">Seat usage</div>
+              <div class="seat-line">
+                <span class="seat-label">Seats used</span>
+                <span class="seat-value">
+                  <strong>{{ subscription.active_users_count ?? 0 }}</strong> / {{ subscription.plan?.max_users ?? '—' }}
+                </span>
+              </div>
+              <div class="progress-track">
+                <div
+                  class="progress-fill"
+                  :style="{ width: seatPercent + '%' }"
+                ></div>
+              </div>
+              <div class="seat-note">{{ seatRemaining }} seats remaining</div>
+            </div>
 
             <!-- Actions -->
-            <div class="plan-actions">
+            <div v-if="subscription" class="plan-actions">
               <button
                 v-if="subscription.is_active && !subscription.is_cancelled"
                 class="btn-primary"
                 @click="showUpgradePlans = !showUpgradePlans"
               >
-                {{ showUpgradePlans ? 'Hide Plans' : 'Upgrade Plan' }}
+                {{ showUpgradePlans ? 'Hide plans' : 'Upgrade plan' }}
               </button>
               <button
                 v-if="subscription.is_active && !subscription.is_cancelled"
                 class="btn-danger"
                 @click="showCancelModal = true"
               >
-                Cancel Subscription
+                Cancel subscription
               </button>
             </div>
-          </div>
-          <div v-else class="card-body">
-            <p class="text-muted">No active subscription found.</p>
-          </div>
-        </section>
+          </section>
+
+          <!-- Payment / Auto-renew -->
+          <section class="card">
+            <div class="section-head">
+              <h2 class="section-title">Payment method</h2>
+            </div>
+
+            <div class="payment-card">
+              <div class="payment-card-bg"></div>
+              <div class="payment-card-inner">
+                <div class="payment-row-top">
+                  <div class="payment-bank">PRIMARY</div>
+                  <div class="payment-card-icon">▭</div>
+                </div>
+                <div class="payment-card-num">•••• •••• •••• ••••</div>
+                <div class="payment-row-bottom">
+                  <span>{{ subscription?.plan?.name?.toUpperCase() ?? 'WORKSPACE' }}</span>
+                  <span v-if="subscription?.next_billing_date">
+                    NEXT {{ formatShortDate(subscription.next_billing_date) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn-secondary btn-full" disabled>+ Add payment method</button>
+
+            <div class="auto-renew">
+              <div class="auto-renew-head">Auto-renew</div>
+              <div class="auto-renew-row">
+                <div class="auto-renew-text">
+                  <template v-if="subscription?.expires_at">
+                    Renews {{ formatDate(subscription.expires_at) }} · same plan
+                  </template>
+                  <template v-else>
+                    Auto-renew status unavailable
+                  </template>
+                </div>
+                <span class="auto-renew-badge" :class="subscription?.is_active && !subscription?.is_cancelled ? 'on' : 'off'">
+                  {{ subscription?.is_active && !subscription?.is_cancelled ? 'On' : 'Off' }}
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
 
         <!-- Upgrade Plans Section (collapsible) -->
         <Transition
@@ -111,10 +171,12 @@
           leave-from-class="opacity-100 translate-y-0"
           leave-to-class="opacity-0 -translate-y-2"
         >
-          <section v-if="showUpgradePlans" class="mb-6">
-            <h2 class="section-title">Available Plans</h2>
-            <div v-if="plansLoading" class="flex gap-4">
-              <div v-for="i in 3" :key="i" class="skeleton skeleton-card flex-1"></div>
+          <section v-if="showUpgradePlans" class="card upgrade-section">
+            <div class="section-head">
+              <h2 class="section-title">Available plans</h2>
+            </div>
+            <div v-if="plansLoading" class="plans-grid">
+              <div v-for="i in 3" :key="i" class="skeleton skeleton-card"></div>
             </div>
             <div v-else class="plans-grid">
               <div
@@ -139,16 +201,14 @@
                 <!-- Features -->
                 <ul v-if="plan.features && plan.features.length > 0" class="plan-features-list">
                   <li v-for="feature in plan.features" :key="feature.slug">
-                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" class="check-icon">
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                    </svg>
+                    <span class="check-icon">✓</span>
                     {{ feature.name }}
                   </li>
                 </ul>
 
                 <!-- Modules -->
                 <div v-if="plan.modules && plan.modules.length > 0" class="plan-modules">
-                  <span class="plan-modules-label">Modules:</span>
+                  <span class="plan-modules-label">Modules</span>
                   <span v-for="mod in plan.modules" :key="mod.slug" class="plan-module-tag">{{ mod.name }}</span>
                 </div>
 
@@ -157,7 +217,7 @@
                   class="btn-select-plan"
                   @click="selectPlanForUpgrade(plan)"
                 >
-                  Select Plan
+                  Select plan
                 </button>
                 <div v-else class="current-plan-label">Your current plan</div>
               </div>
@@ -166,61 +226,56 @@
         </Transition>
 
         <!-- Active Modules -->
-        <section v-if="subscription?.enabled_modules && activeModules.length > 0" class="card mb-6">
-          <div class="card-header">
-            <h2 class="card-title">Active Modules</h2>
+        <section v-if="subscription?.enabled_modules && activeModules.length > 0" class="card">
+          <div class="section-head">
+            <h2 class="section-title">Active modules</h2>
             <span class="module-count">{{ activeModules.length }} active</span>
           </div>
-          <div class="card-body">
-            <div class="modules-grid">
-              <div v-for="mod in activeModules" :key="mod.slug" class="module-item">
-                <div class="module-info">
-                  <span class="module-name">{{ mod.name }}</span>
-                  <span class="module-status-badge active">Active</span>
-                </div>
-              </div>
+          <div class="modules-grid">
+            <div v-for="mod in activeModules" :key="mod.slug" class="module-item">
+              <span class="module-name">{{ mod.name }}</span>
+              <span class="module-status-badge active">Active</span>
             </div>
           </div>
         </section>
 
         <!-- Transaction History -->
-        <section class="card mb-6">
-          <div class="card-header">
-            <h2 class="card-title">Transaction History</h2>
+        <section class="card card-flush">
+          <div class="section-head section-head-padded">
+            <h2 class="section-title">Recent invoices</h2>
           </div>
-          <div class="card-body p-0">
-            <div v-if="transactions.length === 0" class="empty-state">
-              <p>No transactions found.</p>
+
+          <div v-if="transactions.length === 0" class="empty-state">
+            <p>No transactions found.</p>
+          </div>
+
+          <div v-else>
+            <div class="invoice-table-head">
+              <div>Reference</div>
+              <div>Date</div>
+              <div>Description</div>
+              <div class="align-right">Amount</div>
+              <div>Status</div>
             </div>
-            <div v-else class="table-wrapper">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="tx in transactions" :key="tx.id">
-                    <td>{{ formatDate(tx.created_at) }}</td>
-                    <td>
-                      <span class="type-badge" :class="'type-' + tx.type">
-                        {{ formatTransactionType(tx.type) }}
-                      </span>
-                    </td>
-                    <td class="amount-cell">
-                      {{ formatCurrency(tx.amount, tx.currency) }}
-                    </td>
-                    <td>
-                      <span class="tx-status-badge" :class="'tx-' + tx.status">
-                        {{ tx.status }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div
+              v-for="(tx, i) in transactions"
+              :key="tx.id"
+              class="invoice-row"
+              :class="{ 'invoice-row-last': i === transactions.length - 1 }"
+            >
+              <div class="invoice-ref">{{ tx.transaction_id ?? tx.id }}</div>
+              <div class="invoice-date">{{ formatDate(tx.created_at) }}</div>
+              <div class="invoice-desc">
+                <span class="type-badge" :class="'type-' + tx.type">
+                  {{ formatTransactionType(tx.type) }}
+                </span>
+              </div>
+              <div class="invoice-amount">{{ formatCurrency(tx.amount, tx.currency) }}</div>
+              <div>
+                <span class="tx-status-badge" :class="'tx-' + tx.status">
+                  {{ tx.status }}
+                </span>
+              </div>
             </div>
 
             <!-- Pagination -->
@@ -261,13 +316,11 @@
         <div v-if="showCancelModal" class="modal-overlay" @click.self="showCancelModal = false">
           <div class="cancel-modal">
             <div class="cancel-modal-header">
-              <h3 class="cancel-modal-title">Cancel Subscription</h3>
+              <h3 class="cancel-modal-title">Cancel subscription</h3>
             </div>
             <div class="cancel-modal-body">
               <div class="warning-banner">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" class="warning-icon">
-                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                </svg>
+                <span class="warning-icon">!</span>
                 <div>
                   <p class="warning-title">This action cannot be undone</p>
                   <p class="warning-text">
@@ -279,14 +332,14 @@
             </div>
             <div class="cancel-modal-footer">
               <button class="btn-cancel-action" @click="showCancelModal = false">
-                Keep Subscription
+                Keep subscription
               </button>
               <button
                 class="btn-confirm-cancel"
                 :disabled="cancelling"
                 @click="handleCancelSubscription"
               >
-                {{ cancelling ? 'Cancelling...' : 'Yes, Cancel' }}
+                {{ cancelling ? 'Cancelling…' : 'Yes, cancel' }}
               </button>
             </div>
           </div>
@@ -366,6 +419,20 @@ const subscriptionStatusClass = computed(() => {
   return ''
 })
 
+const seatPercent = computed(() => {
+  const max = subscription.value?.plan?.max_users
+  const used = subscription.value?.active_users_count
+  if (!max || !used) return 0
+  return Math.min(100, Math.round((Number(used) / Number(max)) * 100))
+})
+
+const seatRemaining = computed(() => {
+  const max = subscription.value?.plan?.max_users
+  const used = subscription.value?.active_users_count
+  if (!max) return 0
+  return Math.max(0, Number(max) - Number(used ?? 0))
+})
+
 function showToast(message: string, type: 'success' | 'error' = 'success') {
   toast.message = message
   toast.type = type
@@ -380,6 +447,14 @@ function formatDate(dateStr: string | null): string {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+  })
+}
+
+function formatShortDate(dateStr: string | null): string {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: '2-digit',
+    year: '2-digit',
   })
 }
 
@@ -500,180 +575,331 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ── CSS Variables ─────────────────────────────────────── */
+/* Design tokens scoped to this page */
 .billing-page {
-  --bg: #0c0e14;
-  --surface: #141720;
+  --bg: #0d0f17;
+  --surface: #161a23;
   --surface2: #1c2030;
-  --surface3: #222840;
-  --accent: #4f7eff;
-  --green: #36d399;
-  --yellow: #f9a825;
-  --red: #ff6b6b;
-  --purple: #9b6eff;
-  --text: #e8eaf0;
-  --muted: #6b7280;
+  --surface3: #232936;
+  --border: #232936;
+  --border-hi: #2c3344;
+  --accent: #6b5bff;
+  --accent-soft: rgba(107, 91, 255, 0.12);
+  --green: #4dd39a;
+  --red: #f38288;
+  --yellow: #f5a623;
+  --purple: #b28dff;
+  --text: #eef0f4;
+  --muted: #7a8299;
+  --dim: #b0b6c5;
 
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
+  font-feature-settings: 'ss01' on;
 }
 
-/* ── Header ────────────────────────────────────────────── */
+/* ── Page header ─────────────────────────── */
 .page-header {
-  border-bottom: 1px solid var(--surface3);
-  background: var(--surface);
-  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.page-header-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 26px 24px 22px;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .page-title {
-  font-size: 1.75rem;
-  font-weight: 700;
+  margin-top: 6px;
+  font-family: 'Instrument Serif', serif;
+  font-size: 38px;
+  letter-spacing: -0.02em;
   color: var(--text);
+  line-height: 1.05;
 }
 
 .page-subtitle {
-  margin-top: 0.25rem;
-  color: var(--muted);
-  font-size: 0.9375rem;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--dim);
+  max-width: 560px;
 }
 
-/* ── Cards ─────────────────────────────────────────────── */
+/* ── Body ──────────────────────────────── */
+.page-body {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 24px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.space-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Cards ─────────────────────────────── */
 .card {
   background: var(--surface);
-  border: 1px solid var(--surface3);
-  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.card-flush {
+  padding: 0;
   overflow: hidden;
 }
 
-.card-header {
+.section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--surface3);
+  margin-bottom: 14px;
 }
 
-.card-title {
-  font-size: 1rem;
+.section-head-padded {
+  padding: 14px 20px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-title {
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Top grid ──────────────────────────── */
+.top-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 1000px) {
+  .top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Plan hero ──────────────────────────── */
+.plan-hero {
+  padding: 18px;
+  background: linear-gradient(135deg, var(--accent-soft), transparent 80%);
+  border: 1px solid rgba(107, 91, 255, 0.35);
+  border-radius: 12px;
+}
+
+.plan-hero-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.plan-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.plan-amount {
+  margin-top: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.plan-amount-value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1;
+}
+
+.plan-amount-cycle {
+  font-size: 13px;
+  color: var(--dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.plan-amount-note {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.plan-features-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.feature-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
   color: var(--text);
 }
 
-.card-body {
-  padding: 1.5rem;
+.feature-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
-.card-body.p-0 {
-  padding: 0;
-}
-
-/* ── Status Badges ─────────────────────────────────────── */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.status-active {
-  background: rgba(54, 211, 153, 0.15);
+.feature-icon.ok {
+  background: rgba(77, 211, 154, 0.18);
   color: var(--green);
 }
 
-.status-trial {
-  background: rgba(249, 168, 37, 0.15);
+.feature-icon.warn {
+  background: rgba(245, 166, 35, 0.18);
   color: var(--yellow);
 }
 
-.status-danger {
-  background: rgba(255, 107, 107, 0.15);
-  color: var(--red);
-}
-
-/* ── Current Plan ──────────────────────────────────────── */
-.plan-details-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.plan-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.plan-price-line {
-  margin-top: 0.25rem;
-  display: flex;
-  align-items: baseline;
-  gap: 0.25rem;
-}
-
-.plan-price {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.plan-cycle {
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.plan-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem;
-}
-
-.meta-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.meta-label {
-  font-size: 0.75rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.meta-value {
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--text);
+.feature-text {
+  font-size: 12px;
 }
 
 .trial-text {
   color: var(--yellow);
 }
 
-.plan-actions {
-  margin-top: 1.5rem;
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+.empty-plan {
+  padding: 18px;
+  font-size: 13px;
+  color: var(--muted);
+  border: 1px dashed var(--border-hi);
+  border-radius: 12px;
 }
 
-.text-muted {
+/* ── Status badges ─────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.status-active {
+  background: rgba(77, 211, 154, 0.15);
+  color: var(--green);
+}
+
+.status-trial {
+  background: rgba(245, 166, 35, 0.15);
+  color: var(--yellow);
+}
+
+.status-danger {
+  background: rgba(243, 130, 136, 0.15);
+  color: var(--red);
+}
+
+/* ── Seat usage ────────────────────────── */
+.seat-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.seat-head {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 10px;
+}
+
+.seat-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.seat-value {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.seat-value strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.progress-track {
+  margin-top: 8px;
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.seat-note {
+  margin-top: 8px;
+  font-size: 11px;
   color: var(--muted);
 }
 
-/* ── Buttons ───────────────────────────────────────────── */
+/* ── Plan actions ──────────────────────── */
+.plan-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ── Buttons ───────────────────────────── */
 .btn-primary {
-  padding: 0.5rem 1.25rem;
-  font-size: 0.875rem;
+  padding: 9px 18px;
+  font-size: 13px;
   font-weight: 600;
   color: #fff;
   background: var(--accent);
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   cursor: pointer;
   transition: opacity 0.15s;
 }
@@ -682,43 +908,175 @@ onMounted(() => {
   opacity: 0.9;
 }
 
+.btn-secondary {
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--border-hi);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-full {
+  width: 100%;
+  margin-top: 12px;
+}
+
 .btn-danger {
-  padding: 0.5rem 1.25rem;
-  font-size: 0.875rem;
+  padding: 9px 18px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--red);
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  border-radius: 0.5rem;
+  background: rgba(243, 130, 136, 0.1);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.15s;
 }
 
 .btn-danger:hover {
-  background: rgba(255, 107, 107, 0.2);
+  background: rgba(243, 130, 136, 0.2);
 }
 
-/* ── Section title ─────────────────────────────────────── */
-.section-title {
-  font-size: 1.125rem;
+/* ── Payment card ──────────────────────── */
+.payment-card {
+  position: relative;
+  padding: 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0a0a14, #1a1530 70%);
+  border: 1px solid var(--border);
+  height: 130px;
+  overflow: hidden;
+}
+
+.payment-card-bg {
+  position: absolute;
+  right: -30px;
+  top: -30px;
+  width: 120px;
+  height: 120px;
+  border-radius: 60px;
+  background: rgba(107, 91, 255, 0.25);
+}
+
+.payment-card-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.payment-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payment-bank {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--dim);
   font-weight: 600;
-  color: var(--text);
-  margin-bottom: 1rem;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-/* ── Plans Grid ────────────────────────────────────────── */
+.payment-card-icon {
+  font-size: 18px;
+  color: #fff;
+}
+
+.payment-card-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  letter-spacing: 0.16em;
+  color: var(--text);
+}
+
+.payment-row-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Auto-renew ────────────────────────── */
+.auto-renew {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.auto-renew-head {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 10px;
+}
+
+.auto-renew-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auto-renew-text {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.auto-renew-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.auto-renew-badge.on {
+  background: rgba(77, 211, 154, 0.15);
+  color: var(--green);
+}
+
+.auto-renew-badge.off {
+  background: rgba(243, 130, 136, 0.15);
+  color: var(--red);
+}
+
+/* ── Available plans ───────────────────── */
+.upgrade-section {
+  padding: 18px 20px;
+}
+
 .plans-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
 }
 
 .plan-card {
   position: relative;
   background: var(--surface);
-  border: 1px solid var(--surface3);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   transition: border-color 0.15s;
@@ -734,131 +1092,139 @@ onMounted(() => {
 
 .plan-current {
   border-color: var(--green);
-  opacity: 0.7;
+  opacity: 0.85;
 }
 
 .popular-badge {
   position: absolute;
-  top: -0.5rem;
-  right: 1rem;
+  top: -8px;
+  right: 14px;
   background: var(--accent);
   color: #fff;
-  font-size: 0.6875rem;
+  font-size: 10px;
   font-weight: 700;
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
+  padding: 3px 10px;
+  border-radius: 999px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .current-badge {
   position: absolute;
-  top: -0.5rem;
-  right: 1rem;
+  top: -8px;
+  right: 14px;
   background: var(--green);
   color: #0c0e14;
-  font-size: 0.6875rem;
+  font-size: 10px;
   font-weight: 700;
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
+  padding: 3px 10px;
+  border-radius: 999px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .plan-card-name {
-  font-size: 1.125rem;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
 }
 
 .plan-card-desc {
-  margin-top: 0.25rem;
-  font-size: 0.8125rem;
-  color: var(--muted);
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--dim);
   line-height: 1.5;
 }
 
 .plan-card-price {
-  margin-top: 0.75rem;
+  margin-top: 10px;
   display: flex;
   align-items: baseline;
-  gap: 0.25rem;
+  gap: 4px;
 }
 
 .price-amount {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
   color: var(--text);
+  letter-spacing: -0.02em;
 }
 
 .price-cycle {
-  font-size: 0.8125rem;
-  color: var(--muted);
+  font-size: 12px;
+  color: var(--dim);
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .plan-card-meta {
-  margin-top: 0.5rem;
+  margin-top: 6px;
   display: flex;
-  gap: 1rem;
-  font-size: 0.8125rem;
+  gap: 12px;
+  font-size: 11.5px;
   color: var(--muted);
 }
 
 .plan-features-list {
-  margin-top: 1rem;
+  margin-top: 14px;
   list-style: none;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 6px;
   flex: 1;
 }
 
 .plan-features-list li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8125rem;
+  gap: 8px;
+  font-size: 12px;
   color: var(--text);
 }
 
 .check-icon {
   color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
 .plan-modules {
-  margin-top: 0.75rem;
+  margin-top: 12px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.375rem;
+  gap: 6px;
 }
 
 .plan-modules-label {
-  font-size: 0.75rem;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
 }
 
 .plan-module-tag {
-  font-size: 0.6875rem;
-  padding: 0.125rem 0.5rem;
-  background: var(--surface3);
+  font-size: 10.5px;
+  padding: 2px 8px;
+  background: var(--surface2);
   color: var(--text);
-  border-radius: 9999px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
 }
 
 .btn-select-plan {
-  margin-top: 1rem;
+  margin-top: 14px;
   width: 100%;
-  padding: 0.5rem;
-  font-size: 0.875rem;
+  padding: 9px;
+  font-size: 13px;
   font-weight: 600;
   color: #fff;
   background: var(--accent);
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   cursor: pointer;
   transition: opacity 0.15s;
 }
@@ -868,186 +1234,212 @@ onMounted(() => {
 }
 
 .current-plan-label {
-  margin-top: 1rem;
+  margin-top: 14px;
   text-align: center;
-  font-size: 0.8125rem;
+  font-size: 12px;
   color: var(--green);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-/* ── Active Modules ────────────────────────────────────── */
+/* ── Active modules ─────────────────────── */
 .module-count {
-  font-size: 0.75rem;
+  font-size: 11px;
   color: var(--green);
-  font-weight: 500;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
 }
 
 .modules-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 0.75rem;
+  gap: 10px;
 }
 
 .module-item {
-  padding: 0.75rem 1rem;
+  padding: 10px 14px;
   background: var(--surface2);
-  border-radius: 0.5rem;
-  border: 1px solid var(--surface3);
-}
-
-.module-info {
+  border-radius: 8px;
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .module-name {
-  font-size: 0.875rem;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text);
 }
 
 .module-status-badge {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  text-transform: capitalize;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .module-status-badge.active {
-  background: rgba(54, 211, 153, 0.15);
+  background: rgba(77, 211, 154, 0.15);
   color: var(--green);
 }
 
-/* ── Transaction Table ─────────────────────────────────── */
+/* ── Invoice table ─────────────────────── */
 .empty-state {
-  padding: 2rem;
+  padding: 32px;
   text-align: center;
   color: var(--muted);
+  font-size: 13px;
 }
 
-.table-wrapper {
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.data-table th {
-  text-align: left;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.75rem;
+.invoice-table-head {
+  display: grid;
+  grid-template-columns: 170px 130px 1fr 140px 100px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.015);
+  font-size: 10px;
   font-weight: 600;
-  color: var(--muted);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--surface3);
-  background: var(--surface2);
+  color: var(--muted);
+  gap: 12px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-.data-table td {
-  padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--surface3);
+.invoice-row {
+  display: grid;
+  grid-template-columns: 170px 130px 1fr 140px 100px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  gap: 12px;
+  transition: background 0.12s;
+}
+
+.invoice-row:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.invoice-row-last {
+  border-bottom: none;
+}
+
+.invoice-ref {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: var(--accent);
+}
+
+.invoice-date {
+  font-size: 11.5px;
+  color: var(--dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.invoice-desc {
+  font-size: 12.5px;
   color: var(--text);
 }
 
-.data-table tbody tr:hover {
-  background: var(--surface2);
+.invoice-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+  text-align: right;
 }
 
-.data-table tbody tr:last-child td {
-  border-bottom: none;
+.align-right {
+  text-align: right;
 }
 
 .type-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 500;
   text-transform: capitalize;
 }
 
 .type-registration {
-  background: rgba(79, 126, 255, 0.15);
+  background: rgba(107, 91, 255, 0.15);
   color: var(--accent);
 }
 
 .type-module_purchase {
-  background: rgba(155, 110, 255, 0.15);
+  background: rgba(178, 141, 255, 0.15);
   color: var(--purple);
 }
 
 .type-plan_upgrade {
-  background: rgba(54, 211, 153, 0.15);
+  background: rgba(77, 211, 154, 0.15);
   color: var(--green);
 }
 
 .type-renewal {
-  background: rgba(249, 168, 37, 0.15);
+  background: rgba(245, 166, 35, 0.15);
   color: var(--yellow);
-}
-
-.amount-cell {
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
 }
 
 .tx-status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .tx-completed {
-  background: rgba(54, 211, 153, 0.15);
+  background: rgba(77, 211, 154, 0.15);
   color: var(--green);
 }
 
 .tx-failed {
-  background: rgba(255, 107, 107, 0.15);
+  background: rgba(243, 130, 136, 0.15);
   color: var(--red);
 }
 
 .tx-pending {
-  background: rgba(249, 168, 37, 0.15);
+  background: rgba(245, 166, 35, 0.15);
   color: var(--yellow);
 }
 
 .tx-refunded {
-  background: rgba(155, 110, 255, 0.15);
+  background: rgba(178, 141, 255, 0.15);
   color: var(--purple);
 }
 
-/* ── Pagination ────────────────────────────────────────── */
+/* ── Pagination ────────────────────────── */
 .pagination {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-top: 1px solid var(--surface3);
+  gap: 14px;
+  padding: 14px;
+  border-top: 1px solid var(--border);
 }
 
 .page-btn {
-  padding: 0.375rem 0.875rem;
-  font-size: 0.8125rem;
+  padding: 6px 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text);
   background: var(--surface2);
-  border: 1px solid var(--surface3);
-  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color 0.15s;
 }
 
 .page-btn:hover:not(:disabled) {
@@ -1060,11 +1452,12 @@ onMounted(() => {
 }
 
 .page-info {
-  font-size: 0.8125rem;
+  font-size: 11.5px;
   color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
 }
 
-/* ── Cancel Modal ──────────────────────────────────────── */
+/* ── Cancel modal ──────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1074,93 +1467,101 @@ onMounted(() => {
   justify-content: center;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
-  padding: 1rem;
+  padding: 16px;
 }
 
 .cancel-modal {
   background: var(--surface);
-  border: 1px solid var(--surface3);
-  border-radius: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
   width: 100%;
   max-width: 460px;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
 }
 
 .cancel-modal-header {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--surface3);
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
 }
 
 .cancel-modal-title {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-family: 'Instrument Serif', serif;
+  font-size: 22px;
+  letter-spacing: -0.01em;
   color: var(--red);
 }
 
 .cancel-modal-body {
-  padding: 1.5rem;
+  padding: 18px 20px;
 }
 
 .warning-banner {
   display: flex;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: rgba(255, 107, 107, 0.08);
-  border: 1px solid rgba(255, 107, 107, 0.2);
-  border-radius: 0.5rem;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.25);
+  border-radius: 10px;
 }
 
 .warning-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(243, 130, 136, 0.2);
   color: var(--red);
+  font-weight: 700;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
-  margin-top: 0.125rem;
 }
 
 .warning-title {
-  font-size: 0.875rem;
+  font-size: 13px;
   font-weight: 600;
   color: var(--red);
 }
 
 .warning-text {
-  margin-top: 0.25rem;
-  font-size: 0.8125rem;
-  color: var(--muted);
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--dim);
   line-height: 1.6;
 }
 
 .cancel-modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--surface3);
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
 }
 
 .btn-cancel-action {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+  padding: 8px 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text);
   background: var(--surface2);
-  border: 1px solid var(--surface3);
-  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color 0.15s;
 }
 
 .btn-cancel-action:hover {
-  border-color: var(--muted);
+  border-color: var(--border-hi);
 }
 
 .btn-confirm-cancel {
-  padding: 0.5rem 1.25rem;
-  font-size: 0.875rem;
+  padding: 8px 18px;
+  font-size: 13px;
   font-weight: 600;
   color: #fff;
   background: var(--red);
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   cursor: pointer;
   transition: opacity 0.15s;
 }
@@ -1174,36 +1575,36 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-/* ── Toast ─────────────────────────────────────────────── */
+/* ── Toast ─────────────────────────────── */
 .toast {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  bottom: 24px;
+  right: 24px;
   z-index: 60;
-  padding: 0.75rem 1.25rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 500;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .toast-success {
-  background: rgba(54, 211, 153, 0.15);
+  background: rgba(77, 211, 154, 0.15);
   color: var(--green);
-  border: 1px solid rgba(54, 211, 153, 0.3);
+  border: 1px solid rgba(77, 211, 154, 0.3);
 }
 
 .toast-error {
-  background: rgba(255, 107, 107, 0.15);
+  background: rgba(243, 130, 136, 0.15);
   color: var(--red);
-  border: 1px solid rgba(255, 107, 107, 0.3);
+  border: 1px solid rgba(243, 130, 136, 0.3);
 }
 
-/* ── Skeleton Loading ──────────────────────────────────── */
+/* ── Skeleton loading ──────────────────── */
 .skeleton {
   background: var(--surface);
-  border: 1px solid var(--surface3);
-  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -1220,8 +1621,7 @@ onMounted(() => {
 }
 
 @keyframes pulse {
-  0%,
-  100% {
+  0%, 100% {
     opacity: 1;
   }
   50% {
@@ -1229,29 +1629,57 @@ onMounted(() => {
   }
 }
 
-/* ── Error Banner ──────────────────────────────────────── */
+/* ── Error banner ──────────────────────── */
 .error-banner {
-  padding: 1.25rem;
-  background: rgba(255, 107, 107, 0.08);
-  border: 1px solid rgba(255, 107, 107, 0.25);
-  border-radius: 0.75rem;
+  padding: 18px;
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.25);
+  border-radius: 12px;
   color: var(--red);
 }
 
+.error-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.error-text {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--dim);
+}
+
 .retry-btn {
-  margin-top: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
+  margin-top: 10px;
+  padding: 6px 12px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--red);
-  background: rgba(255, 107, 107, 0.15);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  border-radius: 0.375rem;
+  background: rgba(243, 130, 136, 0.15);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .retry-btn:hover {
-  background: rgba(255, 107, 107, 0.25);
+  background: rgba(243, 130, 136, 0.25);
+}
+
+/* ── Responsive ────────────────────────── */
+@media (max-width: 720px) {
+  .invoice-table-head,
+  .invoice-row {
+    grid-template-columns: 1fr 100px;
+    grid-row-gap: 4px;
+  }
+  .invoice-table-head > div:nth-child(2),
+  .invoice-table-head > div:nth-child(3),
+  .invoice-table-head > div:nth-child(4),
+  .invoice-row > div:nth-child(2),
+  .invoice-row > div:nth-child(3),
+  .invoice-row > div:nth-child(4) {
+    display: none;
+  }
 }
 </style>

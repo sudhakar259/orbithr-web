@@ -55,29 +55,29 @@ async function loadCategories() {
   }
 }
 
-function difficultyColor(level: string) {
+function difficultyClass(level: string) {
   switch (level) {
     case 'beginner':
-      return 'bg-green-900/50 text-green-400'
+      return 'pill-green'
     case 'intermediate':
-      return 'bg-yellow-900/50 text-yellow-400'
+      return 'pill-yellow'
     case 'advanced':
-      return 'bg-red-900/50 text-red-400'
+      return 'pill-red'
     default:
-      return 'bg-gray-700 text-gray-400'
+      return 'pill-muted'
   }
 }
 
-function statusColor(status: string) {
+function statusClass(status: string) {
   switch (status) {
     case 'published':
-      return 'bg-green-900/50 text-green-400'
+      return 'pill-green'
     case 'draft':
-      return 'bg-gray-700 text-gray-400'
+      return 'pill-muted'
     case 'archived':
-      return 'bg-red-900/50 text-red-400'
+      return 'pill-red'
     default:
-      return 'bg-gray-700 text-gray-400'
+      return 'pill-muted'
   }
 }
 
@@ -90,47 +90,32 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <p class="text-gray-400 text-sm">{{ pagination.total }} course(s) found</p>
-      </div>
-      <RouterLink
-        v-if="canCreate"
-        :to="{ name: 'lnd.courses.create' }"
-        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-      >
+  <div class="lnd-courses">
+    <div class="page-toolbar">
+      <p class="page-meta">{{ pagination.total }} course(s) found</p>
+      <RouterLink v-if="canCreate" :to="{ name: 'lnd.courses.create' }" class="btn-primary">
         + New Course
       </RouterLink>
     </div>
 
-    <div class="flex flex-wrap gap-3 mb-6">
+    <div class="filter-row">
       <input
         v-model="filters.q"
         type="text"
         placeholder="Search courses..."
-        class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none w-64"
+        class="input search-input"
       />
-      <select
-        v-model="filters.category_id"
-        class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-      >
+      <select v-model="filters.category_id" class="input">
         <option value="">All Categories</option>
         <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
       </select>
-      <select
-        v-model="filters.difficulty_level"
-        class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-      >
+      <select v-model="filters.difficulty_level" class="input">
         <option value="">All Levels</option>
         <option value="beginner">Beginner</option>
         <option value="intermediate">Intermediate</option>
         <option value="advanced">Advanced</option>
       </select>
-      <select
-        v-model="filters.status"
-        class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-      >
+      <select v-model="filters.status" class="input">
         <option value="">All Status</option>
         <option value="draft">Draft</option>
         <option value="published">Published</option>
@@ -138,85 +123,61 @@ onMounted(() => {
       </select>
     </div>
 
-    <div
-      v-if="error"
-      class="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded-lg mb-4"
-    >
-      {{ error }}
-    </div>
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
 
-    <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div
-        v-for="n in 6"
-        :key="n"
-        class="bg-gray-800 border border-gray-700 rounded-lg p-5 animate-pulse"
-      >
-        <div class="h-4 bg-gray-700 rounded w-3/4 mb-3" />
-        <div class="h-3 bg-gray-700 rounded w-1/2 mb-2" />
-        <div class="h-3 bg-gray-700 rounded w-full" />
+    <div v-if="loading" class="course-grid">
+      <div v-for="n in 6" :key="n" class="course-card skeleton">
+        <div class="course-thumb skeleton-thumb" />
+        <div style="padding: 14px">
+          <div class="skeleton-line w-2-3" />
+          <div class="skeleton-line w-1-2" />
+        </div>
       </div>
     </div>
 
-    <div
-      v-else-if="courses.length"
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-    >
+    <div v-else-if="courses.length" class="course-grid">
       <RouterLink
         v-for="course in courses"
         :key="course.id"
         :to="{ name: 'lnd.courses.show', params: { id: course.id } }"
-        class="bg-gray-800 border border-gray-700 rounded-lg p-5 hover:border-gray-600 transition-colors block"
+        class="course-card"
       >
-        <div class="flex items-start justify-between mb-3">
-          <h3 class="text-white font-semibold text-sm line-clamp-2 flex-1 mr-2">
-            {{ course.title }}
-          </h3>
-          <span
-            :class="statusColor(course.status)"
-            class="text-xs px-2 py-0.5 rounded-full whitespace-nowrap"
-          >
-            {{ course.status }}
-          </span>
+        <div class="course-thumb">
+          <div class="thumb-pattern" />
+          <div class="play-circle">
+            <span class="play-tri" />
+          </div>
+          <div class="thumb-cat">
+            {{ course.category?.name || 'Course' }}
+          </div>
+          <div class="thumb-dur">{{ course.duration_minutes }} min</div>
         </div>
-        <p class="text-gray-400 text-xs mb-3 line-clamp-2">
-          {{ course.short_description || course.description || 'No description' }}
-        </p>
-        <div class="flex items-center gap-2 flex-wrap">
-          <span
-            :class="difficultyColor(course.difficulty_level)"
-            class="text-xs px-2 py-0.5 rounded-full"
-          >
-            {{ course.difficulty_level }}
-          </span>
-          <span class="text-gray-500 text-xs">{{ course.duration_minutes }} min</span>
-          <span
-            v-if="course.is_mandatory"
-            class="bg-purple-900/50 text-purple-400 text-xs px-2 py-0.5 rounded-full"
-          >
-            mandatory
-          </span>
-          <span class="text-gray-500 text-xs ml-auto">{{ course.enrolled_count }} enrolled</span>
-        </div>
-        <div v-if="course.category" class="mt-2">
-          <span class="text-xs text-gray-500">{{ course.category.name }}</span>
+        <div class="course-body">
+          <div class="course-row-top">
+            <h3 class="course-title">{{ course.title }}</h3>
+            <span :class="['pill', statusClass(course.status)]">{{ course.status }}</span>
+          </div>
+          <p class="course-desc">
+            {{ course.short_description || course.description || 'No description' }}
+          </p>
+          <div class="course-tags">
+            <span :class="['pill', difficultyClass(course.difficulty_level)]">
+              {{ course.difficulty_level }}
+            </span>
+            <span v-if="course.is_mandatory" class="pill pill-purple">mandatory</span>
+            <span class="course-enrolled">{{ course.enrolled_count }} enrolled</span>
+          </div>
         </div>
       </RouterLink>
     </div>
 
-    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg px-6 py-12 text-center">
-      <p class="text-gray-400">No courses found.</p>
-    </div>
+    <div v-else class="empty-card">No courses found.</div>
 
-    <div v-if="pagination.last_page > 1" class="flex justify-center gap-2 mt-6">
+    <div v-if="pagination.last_page > 1" class="pagination">
       <button
         v-for="p in pagination.last_page"
         :key="p"
-        :class="
-          p === pagination.current_page
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-        "
-        class="px-3 py-1 rounded text-sm"
+        :class="['page-btn', { active: p === pagination.current_page }]"
         @click="loadCourses(p)"
       >
         {{ p }}
@@ -224,3 +185,319 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.lnd-courses {
+  color: #eef0f4;
+}
+
+.page-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.page-meta {
+  color: #7a8299;
+  font-size: 13px;
+  margin: 0;
+}
+
+.btn-primary {
+  background: #6b5bff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: #5a4be8;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.input {
+  background: #161a23;
+  border: 1px solid #232936;
+  color: #eef0f4;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input:focus {
+  border-color: #6b5bff;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.alert-error {
+  background: rgba(243, 130, 136, 0.12);
+  border: 1px solid rgba(243, 130, 136, 0.4);
+  color: #f38288;
+}
+
+/* Course grid */
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 1024px) {
+  .course-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .course-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.course-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  display: block;
+}
+
+.course-card:hover {
+  border-color: #6b5bff;
+}
+
+.course-thumb {
+  height: 130px;
+  position: relative;
+  background: linear-gradient(145deg, #4d2eaa 0%, #6b5bff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.thumb-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+  background-size: 16px 16px;
+  opacity: 0.6;
+}
+
+.skeleton-thumb {
+  background: #232936;
+}
+
+.play-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 25px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.play-tri {
+  width: 0;
+  height: 0;
+  border-left: 13px solid #fff;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  margin-left: 4px;
+}
+
+.thumb-cat {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 10.5px;
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 999px;
+}
+
+.thumb-dur {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  font-size: 10.5px;
+  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.course-body {
+  padding: 14px;
+}
+
+.course-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.course-title {
+  font-size: 14px;
+  color: #eef0f4;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.005em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.course-desc {
+  font-size: 11.5px;
+  color: #7a8299;
+  margin: 0 0 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.course-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.course-enrolled {
+  font-size: 10.5px;
+  color: #7a8299;
+  margin-left: auto;
+}
+
+/* Pills */
+.pill {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.pill-green {
+  background: rgba(77, 211, 154, 0.14);
+  color: #4dd39a;
+}
+
+.pill-yellow {
+  background: rgba(245, 166, 35, 0.14);
+  color: #f5a623;
+}
+
+.pill-red {
+  background: rgba(243, 130, 136, 0.14);
+  color: #f38288;
+}
+
+.pill-purple {
+  background: rgba(107, 91, 255, 0.16);
+  color: #6b5bff;
+}
+
+.pill-muted {
+  background: rgba(122, 130, 153, 0.16);
+  color: #7a8299;
+}
+
+.empty-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 13px;
+}
+
+/* Skeletons */
+.skeleton-line {
+  height: 12px;
+  background: #232936;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.w-2-3 {
+  width: 66%;
+}
+
+.w-1-2 {
+  width: 50%;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+.page-btn {
+  background: #161a23;
+  border: 1px solid #232936;
+  color: #7a8299;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-btn:hover {
+  border-color: #6b5bff;
+  color: #eef0f4;
+}
+
+.page-btn.active {
+  background: #6b5bff;
+  color: #fff;
+  border-color: #6b5bff;
+}
+</style>

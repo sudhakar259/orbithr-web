@@ -2,9 +2,7 @@
 defineOptions({ name: 'AnnouncementsPage' })
 import { ref, computed, reactive, onMounted } from 'vue'
 import api from '@/services/api'
-import PageHeader from '@/components/ui/PageHeader.vue'
-import EmptyState from '@/components/ui/EmptyState.vue'
-import Modal      from '@/components/ui/Modal.vue'
+import Modal from '@/components/ui/Modal.vue'
 import { useToast } from '@/composables/useToast'
 import { useConfirm } from '@/composables/useConfirm'
 
@@ -71,15 +69,25 @@ const filtered = computed(() => {
 const countFor = (val: string) =>
   val === 'all' ? announcements.value.length : announcements.value.filter(a => typeOf(a) === val).length
 
-const typeLabel = (t: string) => ({
-  general: '📢 General', holiday: '🎉 Holiday', policy: '📋 Policy',
-  event: '📅 Event', urgent: '🚨 Urgent',
-}[t] ?? t)
+const selectedId = ref<number | string | null>(null)
+const selected = computed(() => filtered.value.find(a => a.id === selectedId.value) ?? filtered.value[0] ?? null)
+
+const typeMeta: Record<string, { label: string; tone: string }> = {
+  general: { label: 'General', tone: 'accent' },
+  holiday: { label: 'Holiday', tone: 'warn' },
+  policy:  { label: 'Policy',  tone: 'info' },
+  event:   { label: 'Event',   tone: 'purple' },
+  urgent:  { label: 'Urgent',  tone: 'err' },
+}
 
 const authorInitials = (a: Announcement) => {
   const name = authorOf(a)
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 }
+
+const fmtDate = (d?: string) => d
+  ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  : ''
 
 async function togglePin(ann: Announcement) {
   const newVal = !pinnedOf(ann)
@@ -97,8 +105,11 @@ async function deleteAnn(id: number | string) {
   if (!await dialog('Delete', 'Delete this announcement?')) return
   try {
     await api.delete(`/announcements/${id}`)
-  } catch {}
+  } catch {
+    // silent
+  }
   announcements.value = announcements.value.filter(a => a.id !== id)
+  if (selectedId.value === id) selectedId.value = null
   toast.success('Announcement deleted.')
 }
 
@@ -113,7 +124,6 @@ async function createAnn() {
     })
     announcements.value.unshift(data.data ?? data)
   } catch {
-    // optimistic insert if API not ready
     announcements.value.unshift({
       id: Date.now(), title: na.title, body: na.body, type: na.type,
       author: 'You', audience: na.audience, views: 0, pinned: na.pinned,
@@ -127,171 +137,585 @@ async function createAnn() {
 </script>
 
 <template>
-  <div class="ann-page">
-    <PageHeader title="Announcements" subtitle="Company-wide notices and HR updates">
-      <template #actions>
-        <button class="btn-primary" @click="showCreate = true">+ New Announcement</button>
-      </template>
-    </PageHeader>
+  <div class="ann-shell">
+    <!-- Filter rail -->
+    <aside class="ann-rail">
+      <div class="ann-eyebrow">Filters</div>
+      <nav class="ann-rail-list">
+        <button
+          v-for="t in tabs"
+          :key="t.val"
+          class="ann-rail-item"
+          :class="{ active: activeTab === t.val }"
+          @click="activeTab = t.val"
+        >
+          <span class="ann-rail-dot" :class="t.val" />
+          <span class="ann-rail-label">{{ t.label }}</span>
+          <span class="ann-rail-count">{{ countFor(t.val) }}</span>
+        </button>
+      </nav>
 
-    <!-- Filter tabs -->
-    <div class="tab-row">
-      <button
-        v-for="t in tabs" :key="t.val"
-        class="tab" :class="{ active: activeTab === t.val }"
-        @click="activeTab = t.val"
-      >
-        {{ t.label }} <span class="tab-count">{{ countFor(t.val) }}</span>
-      </button>
-    </div>
+      <div class="ann-eyebrow ann-eyebrow-spaced">Saved views</div>
+      <div class="ann-saved">
+        <div class="ann-saved-item"><span class="ann-hash">#</span>Pinned only</div>
+        <div class="ann-saved-item"><span class="ann-hash">#</span>This month</div>
+        <div class="ann-saved-item"><span class="ann-hash">#</span>HR team</div>
+      </div>
+    </aside>
 
-    <!-- Loading -->
-    <div v-if="loading" class="loading-row">Loading announcements…</div>
-
-    <!-- List -->
-    <div v-else class="ann-list">
-      <transition-group name="ann" tag="div" class="ann-grid">
-        <div v-for="ann in filtered" :key="ann.id" class="ann-card" :class="{ pinned: pinnedOf(ann) }">
-          <div class="ann-head">
-            <div class="ann-badges">
-              <span v-if="pinnedOf(ann)" class="badge pin">📌 Pinned</span>
-              <span class="badge" :class="typeOf(ann)">{{ typeLabel(typeOf(ann)) }}</span>
-            </div>
-            <div class="ann-actions">
-              <button class="ia-btn" @click="togglePin(ann)" :title="pinnedOf(ann) ? 'Unpin' : 'Pin'">
-                {{ pinnedOf(ann) ? '📌' : '📍' }}
-              </button>
-              <button class="ia-btn danger" @click="deleteAnn(ann.id)">🗑</button>
-            </div>
-          </div>
-          <div class="ann-title">{{ ann.title }}</div>
-          <div class="ann-body">{{ bodyOf(ann) }}</div>
-          <div class="ann-footer">
-            <div class="ann-author">
-              <div class="aa-av">{{ authorInitials(ann) }}</div>
-              <div>
-                <div class="aa-name">{{ authorOf(ann) }}</div>
-                <div class="aa-time">
-                  {{ ann.created_at ? new Date(ann.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '' }}
-                </div>
-              </div>
-            </div>
-            <div class="ann-reach">
-              <span v-if="ann.views !== undefined">👁 {{ ann.views }} views</span>
-              <span v-if="ann.audience">🏢 {{ ann.audience }}</span>
-            </div>
-          </div>
+    <!-- List column -->
+    <section class="ann-list-wrap">
+      <header class="ann-list-head">
+        <div>
+          <h1 class="ann-title">Announcements</h1>
+          <p class="ann-subtitle">{{ announcements.length }} items · Company-wide notices and HR updates</p>
         </div>
+        <div class="ann-list-actions">
+          <button class="ann-btn ann-btn-secondary">Filter</button>
+          <button class="ann-btn ann-btn-primary" @click="showCreate = true">+ New</button>
+        </div>
+      </header>
+
+      <div v-if="loading" class="ann-empty">Loading announcements…</div>
+
+      <transition-group v-else name="ann" tag="div" class="ann-items">
+        <button
+          v-for="ann in filtered"
+          :key="ann.id"
+          class="ann-item"
+          :class="{ active: selected && selected.id === ann.id }"
+          @click="selectedId = ann.id"
+        >
+          <div class="ann-item-bar" :class="{ unread: pinnedOf(ann) }" />
+          <span class="ann-avatar" :data-hue="typeOf(ann)">{{ authorInitials(ann) }}</span>
+          <div class="ann-item-body">
+            <div class="ann-item-row">
+              <span class="ann-badge" :class="`tone-${typeMeta[typeOf(ann)]?.tone ?? 'accent'}`">{{ typeMeta[typeOf(ann)]?.label ?? typeOf(ann) }}</span>
+              <span class="ann-item-cat">{{ ann.audience ?? 'All Employees' }}</span>
+              <span class="ann-item-dot">·</span>
+              <span class="ann-item-author">{{ authorOf(ann) }}</span>
+            </div>
+            <div class="ann-item-title">{{ ann.title }}</div>
+            <div class="ann-item-preview">{{ bodyOf(ann) }}</div>
+          </div>
+          <div class="ann-item-time">{{ fmtDate(ann.created_at) }}</div>
+        </button>
       </transition-group>
-      <EmptyState v-if="!filtered.length" icon="📢" message="No announcements yet" sub="Create one to notify your team" />
-    </div>
 
-    <!-- Create Modal -->
-    <Modal v-model="showCreate" title="New Announcement" subtitle="Broadcast a message to your team" max-width="560px">
-      <div class="form-stack">
-        <div class="field">
-          <label>Title *</label>
-          <input v-model="na.title" placeholder="e.g. Office Closed on Holi" />
+      <div v-if="!loading && !filtered.length" class="ann-empty">
+        <div class="ann-empty-icon">📢</div>
+        <div class="ann-empty-text">No announcements yet</div>
+        <div class="ann-empty-sub">Create one to notify your team</div>
+      </div>
+    </section>
+
+    <!-- Detail column -->
+    <aside class="ann-detail">
+      <template v-if="selected">
+        <div class="ann-detail-head">
+          <span class="ann-badge" :class="`tone-${typeMeta[typeOf(selected)]?.tone ?? 'accent'}`">
+            {{ typeMeta[typeOf(selected)]?.label ?? typeOf(selected) }}
+          </span>
+          <span class="ann-detail-id">#{{ String(selected.id).slice(-6) }}</span>
+          <div class="ann-spacer" />
+          <button class="ann-icon-btn" @click="togglePin(selected)" :title="pinnedOf(selected) ? 'Unpin' : 'Pin'">
+            {{ pinnedOf(selected) ? '📌' : '📍' }}
+          </button>
+          <button class="ann-icon-btn ann-danger" @click="deleteAnn(selected.id)" title="Delete">🗑</button>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Type</label>
-            <select v-model="na.type">
-              <option value="general">General</option>
-              <option value="holiday">Holiday</option>
-              <option value="policy">Policy Update</option>
-              <option value="event">Event</option>
-              <option value="urgent">Urgent</option>
-            </select>
+
+        <h2 class="ann-detail-title">{{ selected.title }}</h2>
+
+        <div class="ann-author-card">
+          <span class="ann-avatar lg">{{ authorInitials(selected) }}</span>
+          <div class="ann-author-info">
+            <div class="ann-author-name">{{ authorOf(selected) }}</div>
+            <div class="ann-author-meta">{{ selected.audience ?? 'All Employees' }} · {{ fmtDate(selected.created_at) }}</div>
           </div>
-          <div class="field">
-            <label>Audience</label>
-            <select v-model="na.audience">
-              <option>All Employees</option>
-              <option>Engineering</option>
-              <option>HR Team</option>
-              <option>Management</option>
-            </select>
+        </div>
+
+        <div class="ann-detail-section">
+          <div class="ann-eyebrow">Message</div>
+          <p class="ann-detail-body">{{ bodyOf(selected) }}</p>
+        </div>
+
+        <div class="ann-stats">
+          <div class="ann-stat">
+            <div class="ann-stat-label">Views</div>
+            <div class="ann-stat-value">{{ selected.views ?? 0 }}</div>
+          </div>
+          <div class="ann-stat">
+            <div class="ann-stat-label">Audience</div>
+            <div class="ann-stat-value">{{ selected.audience ?? 'All' }}</div>
+          </div>
+          <div class="ann-stat">
+            <div class="ann-stat-label">Type</div>
+            <div class="ann-stat-value">{{ typeMeta[typeOf(selected)]?.label ?? typeOf(selected) }}</div>
+          </div>
+          <div class="ann-stat">
+            <div class="ann-stat-label">Pinned</div>
+            <div class="ann-stat-value">{{ pinnedOf(selected) ? 'Yes' : 'No' }}</div>
           </div>
         </div>
-        <div class="field">
-          <label>Message *</label>
-          <textarea v-model="na.body" rows="4" placeholder="Write your announcement…"></textarea>
+
+        <div class="ann-actions">
+          <button class="ann-btn ann-btn-primary ann-flex">Acknowledge</button>
+          <button class="ann-btn ann-btn-secondary">Share</button>
         </div>
-        <div class="field-check">
-          <label class="check-label">
+      </template>
+
+      <div v-else class="ann-empty">
+        <div class="ann-empty-icon">📭</div>
+        <div class="ann-empty-text">Select an announcement</div>
+      </div>
+    </aside>
+
+    <Teleport to="body">
+      <Modal v-model="showCreate" title="New Announcement" subtitle="Broadcast a message to your team" max-width="560px">
+        <div class="ann-form">
+          <div class="ann-field">
+            <label>Title *</label>
+            <input v-model="na.title" placeholder="e.g. Office Closed on Holi" />
+          </div>
+          <div class="ann-field-row">
+            <div class="ann-field">
+              <label>Type</label>
+              <select v-model="na.type">
+                <option value="general">General</option>
+                <option value="holiday">Holiday</option>
+                <option value="policy">Policy Update</option>
+                <option value="event">Event</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+            <div class="ann-field">
+              <label>Audience</label>
+              <select v-model="na.audience">
+                <option>All Employees</option>
+                <option>Engineering</option>
+                <option>HR Team</option>
+                <option>Management</option>
+              </select>
+            </div>
+          </div>
+          <div class="ann-field">
+            <label>Message *</label>
+            <textarea v-model="na.body" rows="4" placeholder="Write your announcement…"></textarea>
+          </div>
+          <label class="ann-check">
             <input type="checkbox" v-model="na.pinned" />
             <span>Pin this announcement to the top</span>
           </label>
         </div>
-      </div>
-      <template #footer>
-        <button class="btn-ghost" @click="showCreate = false">Cancel</button>
-        <button class="btn-primary" @click="createAnn">Publish</button>
-      </template>
-    </Modal>
+        <template #footer>
+          <button class="ann-btn ann-btn-secondary" @click="showCreate = false">Cancel</button>
+          <button class="ann-btn ann-btn-primary" @click="createAnn">Publish</button>
+        </template>
+      </Modal>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
-.ann-page { display: flex; flex-direction: column; gap: 18px; }
-
-.tab-row { display: flex; gap: 4px; flex-wrap: wrap; }
-.tab { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--rs); background: var(--surface); border: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--dim); cursor: pointer; font-family: inherit; transition: all .14s; }
-.tab:hover { border-color: var(--border-hi); color: var(--text); }
-.tab.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
-.tab-count { background: var(--surface2); border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700; }
-.tab.active .tab-count { background: rgba(79,126,255,.2); }
-
-.loading-row { padding: 32px; text-align: center; color: var(--muted); font-size: 13px; }
-.ann-grid { display: flex; flex-direction: column; gap: 12px; }
-.ann-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; transition: border-color .2s; }
-.ann-card:hover { border-color: var(--border-hi); }
-.ann-card.pinned { border-color: rgba(79,126,255,.3); background: rgba(79,126,255,.03); }
-
-.ann-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.ann-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
-.badge.pin     { background: rgba(79,126,255,.12); color: var(--accent); }
-.badge.general { background: rgba(54,211,153,.1);  color: #36D399; }
-.badge.holiday { background: rgba(249,168,37,.1);  color: #F9A825; }
-.badge.policy  { background: rgba(79,126,255,.1);  color: var(--accent); }
-.badge.event   { background: rgba(155,110,255,.1); color: #9B6EFF; }
-.badge.urgent  { background: rgba(255,107,107,.1); color: var(--red); }
-
-.ann-actions { display: flex; gap: 5px; opacity: 0; transition: opacity .15s; }
-.ann-card:hover .ann-actions { opacity: 1; }
-.ia-btn { width: 26px; height: 26px; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; display: grid; place-items: center; font-size: 12px; transition: all .1s; }
-.ia-btn:hover { border-color: var(--border-hi); }
-.ia-btn.danger:hover { border-color: var(--red); }
-
-.ann-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; line-height: 1.3; color: var(--text); }
-.ann-body { font-size: 13px; color: var(--dim); line-height: 1.7; margin-bottom: 14px; }
-.ann-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border); }
-.ann-author { display: flex; align-items: center; gap: 10px; }
-.aa-av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#4F7EFF,#9B6EFF); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; }
-.aa-name { font-size: 12px; font-weight: 500; }
-.aa-time { font-size: 11px; color: var(--muted); margin-top: 1px; }
-.ann-reach { display: flex; gap: 12px; font-size: 11px; color: var(--muted); }
-
-.form-stack { display: flex; flex-direction: column; gap: 14px; }
-.field { display: flex; flex-direction: column; gap: 5px; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.field label { font-size: 11px; color: var(--dim); font-weight: 500; }
-.field input, .field select, .field textarea {
-  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--rs);
-  padding: 9px 12px; color: var(--text); font-size: 13px; font-family: inherit;
-  outline: none; transition: border-color .15s; resize: vertical;
+.ann-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr 360px;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: calc(100vh - 160px);
+  color: #EEF0F4;
+  font-family: 'Inter', system-ui, sans-serif;
 }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
-.check-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--dim); }
-.check-label input { accent-color: var(--accent); width: 14px; height: 14px; }
 
-.btn-primary { background: var(--accent); color: #fff; border: none; border-radius: var(--rs); padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all .15s; }
-.btn-primary:hover { background: #3d6ee8; transform: translateY(-1px); }
-.btn-ghost { background: var(--surface2); color: var(--dim); border: 1px solid var(--border); border-radius: var(--rs); padding: 9px 16px; font-size: 13px; cursor: pointer; font-family: inherit; }
-.btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
+/* Rail */
+.ann-rail {
+  border-right: 1px solid #232936;
+  padding: 18px 12px;
+  overflow: auto;
+}
+.ann-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7A8299;
+  padding: 0 8px 10px;
+}
+.ann-eyebrow-spaced { padding-top: 24px; }
+.ann-rail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ann-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #B6BED0;
+  font-weight: 400;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.ann-rail-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.ann-rail-item.active {
+  background: rgba(107, 91, 255, 0.12);
+  color: #EEF0F4;
+  font-weight: 500;
+}
+.ann-rail-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7A8299;
+}
+.ann-rail-dot.general { background: #6B5BFF; }
+.ann-rail-dot.holiday { background: #F5A623; }
+.ann-rail-dot.policy  { background: #4DD39A; }
+.ann-rail-dot.event   { background: #9B6EFF; }
+.ann-rail-dot.urgent  { background: #F38288; }
+.ann-rail-label { flex: 1; }
+.ann-rail-count {
+  font-size: 11px;
+  color: #7A8299;
+  font-variant-numeric: tabular-nums;
+}
+.ann-rail-item.active .ann-rail-count { color: #6B5BFF; }
+.ann-saved {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ann-saved-item {
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: #B6BED0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ann-saved-item:hover { background: rgba(255, 255, 255, 0.03); }
+.ann-hash { color: #7A8299; margin-right: 6px; }
 
-.ann-enter-active, .ann-leave-active { transition: all .25s ease; }
-.ann-enter-from, .ann-leave-to { opacity: 0; transform: translateY(-8px); }
+/* List */
+.ann-list-wrap {
+  border-right: 1px solid #232936;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.ann-list-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid #232936;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ann-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  color: #EEF0F4;
+  margin: 0;
+}
+.ann-subtitle {
+  font-size: 11.5px;
+  color: #7A8299;
+  margin: 3px 0 0;
+}
+.ann-list-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ann-items {
+  display: block;
+}
+.ann-item {
+  display: grid;
+  grid-template-columns: 4px 28px 1fr auto;
+  gap: 10px;
+  padding: 14px 18px;
+  border: none;
+  border-bottom: 1px solid #1C2030;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  width: 100%;
+  text-align: left;
+  align-items: start;
+}
+.ann-item:hover { background: rgba(255, 255, 255, 0.02); }
+.ann-item.active { background: rgba(107, 91, 255, 0.08); }
+.ann-item-bar {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: transparent;
+  align-self: stretch;
+}
+.ann-item-bar.unread { background: #6B5BFF; }
+
+.ann-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6B5BFF, #9B6EFF);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.ann-avatar[data-hue="holiday"] { background: linear-gradient(135deg, #F5A623, #F38288); }
+.ann-avatar[data-hue="policy"]  { background: linear-gradient(135deg, #4DD39A, #6B5BFF); }
+.ann-avatar[data-hue="event"]   { background: linear-gradient(135deg, #9B6EFF, #6B5BFF); }
+.ann-avatar[data-hue="urgent"]  { background: linear-gradient(135deg, #F38288, #6B5BFF); }
+.ann-avatar.lg { width: 36px; height: 36px; font-size: 13px; }
+
+.ann-item-body {
+  min-width: 0;
+}
+.ann-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.ann-item-cat {
+  font-size: 11.5px;
+  color: #B6BED0;
+  font-weight: 500;
+}
+.ann-item-dot, .ann-item-author {
+  font-size: 11px;
+  color: #7A8299;
+}
+.ann-item-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #EEF0F4;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ann-item-preview {
+  font-size: 11.5px;
+  color: #7A8299;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ann-item-time {
+  font-size: 10.5px;
+  color: #7A8299;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+/* Badges */
+.ann-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tone-accent { background: rgba(107, 91, 255, 0.18); color: #6B5BFF; }
+.tone-warn   { background: rgba(245, 166, 35, 0.18); color: #F5A623; }
+.tone-info   { background: rgba(77, 211, 154, 0.16); color: #4DD39A; }
+.tone-purple { background: rgba(155, 110, 255, 0.18); color: #9B6EFF; }
+.tone-err    { background: rgba(243, 130, 136, 0.18); color: #F38288; }
+
+/* Detail */
+.ann-detail {
+  padding: 22px 22px;
+  overflow: auto;
+}
+.ann-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.ann-detail-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: #7A8299;
+}
+.ann-spacer { flex: 1; }
+.ann-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #232936;
+  background: #1C2030;
+  color: #B6BED0;
+  cursor: pointer;
+  font-size: 13px;
+}
+.ann-icon-btn:hover { border-color: #3a4258; }
+.ann-icon-btn.ann-danger:hover { border-color: #F38288; color: #F38288; }
+
+.ann-detail-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #EEF0F4;
+  margin: 0;
+}
+
+.ann-author-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 8px;
+}
+.ann-author-info { flex: 1; }
+.ann-author-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #EEF0F4;
+}
+.ann-author-meta {
+  font-size: 11px;
+  color: #7A8299;
+  margin-top: 2px;
+}
+
+.ann-detail-section { margin-top: 18px; }
+.ann-detail-body {
+  font-size: 13px;
+  color: #D8DCE6;
+  line-height: 1.6;
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+
+.ann-stats {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ann-stat {
+  padding: 10px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 6px;
+}
+.ann-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7A8299;
+}
+.ann-stat-value {
+  font-size: 13px;
+  color: #EEF0F4;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.ann-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 22px;
+}
+.ann-flex { flex: 1; justify-content: center; }
+
+/* Buttons */
+.ann-btn {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ann-btn-primary { background: #6B5BFF; color: #fff; }
+.ann-btn-primary:hover { background: #5a4ce8; }
+.ann-btn-secondary { background: #1C2030; color: #EEF0F4; border-color: #232936; }
+.ann-btn-secondary:hover { border-color: #3a4258; }
+
+/* Empty */
+.ann-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #7A8299;
+  font-size: 13px;
+}
+.ann-empty-icon { font-size: 30px; margin-bottom: 8px; }
+.ann-empty-text { color: #B6BED0; font-size: 14px; font-weight: 500; }
+.ann-empty-sub { color: #7A8299; font-size: 12px; margin-top: 4px; }
+
+/* Form */
+.ann-form { display: flex; flex-direction: column; gap: 14px; }
+.ann-field { display: flex; flex-direction: column; gap: 5px; }
+.ann-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ann-field label {
+  font-size: 11px;
+  color: #7A8299;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ann-field input,
+.ann-field select,
+.ann-field textarea {
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 6px;
+  padding: 9px 12px;
+  color: #EEF0F4;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+}
+.ann-field input:focus,
+.ann-field select:focus,
+.ann-field textarea:focus { border-color: #6B5BFF; }
+.ann-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #B6BED0;
+}
+.ann-check input { accent-color: #6B5BFF; width: 14px; height: 14px; }
+
+.ann-enter-active, .ann-leave-active { transition: all 0.25s ease; }
+.ann-enter-from, .ann-leave-to { opacity: 0; transform: translateY(-6px); }
+
+@media (max-width: 1100px) {
+  .ann-shell { grid-template-columns: 1fr; min-height: auto; }
+  .ann-rail { border-right: none; border-bottom: 1px solid #232936; }
+  .ann-list-wrap { border-right: none; border-bottom: 1px solid #232936; }
+}
 </style>

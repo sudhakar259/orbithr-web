@@ -39,10 +39,10 @@ const candidates = ref<Candidate[]>([])
 const jobPostings = ref<JobPosting[]>([])
 const form = ref({ candidate_id: '', job_posting_id: '' })
 
-const statusColors: Record<string, string> = {
-  pending: 'badge-yellow',
-  accepted: 'badge-green',
-  rejected: 'badge-red',
+const statusClass: Record<string, string> = {
+  pending: 'cp-badge-yellow',
+  accepted: 'cp-badge-green',
+  rejected: 'cp-badge-red',
 }
 
 const formatDate = (d: string | null) => {
@@ -114,7 +114,7 @@ onMounted(load)
   <div class="cp-page">
     <PageHeader title="Candidate Portals" subtitle="Manage candidate portal links and document submissions">
       <template #actions>
-        <button class="cp-btn primary" @click="openCreateModal">+ Generate Portal Link</button>
+        <button class="cp-btn-primary" @click="openCreateModal">+ Generate Portal Link</button>
       </template>
     </PageHeader>
 
@@ -124,65 +124,59 @@ onMounted(load)
       <table class="cp-table">
         <thead>
           <tr>
-            <th>Candidate</th>
-            <th>Job</th>
-            <th>Status</th>
-            <th>Docs</th>
-            <th>Expires</th>
-            <th></th>
+            <th class="cp-th">Candidate</th>
+            <th class="cp-th">Job</th>
+            <th class="cp-th">Status</th>
+            <th class="cp-th">Docs</th>
+            <th class="cp-th">Expires</th>
+            <th class="cp-th"></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="n in 5" :key="n">
-            <td><div class="sk sk-text"></div></td>
-            <td><div class="sk sk-text"></div></td>
-            <td><div class="sk sk-badge"></div></td>
-            <td><div class="sk sk-badge"></div></td>
-            <td><div class="sk sk-text short"></div></td>
-            <td><div class="sk sk-btn"></div></td>
+            <td class="cp-td"><div class="cp-sk cp-sk-text"></div></td>
+            <td class="cp-td"><div class="cp-sk cp-sk-text"></div></td>
+            <td class="cp-td"><div class="cp-sk cp-sk-badge"></div></td>
+            <td class="cp-td"><div class="cp-sk cp-sk-badge"></div></td>
+            <td class="cp-td"><div class="cp-sk cp-sk-short"></div></td>
+            <td class="cp-td"><div class="cp-sk cp-sk-btn"></div></td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <template v-else-if="portals.length === 0 && !error">
-      <EmptyState
-        icon="🔗"
-        message="No candidate portals yet"
-        sub="Generate a portal link to allow candidates to submit documents"
-      />
+      <EmptyState icon="🔗" message="No candidate portals yet" sub="Generate a portal link to allow candidates to submit documents" />
     </template>
 
     <div v-else class="cp-table-wrap">
       <table class="cp-table">
         <thead>
           <tr>
-            <th>Candidate</th>
-            <th>Job</th>
-            <th>Status</th>
-            <th>Docs</th>
-            <th>Expires</th>
-            <th></th>
+            <th class="cp-th">Candidate</th>
+            <th class="cp-th">Job</th>
+            <th class="cp-th">Status</th>
+            <th class="cp-th">Docs</th>
+            <th class="cp-th">Expires</th>
+            <th class="cp-th"></th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="portal in portals" :key="portal.id">
-            <td class="cp-name">{{ portal.candidate_name }}</td>
-            <td>{{ portal.job_title }}</td>
-            <td>
-              <span :class="['cp-badge', statusColors[portal.status] ?? 'badge-yellow']">
-                {{ portal.status }}
-              </span>
+          <tr v-for="portal in portals" :key="portal.id" class="cp-tr">
+            <td class="cp-td cp-td-name">{{ portal.candidate_name }}</td>
+            <td class="cp-td">{{ portal.job_title }}</td>
+            <td class="cp-td">
+              <span :class="['cp-badge', statusClass[portal.status] ?? 'cp-badge-yellow']">{{ portal.status }}</span>
             </td>
-            <td>
-              <span :class="['cp-badge', portal.docs_submitted ? 'badge-green' : 'badge-muted']">
+            <td class="cp-td">
+              <span :class="['cp-badge', portal.docs_submitted ? 'cp-badge-green' : 'cp-badge-muted']">
                 {{ portal.docs_submitted ? 'Submitted' : 'Pending' }}
               </span>
             </td>
-            <td class="cp-date">{{ formatDate(portal.expires_at) }}</td>
-            <td>
-              <button class="cp-copy-btn" @click="copyLink(portal.token)" title="Copy portal link">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+            <td class="cp-td cp-td-date">{{ formatDate(portal.expires_at) }}</td>
+            <td class="cp-td">
+              <button class="cp-copy-btn" @click="copyLink(portal.token)">
+                <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
                   <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
                 </svg>
@@ -199,27 +193,23 @@ onMounted(load)
       <div class="cp-form">
         <div class="cp-field">
           <label class="cp-label">Candidate *</label>
-          <select v-model="form.candidate_id" class="cp-select">
+          <select v-model="form.candidate_id" class="cp-input">
             <option value="" disabled>Select candidate</option>
             <option v-for="c in candidates" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
         </div>
         <div class="cp-field">
           <label class="cp-label">Job Posting *</label>
-          <select v-model="form.job_posting_id" class="cp-select">
+          <select v-model="form.job_posting_id" class="cp-input">
             <option value="" disabled>Select job posting</option>
             <option v-for="j in jobPostings" :key="j.id" :value="j.id">{{ j.title }}</option>
           </select>
         </div>
       </div>
       <template #footer>
-        <button class="cp-btn secondary" @click="showModal = false">Cancel</button>
-        <button
-          class="cp-btn primary"
-          :disabled="saving || !form.candidate_id || !form.job_posting_id"
-          @click="createPortal"
-        >
-          {{ saving ? 'Generating...' : 'Generate Link' }}
+        <button class="cp-btn-ghost" @click="showModal = false">Cancel</button>
+        <button class="cp-btn-primary" :disabled="saving || !form.candidate_id || !form.job_posting_id" @click="createPortal">
+          {{ saving ? 'Generating…' : 'Generate Link' }}
         </button>
       </template>
     </Modal>
@@ -227,186 +217,38 @@ onMounted(load)
 </template>
 
 <style scoped>
-.cp-page {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.cp-error {
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  border-radius: var(--rs);
-  padding: 12px 16px;
-  font-size: 13px;
-  color: var(--red);
-}
-.cp-btn {
-  font-size: 13px;
-  font-weight: 500;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
-}
-.cp-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.cp-btn.primary {
-  background: var(--accent);
-  color: #fff;
-}
-.cp-btn.primary:hover:not(:disabled) {
-  background: #3d6be6;
-}
-.cp-btn.secondary {
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-.cp-btn.secondary:hover {
-  background: var(--surface3);
-}
-
-/* Table */
-.cp-table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--rs);
-  background: var(--surface);
-}
-.cp-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.cp-table th {
-  text-align: left;
-  padding: 12px 16px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface2);
-}
-.cp-table td {
-  padding: 12px 16px;
-  color: var(--text);
-  border-bottom: 1px solid var(--border);
-}
-.cp-table tr:last-child td {
-  border-bottom: none;
-}
-.cp-name {
-  font-weight: 500;
-}
-.cp-date {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-/* Badges */
-.cp-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 6px;
-  text-transform: capitalize;
-}
-.badge-yellow {
-  background: rgba(249, 168, 37, 0.15);
-  color: var(--yellow);
-}
-.badge-green {
-  background: rgba(54, 211, 153, 0.15);
-  color: var(--green);
-}
-.badge-red {
-  background: rgba(255, 107, 107, 0.15);
-  color: var(--red);
-}
-.badge-muted {
-  background: rgba(107, 114, 128, 0.15);
-  color: var(--muted);
-}
-
-.cp-copy-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 5px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--accent);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.cp-copy-btn:hover {
-  background: var(--surface3);
-}
-
-/* Form */
-.cp-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.cp-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.cp-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-}
-.cp-select {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 13px;
-  padding: 9px 12px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.cp-select:focus {
-  border-color: var(--accent);
-}
-
-/* Skeleton */
-.sk {
-  border-radius: 4px;
-  background: var(--surface2);
-  animation: shimmer 1.4s ease-in-out infinite;
-}
-.sk-text {
-  height: 14px;
-  width: 120px;
-}
-.sk-text.short {
-  width: 80px;
-}
-.sk-badge {
-  height: 22px;
-  width: 60px;
-  border-radius: 6px;
-}
-.sk-btn {
-  height: 28px;
-  width: 90px;
-  border-radius: 6px;
-}
-@keyframes shimmer {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
+.cp-page { display: flex; flex-direction: column; gap: 20px; }
+.cp-error { background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #F38288; }
+.cp-btn-primary { background: #6B5BFF; border: none; color: #fff; border-radius: 7px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.cp-btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.cp-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.cp-btn-ghost { background: #232936; border: 1px solid #2D3448; color: #B6BED0; border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+.cp-btn-ghost:hover { color: #EEF0F4; }
+.cp-table-wrap { overflow-x: auto; border: 1px solid #232936; border-radius: 10px; background: #161A23; }
+.cp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cp-th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #7A8299; border-bottom: 1px solid #232936; background: #11141C; }
+.cp-tr { border-bottom: 1px solid #1C2030; }
+.cp-tr:last-child { border-bottom: none; }
+.cp-tr:hover { background: rgba(255,255,255,0.02); }
+.cp-td { padding: 11px 14px; color: #EEF0F4; vertical-align: middle; }
+.cp-td-name { font-weight: 500; }
+.cp-td-date { color: #7A8299; font-size: 12px; }
+.cp-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; text-transform: capitalize; }
+.cp-badge-yellow { background: rgba(245,166,35,0.12); color: #F5A623; }
+.cp-badge-green  { background: rgba(77,211,154,0.12); color: #4DD39A; }
+.cp-badge-red    { background: rgba(243,130,136,0.12); color: #F38288; }
+.cp-badge-muted  { background: rgba(122,130,153,0.12); color: #7A8299; }
+.cp-copy-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 5px 10px; border-radius: 6px; border: 1px solid #232936; background: #232936; color: #6B5BFF; cursor: pointer; }
+.cp-copy-btn:hover { background: #2D3448; }
+.cp-sk { border-radius: 4px; background: #232936; animation: cp-shimmer 1.4s ease-in-out infinite; }
+.cp-sk-text { height: 14px; width: 120px; }
+.cp-sk-short { height: 14px; width: 80px; }
+.cp-sk-badge { height: 22px; width: 60px; border-radius: 20px; }
+.cp-sk-btn { height: 28px; width: 90px; border-radius: 6px; }
+@keyframes cp-shimmer { 0%,100%{opacity:0.4} 50%{opacity:0.8} }
+.cp-form { display: flex; flex-direction: column; gap: 14px; }
+.cp-field { display: flex; flex-direction: column; gap: 5px; }
+.cp-label { font-size: 12px; font-weight: 500; color: #B6BED0; }
+.cp-input { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 8px 11px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+.cp-input:focus { border-color: #6B5BFF; }
 </style>

@@ -88,14 +88,14 @@ const deleteJob = async (job: JobPosting) => {
   }
 }
 
-const getStatusClasses = (status: string) => {
+const getStatusTone = (status: string) => {
   const map: Record<string, string> = {
-    draft: 'bg-gray-700 text-gray-300',
-    published: 'bg-green-900/50 text-green-400',
-    closed: 'bg-red-900/50 text-red-400',
-    cancelled: 'bg-yellow-900/50 text-yellow-400',
+    draft: 'neutral',
+    published: 'ok',
+    closed: 'danger',
+    cancelled: 'warn',
   }
-  return map[status] ?? 'bg-gray-700 text-gray-300'
+  return map[status] ?? 'neutral'
 }
 
 const formatEmploymentType = (type: string) => {
@@ -110,7 +110,7 @@ const formatEmploymentType = (type: string) => {
 }
 
 const formatDate = (date?: string) => {
-  if (!date) return '-'
+  if (!date) return '—'
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -122,232 +122,232 @@ onMounted(loadData)
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="rec-dashboard">
     <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-white">Recruitment</h1>
-        <p class="text-gray-400 text-sm mt-1">Manage job postings and track applications.</p>
+    <header class="page-header">
+      <div class="ph-text">
+        <div class="ph-eyebrow">Applicant tracking · 12 open roles</div>
+        <h1 class="ph-title">Recruitment</h1>
+        <p class="ph-sub">
+          Manage job postings, track applications, and monitor your hiring pipeline
+          across departments.
+        </p>
       </div>
-      <button
-        @click="router.push({ name: 'recruitment.jobs.create' })"
-        class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-      >
-        <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-        New Job
-      </button>
-    </div>
+      <div class="ph-actions">
+        <button
+          class="btn btn-secondary"
+          @click="router.push({ name: 'recruitment.analytics' })"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M7 14l4-4 4 3 5-7" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Analytics
+        </button>
+        <button
+          class="btn btn-primary"
+          @click="router.push({ name: 'recruitment.jobs.create' })"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Post job
+        </button>
+      </div>
+    </header>
 
     <!-- Error -->
-    <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4">
-      <p class="text-sm text-red-400">{{ error }}</p>
-    </div>
+    <div v-if="error" class="alert-error">{{ error }}</div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <section class="stat-grid">
       <div
         v-for="stat in [
-          { label: 'Total Jobs', value: stats?.total_jobs ?? 0, icon: 'briefcase', color: 'blue' },
-          { label: 'Open Jobs', value: stats?.open_jobs ?? 0, icon: 'check-circle', color: 'green' },
-          { label: 'Applications This Month', value: stats?.applications_this_month ?? 0, icon: 'inbox', color: 'purple' },
-          { label: 'Hired This Month', value: stats?.hired_this_month ?? 0, icon: 'user-plus', color: 'teal' },
+          { label: 'Total jobs', value: stats?.total_jobs ?? 0, tone: 'default' },
+          { label: 'Open jobs', value: stats?.open_jobs ?? 0, tone: 'green' },
+          { label: 'Applications this month', value: stats?.applications_this_month ?? 0, tone: 'accent' },
+          { label: 'Hired this month', value: stats?.hired_this_month ?? 0, tone: 'yellow' },
         ]"
         :key="stat.label"
-        class="bg-gray-800 border border-gray-700 rounded-lg p-5 hover:border-gray-600 transition-colors"
+        class="stat-card"
       >
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-400">{{ stat.label }}</p>
-            <p class="text-2xl font-bold text-white mt-1">{{ stat.value }}</p>
-          </div>
-          <div
-            :class="[
-              stat.color === 'blue' ? 'bg-blue-500/10 text-blue-400' : '',
-              stat.color === 'green' ? 'bg-green-500/10 text-green-400' : '',
-              stat.color === 'purple' ? 'bg-purple-500/10 text-purple-400' : '',
-              stat.color === 'teal' ? 'bg-teal-500/10 text-teal-400' : '',
-              'w-10 h-10 rounded-lg flex items-center justify-center',
-            ]"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                v-if="stat.icon === 'briefcase'"
-                stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 13.255A23.193 23.193 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-              <path
-                v-else-if="stat.icon === 'check-circle'"
-                stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-              <path
-                v-else-if="stat.icon === 'inbox'"
-                stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-              />
-              <path
-                v-else-if="stat.icon === 'user-plus'"
-                stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-              />
-            </svg>
-          </div>
-        </div>
+        <div class="stat-label">{{ stat.label }}</div>
+        <div :class="['stat-value', `tone-${stat.tone}`]">{{ stat.value }}</div>
       </div>
-    </div>
+    </section>
 
     <!-- Filters -->
-    <div class="flex flex-col sm:flex-row gap-3">
-      <select
-        v-model="statusFilter"
-        class="bg-gray-800 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-      >
-        <option value="all">All Statuses</option>
+    <section class="filter-bar">
+      <select v-model="statusFilter" class="input select">
+        <option value="all">All statuses</option>
         <option value="draft">Draft</option>
         <option value="published">Published</option>
         <option value="closed">Closed</option>
       </select>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Search jobs..."
-        class="bg-gray-800 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 flex-1 max-w-xs"
-      />
-    </div>
+      <div class="search-wrap">
+        <svg
+          class="search-icon"
+          width="14"
+          height="14"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+            clip-rule="evenodd"
+          />
+        </svg>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search jobs..."
+          class="input search-input"
+        />
+      </div>
+      <div class="filter-hint">
+        Showing
+        <span class="hint-num">{{ filteredJobs.length }}</span>
+        of
+        <span class="hint-num">{{ jobs.length }}</span>
+        jobs
+      </div>
+    </section>
 
     <!-- Loading -->
-    <div v-if="loading" class="space-y-3">
-      <div v-for="n in 4" :key="n" class="bg-gray-800 border border-gray-700 rounded-lg p-5 animate-pulse">
-        <div class="flex items-center space-x-4">
-          <div class="h-4 bg-gray-700 rounded w-1/4"></div>
-          <div class="h-4 bg-gray-700 rounded w-1/6"></div>
-          <div class="h-4 bg-gray-700 rounded w-1/6"></div>
-        </div>
-      </div>
+    <div v-if="loading" class="skeleton-list">
+      <div v-for="n in 4" :key="n" class="skeleton-row" />
     </div>
 
     <!-- Empty state -->
-    <div
-      v-else-if="filteredJobs.length === 0"
-      class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center"
-    >
-      <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 13.255A23.193 23.193 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    <div v-else-if="filteredJobs.length === 0" class="card empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path
+          d="M21 13.255A23.193 23.193 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
       </svg>
-      <h3 class="mt-3 text-sm font-medium text-gray-300">No jobs found</h3>
-      <p class="mt-1 text-sm text-gray-500">Get started by creating a new job posting.</p>
+      <h3>No jobs found</h3>
+      <p>Get started by creating a new job posting.</p>
       <button
+        class="btn btn-primary btn-sm"
         @click="router.push({ name: 'recruitment.jobs.create' })"
-        class="mt-4 inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
       >
-        Create Job
+        Create job
       </button>
     </div>
 
     <!-- Jobs table -->
-    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-700">
-          <thead class="bg-gray-800/50">
+    <section v-else class="card">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Job Title</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Department</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Location</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vacancies</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Applications</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Deadline</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+              <th>Job title</th>
+              <th>Department</th>
+              <th>Type</th>
+              <th>Location</th>
+              <th class="t-right">Vacancies</th>
+              <th class="t-right">Applications</th>
+              <th>Deadline</th>
+              <th>Status</th>
+              <th class="t-right">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-700">
-            <tr
-              v-for="job in filteredJobs"
-              :key="job.id"
-              class="hover:bg-gray-750 transition-colors"
-            >
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-white">{{ job.title }}</div>
-                <div class="text-xs text-gray-500">{{ job.job_code }}</div>
+          <tbody>
+            <tr v-for="job in filteredJobs" :key="job.id" class="row">
+              <td>
+                <div class="job-title">{{ job.title }}</div>
+                <div class="job-code">{{ job.job_code }}</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                {{ job.department || '-' }}
+              <td class="t-muted">{{ job.department || '—' }}</td>
+              <td class="t-muted">{{ formatEmploymentType(job.employment_type) }}</td>
+              <td>
+                <span v-if="job.is_remote" class="loc-remote">Remote</span>
+                <span v-else class="t-muted">{{ job.location || '—' }}</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                {{ formatEmploymentType(job.employment_type) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                <span v-if="job.is_remote" class="text-blue-400">Remote</span>
-                <span v-else>{{ job.location || '-' }}</span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                {{ job.vacancies }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                {{ job.applications_count }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                {{ formatDate(job.application_deadline) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span
-                  :class="[getStatusClasses(job.status), 'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full']"
-                >
+              <td class="t-right t-mono">{{ job.vacancies }}</td>
+              <td class="t-right t-mono t-accent">{{ job.applications_count }}</td>
+              <td class="t-muted">{{ formatDate(job.application_deadline) }}</td>
+              <td>
+                <span :class="['badge', `badge-${getStatusTone(job.status)}`]">
                   {{ job.status }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                <div class="flex items-center justify-end space-x-2">
+              <td class="t-right">
+                <div class="row-actions">
                   <button
-                    @click="router.push({ name: 'recruitment.jobs.show', params: { id: job.id } })"
-                    class="text-gray-400 hover:text-white transition-colors"
+                    class="icon-btn"
                     title="View"
+                    @click="router.push({ name: 'recruitment.jobs.show', params: { id: job.id } })"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </button>
                   <button
-                    @click="router.push({ name: 'recruitment.jobs.edit', params: { id: job.id } })"
-                    class="text-gray-400 hover:text-white transition-colors"
+                    class="icon-btn"
                     title="Edit"
+                    @click="router.push({ name: 'recruitment.jobs.edit', params: { id: job.id } })"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </button>
                   <button
                     v-if="job.status === 'draft'"
-                    @click="publishJob(job)"
-                    class="text-green-400 hover:text-green-300 transition-colors"
+                    class="icon-btn icon-btn-ok"
                     title="Publish"
+                    @click="publishJob(job)"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path
+                        d="M5 13l4 4L19 7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </button>
                   <button
                     v-if="job.status === 'published'"
-                    @click="closeJob(job)"
-                    class="text-yellow-400 hover:text-yellow-300 transition-colors"
+                    class="icon-btn icon-btn-warn"
                     title="Close"
+                    @click="closeJob(job)"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path
+                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </button>
                   <button
                     v-if="job.status === 'draft'"
-                    @click="deleteJob(job)"
-                    class="text-red-400 hover:text-red-300 transition-colors"
+                    class="icon-btn icon-btn-danger"
                     title="Delete"
+                    @click="deleteJob(job)"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -356,6 +356,415 @@ onMounted(loadData)
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   </div>
 </template>
+
+<style scoped>
+.rec-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #eef0f4;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.ph-text {
+  display: flex;
+  flex-direction: column;
+}
+.ph-eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+  margin-bottom: 6px;
+}
+.ph-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: #eef0f4;
+  margin: 0 0 6px;
+  line-height: 1.1;
+}
+.ph-sub {
+  font-size: 13px;
+  color: #7a8299;
+  margin: 0;
+  max-width: 560px;
+  line-height: 1.55;
+}
+.ph-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+}
+.btn svg {
+  width: 14px;
+  height: 14px;
+}
+.btn-sm {
+  padding: 7px 11px;
+  font-size: 12px;
+}
+.btn-primary {
+  background: #6b5bff;
+  color: #fff;
+  border-color: #6b5bff;
+}
+.btn-primary:hover {
+  background: #7d6fff;
+}
+.btn-secondary {
+  background: #161a23;
+  color: #eef0f4;
+  border-color: #232936;
+}
+.btn-secondary:hover {
+  border-color: #2c3242;
+  background: #1a1f2a;
+}
+
+/* Alerts */
+.alert-error {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #f38288;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+
+/* Stat grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.stat-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease;
+}
+.stat-card:hover {
+  border-color: #2c3242;
+}
+.stat-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+}
+.stat-value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  line-height: 1.05;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.tone-default {
+  color: #eef0f4;
+}
+.tone-accent {
+  color: #6b5bff;
+}
+.tone-green {
+  color: #4dd39a;
+}
+.tone-purple {
+  color: #9b6eff;
+}
+.tone-yellow {
+  color: #f5a623;
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.input {
+  background: #161a23;
+  border: 1px solid #232936;
+  color: #eef0f4;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.input:focus {
+  border-color: #6b5bff;
+}
+.input::placeholder {
+  color: #7a8299;
+}
+.select {
+  cursor: pointer;
+  padding-right: 28px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A8299' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 320px;
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #7a8299;
+  pointer-events: none;
+}
+.search-input {
+  padding-left: 30px;
+  width: 100%;
+}
+.filter-hint {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #7a8299;
+  font-family: 'JetBrains Mono', monospace;
+}
+.hint-num {
+  color: #eef0f4;
+  font-weight: 600;
+  margin: 0 2px;
+}
+
+/* Skeletons */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skeleton-row {
+  height: 56px;
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Card */
+.card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Empty state */
+.empty-state {
+  padding: 56px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+.empty-state svg {
+  width: 44px;
+  height: 44px;
+  color: #4a5160;
+}
+.empty-state h3 {
+  font-size: 14px;
+  color: #eef0f4;
+  margin: 8px 0 0;
+  font-weight: 500;
+}
+.empty-state p {
+  font-size: 12.5px;
+  color: #7a8299;
+  margin: 0 0 12px;
+}
+
+/* Table */
+.table-wrap {
+  overflow-x: auto;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table thead th {
+  background: #1a1f2a;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+  padding: 10px 18px;
+  border-bottom: 1px solid #232936;
+  white-space: nowrap;
+}
+.data-table tbody td {
+  padding: 14px 18px;
+  font-size: 13px;
+  color: #c8ccd6;
+  border-bottom: 1px solid #232936;
+  vertical-align: middle;
+}
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.row {
+  transition: background 0.12s ease;
+}
+.row:hover {
+  background: rgba(107, 91, 255, 0.04);
+}
+
+.t-right {
+  text-align: right;
+}
+.t-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.t-accent {
+  color: #6b5bff;
+  font-weight: 600;
+}
+.t-muted {
+  color: #7a8299;
+}
+
+.job-title {
+  color: #eef0f4;
+  font-weight: 500;
+  font-size: 13px;
+}
+.job-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: #7a8299;
+  margin-top: 2px;
+}
+.loc-remote {
+  color: #6b5bff;
+  font-weight: 500;
+  font-size: 12.5px;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+}
+.badge-neutral {
+  background: #1a1f2a;
+  color: #c8ccd6;
+  border-color: #232936;
+}
+.badge-ok {
+  background: rgba(77, 211, 154, 0.12);
+  color: #4dd39a;
+  border-color: rgba(77, 211, 154, 0.25);
+}
+.badge-danger {
+  background: rgba(243, 130, 136, 0.12);
+  color: #f38288;
+  border-color: rgba(243, 130, 136, 0.25);
+}
+.badge-warn {
+  background: rgba(245, 166, 35, 0.12);
+  color: #f5a623;
+  border-color: rgba(245, 166, 35, 0.25);
+}
+
+/* Row actions */
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #7a8299;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+}
+.icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.icon-btn:hover {
+  background: #1a1f2a;
+  border-color: #232936;
+  color: #eef0f4;
+}
+.icon-btn-ok:hover {
+  color: #4dd39a;
+}
+.icon-btn-warn:hover {
+  color: #f5a623;
+}
+.icon-btn-danger:hover {
+  color: #f38288;
+}
+</style>

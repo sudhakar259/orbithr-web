@@ -15,7 +15,12 @@ const activeTab = ref<'my' | 'team'>('my')
 const filterStatus = ref('')
 
 const rLower = computed(() => roles().map((r: string) => r.toLowerCase()))
-const canViewTeam = computed(() => rLower.value.includes('admin') || rLower.value.includes('hr_manager') || rLower.value.includes('manager'))
+const canViewTeam = computed(
+  () =>
+    rLower.value.includes('admin') ||
+    rLower.value.includes('hr_manager') ||
+    rLower.value.includes('manager'),
+)
 
 const loadAppraisals = async () => {
   loading.value = true
@@ -35,19 +40,21 @@ const loadAppraisals = async () => {
   }
 }
 
-const displayedAppraisals = computed(() => activeTab.value === 'team' ? teamAppraisals.value : appraisals.value)
+const displayedAppraisals = computed(() =>
+  activeTab.value === 'team' ? teamAppraisals.value : appraisals.value,
+)
 
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    not_started: 'bg-gray-700 text-gray-400',
-    in_progress: 'bg-blue-900/50 text-blue-400',
-    self_review_done: 'bg-indigo-900/50 text-indigo-400',
-    manager_review_done: 'bg-purple-900/50 text-purple-400',
-    calibration: 'bg-yellow-900/50 text-yellow-400',
-    completed: 'bg-green-900/50 text-green-400',
-    acknowledged: 'bg-teal-900/50 text-teal-400',
+const getStatusClass = (status: string) => {
+  const map: Record<string, string> = {
+    not_started: 'badge-muted',
+    in_progress: 'badge-accent',
+    self_review_done: 'badge-accent',
+    manager_review_done: 'badge-accent',
+    calibration: 'badge-warn',
+    completed: 'badge-ok',
+    acknowledged: 'badge-ok',
   }
-  return colors[status] || 'bg-gray-700 text-gray-300'
+  return map[status] || 'badge-muted'
 }
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString()
@@ -56,68 +63,329 @@ onMounted(() => loadAppraisals())
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Tabs -->
-    <div v-if="canViewTeam" class="border-b border-gray-700">
-      <nav class="-mb-px flex space-x-6">
-        <button @click="activeTab = 'my'" :class="['py-3 px-1 border-b-2 text-sm font-medium', activeTab === 'my' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']">My Appraisals</button>
-        <button @click="activeTab = 'team'" :class="['py-3 px-1 border-b-2 text-sm font-medium', activeTab === 'team' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']">Team Appraisals</button>
-      </nav>
+  <div class="appraisals">
+    <!-- Sub tabs -->
+    <div v-if="canViewTeam" class="sub-tabs">
+      <button
+        :class="['sub-tab', activeTab === 'my' && 'is-active']"
+        @click="activeTab = 'my'"
+      >
+        My Appraisals
+      </button>
+      <button
+        :class="['sub-tab', activeTab === 'team' && 'is-active']"
+        @click="activeTab = 'team'"
+      >
+        Team Appraisals
+      </button>
     </div>
 
-    <div class="flex items-center gap-3">
-      <select v-model="filterStatus" @change="loadAppraisals()" class="bg-gray-800 border border-gray-700 text-gray-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none">
-        <option value="">All Status</option>
-        <option value="not_started">Not Started</option>
-        <option value="in_progress">In Progress</option>
-        <option value="self_review_done">Self Review Done</option>
-        <option value="manager_review_done">Manager Review Done</option>
+    <div class="toolbar">
+      <select v-model="filterStatus" class="select" @change="loadAppraisals()">
+        <option value="">All status</option>
+        <option value="not_started">Not started</option>
+        <option value="in_progress">In progress</option>
+        <option value="self_review_done">Self review done</option>
+        <option value="manager_review_done">Manager review done</option>
         <option value="completed">Completed</option>
         <option value="acknowledged">Acknowledged</option>
       </select>
     </div>
 
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+    <div v-if="loading" class="state-block">
+      <div class="spinner"></div>
     </div>
 
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="state-error">{{ error }}</div>
 
-    <div v-else-if="displayedAppraisals.length === 0" class="text-center py-12 text-gray-500">No appraisals found.</div>
+    <div v-else-if="displayedAppraisals.length === 0" class="empty-pad">
+      No appraisals found.
+    </div>
 
-    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-700">
-        <thead class="bg-gray-800/50">
-          <tr>
-            <th v-if="activeTab === 'team'" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Employee</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Cycle</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Final Score</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Self Review</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-700">
-          <tr v-for="appraisal in displayedAppraisals" :key="appraisal.id" class="hover:bg-gray-700/30">
-            <td v-if="activeTab === 'team'" class="px-6 py-4">
-              <p class="text-sm font-medium text-white">{{ appraisal.employee?.first_name }} {{ appraisal.employee?.last_name }}</p>
-              <p class="text-xs text-gray-400">{{ appraisal.employee?.email }}</p>
-            </td>
-            <td class="px-6 py-4">
-              <p class="text-sm font-medium text-white">{{ appraisal.appraisal_cycle?.name ?? '—' }}</p>
-              <p v-if="appraisal.appraisal_cycle" class="text-xs text-gray-400">{{ formatDate(appraisal.appraisal_cycle.end_date) }}</p>
-            </td>
-            <td class="px-6 py-4">
-              <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getStatusColor(appraisal.status)]">{{ appraisal.status.replace(/_/g, ' ') }}</span>
-            </td>
-            <td class="px-6 py-4 text-sm text-white">{{ appraisal.final_score ?? '—' }}</td>
-            <td class="px-6 py-4 text-sm text-gray-400">{{ appraisal.self_review_submitted_at ? formatDate(appraisal.self_review_submitted_at) : '—' }}</td>
-            <td class="px-6 py-4">
-              <button @click="router.push({ name: 'performance.appraisals.show', params: { id: appraisal.id } })" class="text-blue-400 hover:text-blue-300 text-sm font-medium">View</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-else class="card pad0">
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th v-if="activeTab === 'team'">Employee</th>
+              <th>Cycle</th>
+              <th>Status</th>
+              <th>Final score</th>
+              <th>Self review</th>
+              <th class="th-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="appraisal in displayedAppraisals" :key="appraisal.id">
+              <td v-if="activeTab === 'team'">
+                <div class="cell-strong">
+                  {{ appraisal.employee?.first_name }} {{ appraisal.employee?.last_name }}
+                </div>
+                <div class="cell-muted">{{ appraisal.employee?.email }}</div>
+              </td>
+              <td>
+                <div class="cell-strong">{{ appraisal.appraisal_cycle?.name ?? '—' }}</div>
+                <div v-if="appraisal.appraisal_cycle" class="cell-muted">
+                  {{ formatDate(appraisal.appraisal_cycle.end_date) }}
+                </div>
+              </td>
+              <td>
+                <span :class="['badge', getStatusClass(appraisal.status)]">
+                  {{ appraisal.status.replace(/_/g, ' ') }}
+                </span>
+              </td>
+              <td class="cell-mono">{{ appraisal.final_score ?? '—' }}</td>
+              <td class="cell-muted cell-mono">
+                {{
+                  appraisal.self_review_submitted_at
+                    ? formatDate(appraisal.self_review_submitted_at)
+                    : '—'
+                }}
+              </td>
+              <td class="th-right">
+                <button
+                  class="btn-link"
+                  @click="
+                    router.push({
+                      name: 'performance.appraisals.show',
+                      params: { id: appraisal.id },
+                    })
+                  "
+                >
+                  View &rarr;
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.appraisals {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sub-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #232936;
+}
+
+.sub-tab {
+  padding: 9px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #7a8299;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.sub-tab:hover {
+  color: #eef0f4;
+}
+
+.sub-tab.is-active {
+  color: #eef0f4;
+  border-bottom-color: #6b5bff;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.select {
+  background: #161a23;
+  border: 1px solid #232936;
+  color: #eef0f4;
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.select:focus {
+  border-color: #6b5bff;
+}
+
+.state-block {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #232936;
+  border-top-color: #6b5bff;
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.state-error {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #f38288;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.empty-pad {
+  padding: 56px 16px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 13px;
+  background: #161a23;
+  border: 1px dashed #232936;
+  border-radius: 12px;
+}
+
+.card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.card.pad0 {
+  padding: 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.tbl th {
+  padding: 11px 16px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7a8299;
+  text-align: left;
+  background: #0d0f17;
+  border-bottom: 1px solid #232936;
+}
+
+.tbl th.th-right {
+  text-align: right;
+}
+
+.tbl td {
+  padding: 13px 16px;
+  font-size: 12.5px;
+  color: #eef0f4;
+  border-bottom: 1px solid #232936;
+  vertical-align: top;
+}
+
+.tbl td.th-right {
+  text-align: right;
+}
+
+.tbl tr:last-child td {
+  border-bottom: none;
+}
+
+.tbl tbody tr:hover td {
+  background: rgba(107, 91, 255, 0.04);
+}
+
+.cell-strong {
+  color: #eef0f4;
+  font-weight: 500;
+}
+
+.cell-muted {
+  color: #7a8299;
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+
+.cell-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-link {
+  background: transparent;
+  border: none;
+  color: #6b5bff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+
+.btn-link:hover {
+  color: #8b7eff;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge-muted {
+  background: rgba(122, 130, 153, 0.12);
+  color: #7a8299;
+  border-color: rgba(122, 130, 153, 0.25);
+}
+
+.badge-accent {
+  background: rgba(107, 91, 255, 0.12);
+  color: #6b5bff;
+  border-color: rgba(107, 91, 255, 0.3);
+}
+
+.badge-warn {
+  background: rgba(245, 166, 35, 0.12);
+  color: #f5a623;
+  border-color: rgba(245, 166, 35, 0.3);
+}
+
+.badge-ok {
+  background: rgba(77, 211, 154, 0.12);
+  color: #4dd39a;
+  border-color: rgba(77, 211, 154, 0.25);
+}
+</style>

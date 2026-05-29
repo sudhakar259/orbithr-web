@@ -37,19 +37,17 @@ onMounted(loadEmployee)
 </script>
 
 <template>
-  <div class="space-y-6 p-6">
-    <div>
-      <h1 class="text-3xl font-bold text-slate-900">Edit Employee</h1>
-      <p class="mt-1 text-slate-600">Update employee information</p>
+  <div class="ee-page">
+    <div class="ee-header">
+      <h1 class="ee-title">Edit Employee</h1>
+      <p class="ee-subtitle">Update employee information</p>
     </div>
 
-    <div v-if="loading" class="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-500">
-      Loading employee details...
+    <div v-if="loading" class="ee-card ee-loading">
+      <div v-for="i in 5" :key="i" class="ee-skeleton"></div>
     </div>
 
-    <div v-else-if="error" class="rounded-lg bg-red-50 p-4 text-red-600">
-      {{ error }}
-    </div>
+    <div v-else-if="error" class="ee-error">{{ error }}</div>
 
     <div v-else-if="employeeData">
       <EmployeeForm
@@ -61,3 +59,15 @@ onMounted(loadEmployee)
     </div>
   </div>
 </template>
+
+<style scoped>
+.ee-page { display: flex; flex-direction: column; gap: 20px; padding: 24px; }
+.ee-header { display: flex; flex-direction: column; gap: 4px; }
+.ee-title { font-size: 22px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.ee-subtitle { font-size: 13px; color: #7A8299; margin: 0; }
+.ee-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; }
+.ee-loading { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.ee-skeleton { height: 36px; background: #232936; border-radius: 6px; animation: ee-pulse 1.2s ease-in-out infinite; }
+@keyframes ee-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.ee-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+</style>

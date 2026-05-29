@@ -17,18 +17,17 @@ const error = ref('')
 const pending = ref<ApprovalWithClaim[]>([])
 const history = ref<ApprovalWithClaim[]>([])
 
-// Comment modal
 const commentModal = ref(false)
 const commentAction = ref<'approve' | 'reject' | 'request_changes'>('approve')
 const commentTarget = ref<number | null>(null)
 const commentText = ref('')
 const actionLoading = ref(false)
 
-const statusClass: Record<string, string> = {
-  pending: 'bg-yellow-900/50 text-yellow-400',
-  approved: 'bg-green-900/50 text-green-400',
-  rejected: 'bg-red-900/50 text-red-400',
-  changes_requested: 'bg-yellow-900/50 text-yellow-400',
+const statusBadge: Record<string, string> = {
+  pending: 'ea-badge-yellow',
+  approved: 'ea-badge-green',
+  rejected: 'ea-badge-red',
+  changes_requested: 'ea-badge-yellow',
 }
 
 function fmtCurrency(amount: number) {
@@ -74,9 +73,9 @@ const actionLabel = computed(() => {
 })
 
 const actionBtnClass = computed(() => {
-  if (commentAction.value === 'approve') return 'bg-green-600 hover:bg-green-700'
-  if (commentAction.value === 'reject') return 'bg-red-600 hover:bg-red-700'
-  return 'bg-yellow-600 hover:bg-yellow-700'
+  if (commentAction.value === 'approve') return 'ea-modal-btn-green'
+  if (commentAction.value === 'reject') return 'ea-modal-btn-red'
+  return 'ea-modal-btn-yellow'
 })
 
 async function fetchData() {
@@ -100,131 +99,103 @@ onMounted(fetchData)
 </script>
 
 <template>
-  <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-white">Approvals</h1>
+  <div class="ea-page">
+    <h1 class="ea-title">Approvals</h1>
 
-    <!-- Sub-tabs -->
-    <div class="flex gap-4 border-b border-gray-700">
-      <button
-        :class="[activeTab === 'pending' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200', 'pb-3 px-1 border-b-2 font-medium text-sm transition-colors']"
-        @click="activeTab = 'pending'"
-      >
+    <div class="ea-tabs">
+      <button :class="['ea-tab', activeTab === 'pending' ? 'ea-tab-active' : '']" @click="activeTab = 'pending'">
         Pending ({{ pending.length }})
       </button>
-      <button
-        :class="[activeTab === 'history' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200', 'pb-3 px-1 border-b-2 font-medium text-sm transition-colors']"
-        @click="activeTab = 'history'"
-      >
+      <button :class="['ea-tab', activeTab === 'history' ? 'ea-tab-active' : '']" @click="activeTab = 'history'">
         History
       </button>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="bg-gray-800 border border-gray-700 rounded-lg p-8 animate-pulse">
-      <div v-for="i in 4" :key="i" class="h-4 bg-gray-700 rounded mb-4" />
+    <div v-if="loading" class="ea-card ea-loading">
+      <div v-for="i in 4" :key="i" class="ea-skeleton"></div>
     </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="ea-error">{{ error }}</div>
 
     <template v-else>
-      <!-- Pending tab -->
-      <div v-if="activeTab === 'pending'" class="space-y-4">
-        <div v-if="!pending.length" class="bg-gray-800 border border-gray-700 rounded-lg p-8 text-center text-gray-500">
-          No pending approvals
-        </div>
-        <div v-for="approval in pending" :key="approval.id" class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-          <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <RouterLink
-                v-if="approval.claim"
-                :to="{ name: 'expenses.claims.show', params: { id: approval.expense_claim_id } }"
-                class="text-white font-medium hover:text-blue-400"
-              >
-                {{ approval.claim.title }}
-              </RouterLink>
-              <p class="text-gray-400 text-sm mt-1">
-                <span v-if="approval.claim?.employee_name">{{ approval.claim.employee_name }} &middot; </span>
-                {{ approval.level_label || 'Level ' + approval.level }}
-              </p>
-              <p v-if="approval.claim" class="text-lg font-semibold text-white mt-1">
-                {{ fmtCurrency(approval.claim.total_amount) }}
-              </p>
-              <p class="text-gray-500 text-xs mt-1">Submitted {{ fmtDate(approval.claim?.submitted_at ?? null) }}</p>
-            </div>
-            <div class="flex gap-2">
-              <button class="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors" @click="openActionModal(approval.id, 'approve')">
-                Approve
-              </button>
-              <button class="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors" @click="openActionModal(approval.id, 'reject')">
-                Reject
-              </button>
-              <button class="px-3 py-1.5 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors" @click="openActionModal(approval.id, 'request_changes')">
-                Request Changes
-              </button>
-            </div>
+      <div v-if="activeTab === 'pending'" class="ea-list">
+        <div v-if="!pending.length" class="ea-empty">No pending approvals</div>
+        <div v-for="approval in pending" :key="approval.id" class="ea-approval-card">
+          <div class="ea-approval-info">
+            <RouterLink
+              v-if="approval.claim"
+              :to="{ name: 'expenses.claims.show', params: { id: approval.expense_claim_id } }"
+              class="ea-claim-title"
+            >
+              {{ approval.claim.title }}
+            </RouterLink>
+            <p class="ea-approval-meta">
+              <span v-if="approval.claim?.employee_name">{{ approval.claim.employee_name }} &middot; </span>
+              {{ approval.level_label || 'Level ' + approval.level }}
+            </p>
+            <p v-if="approval.claim" class="ea-amount">{{ fmtCurrency(approval.claim.total_amount) }}</p>
+            <p class="ea-date">Submitted {{ fmtDate(approval.claim?.submitted_at ?? null) }}</p>
+          </div>
+          <div class="ea-approval-actions">
+            <button class="ea-btn-approve" @click="openActionModal(approval.id, 'approve')">Approve</button>
+            <button class="ea-btn-reject" @click="openActionModal(approval.id, 'reject')">Reject</button>
+            <button class="ea-btn-changes" @click="openActionModal(approval.id, 'request_changes')">Request Changes</button>
           </div>
         </div>
       </div>
 
-      <!-- History tab -->
-      <div v-if="activeTab === 'history'" class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <table class="w-full">
+      <div v-if="activeTab === 'history'" class="ea-card">
+        <table class="ea-table">
           <thead>
-            <tr class="bg-gray-700/50">
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Claim</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Level</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Status</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Comments</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Date</th>
+            <tr>
+              <th class="ea-th">Claim</th>
+              <th class="ea-th">Level</th>
+              <th class="ea-th">Status</th>
+              <th class="ea-th">Comments</th>
+              <th class="ea-th">Date</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-700">
-            <tr v-for="a in history" :key="a.id" class="hover:bg-gray-700/30">
-              <td class="px-5 py-3">
-                <RouterLink v-if="a.claim" :to="{ name: 'expenses.claims.show', params: { id: a.expense_claim_id } }" class="text-white hover:text-blue-400 text-sm">
+          <tbody>
+            <tr v-for="a in history" :key="a.id" class="ea-row">
+              <td class="ea-td">
+                <RouterLink v-if="a.claim" :to="{ name: 'expenses.claims.show', params: { id: a.expense_claim_id } }" class="ea-link">
                   {{ a.claim.title }}
                 </RouterLink>
-                <span v-else class="text-gray-400 text-sm">#{{ a.expense_claim_id }}</span>
+                <span v-else class="ea-td-muted">#{{ a.expense_claim_id }}</span>
               </td>
-              <td class="px-5 py-3 text-gray-300 text-sm">{{ a.level_label || 'Level ' + a.level }}</td>
-              <td class="px-5 py-3">
-                <span :class="[statusClass[a.status] || 'bg-gray-700 text-gray-300', 'text-xs px-2 py-0.5 rounded-full font-medium']">
-                  {{ a.status.replace('_', ' ') }}
-                </span>
+              <td class="ea-td">{{ a.level_label || 'Level ' + a.level }}</td>
+              <td class="ea-td">
+                <span :class="['ea-badge', statusBadge[a.status] ?? 'ea-badge-muted']">{{ a.status.replace('_', ' ') }}</span>
               </td>
-              <td class="px-5 py-3 text-gray-400 text-sm max-w-xs truncate">{{ a.comments || '-' }}</td>
-              <td class="px-5 py-3 text-gray-400 text-sm">{{ fmtDate(a.acted_at) }}</td>
+              <td class="ea-td ea-td-truncate">{{ a.comments || '-' }}</td>
+              <td class="ea-td ea-td-muted">{{ fmtDate(a.acted_at) }}</td>
             </tr>
             <tr v-if="!history.length">
-              <td colspan="5" class="px-5 py-8 text-center text-gray-500">No approval history</td>
+              <td colspan="5" class="ea-td-empty">No approval history</td>
             </tr>
           </tbody>
         </table>
       </div>
     </template>
 
-    <!-- Comment modal -->
     <Teleport to="body">
-      <div v-if="commentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="commentModal = false">
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md space-y-4">
-          <h3 class="text-lg font-semibold text-white">{{ actionLabel }}</h3>
+      <div v-if="commentModal" class="ea-overlay" @click.self="commentModal = false">
+        <div class="ea-modal">
+          <h3 class="ea-modal-title">{{ actionLabel }}</h3>
           <textarea
             v-model="commentText"
             rows="3"
-            class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
-            :placeholder="commentAction === 'approve' ? 'Optional comments...' : 'Provide a reason...'"
+            class="ea-textarea"
+            :placeholder="commentAction === 'approve' ? 'Optional comments…' : 'Provide a reason…'"
           />
-          <div class="flex justify-end gap-3">
-            <button class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors" @click="commentModal = false">
-              Cancel
-            </button>
+          <div class="ea-modal-footer">
+            <button class="ea-btn-ghost" @click="commentModal = false">Cancel</button>
             <button
               :disabled="actionLoading || (commentAction !== 'approve' && !commentText.trim())"
-              :class="[actionBtnClass, 'px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-40']"
+              :class="['ea-modal-action-btn', actionBtnClass]"
               @click="doAction"
             >
-              {{ actionLoading ? 'Processing...' : actionLabel }}
+              {{ actionLoading ? 'Processing…' : actionLabel }}
             </button>
           </div>
         </div>
@@ -232,3 +203,65 @@ onMounted(fetchData)
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+.ea-page { display: flex; flex-direction: column; gap: 16px; }
+.ea-title { font-size: 20px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.ea-tabs { display: flex; gap: 0; border-bottom: 1px solid #232936; }
+.ea-tab { background: none; border: none; border-bottom: 2px solid transparent; color: #7A8299; padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer; transition: color 0.12s; margin-bottom: -1px; }
+.ea-tab:hover { color: #EEF0F4; }
+.ea-tab-active { color: #6B5BFF; border-bottom-color: #6B5BFF; }
+.ea-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.ea-loading { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.ea-skeleton { height: 36px; background: #232936; border-radius: 6px; animation: ea-pulse 1.2s ease-in-out infinite; }
+@keyframes ea-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.ea-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.ea-list { display: flex; flex-direction: column; gap: 8px; }
+.ea-approval-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.ea-approval-info { flex: 1; min-width: 0; }
+.ea-claim-title { font-size: 14px; font-weight: 600; color: #EEF0F4; text-decoration: none; }
+.ea-claim-title:hover { color: #8A7BFF; }
+.ea-approval-meta { font-size: 12px; color: #7A8299; margin: 3px 0; }
+.ea-amount { font-family: 'Instrument Serif', serif; font-size: 20px; color: #EEF0F4; margin: 4px 0; }
+.ea-date { font-size: 11px; color: #7A8299; }
+.ea-approval-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.ea-btn-approve { background: rgba(77,211,154,0.15); border: 1px solid rgba(77,211,154,0.3); color: #4DD39A; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.ea-btn-approve:hover { background: rgba(77,211,154,0.25); }
+.ea-btn-reject { background: rgba(243,130,136,0.12); border: 1px solid rgba(243,130,136,0.25); color: #F38288; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.ea-btn-reject:hover { background: rgba(243,130,136,0.22); }
+.ea-btn-changes { background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.25); color: #F5A623; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.ea-btn-changes:hover { background: rgba(245,166,35,0.2); }
+.ea-empty { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 48px; text-align: center; font-size: 14px; color: #7A8299; }
+.ea-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ea-th { padding: 11px 16px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; background: #11141C; border-bottom: 1px solid #232936; }
+.ea-row { border-bottom: 1px solid #1C2030; transition: background 0.12s; }
+.ea-row:last-child { border-bottom: none; }
+.ea-row:hover { background: rgba(255,255,255,0.02); }
+.ea-td { padding: 11px 16px; color: #B6BED0; vertical-align: middle; }
+.ea-td-muted { color: #7A8299; }
+.ea-td-truncate { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ea-td-empty { padding: 32px 16px; text-align: center; color: #7A8299; font-size: 13px; }
+.ea-link { color: #EEF0F4; text-decoration: none; font-weight: 500; }
+.ea-link:hover { color: #8A7BFF; }
+.ea-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; text-transform: capitalize; white-space: nowrap; }
+.ea-badge-green  { background: rgba(77,211,154,0.12); color: #4DD39A; }
+.ea-badge-yellow { background: rgba(245,166,35,0.12); color: #F5A623; }
+.ea-badge-red    { background: rgba(243,130,136,0.12); color: #F38288; }
+.ea-badge-muted  { background: rgba(122,130,153,0.12); color: #7A8299; }
+.ea-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.65); }
+.ea-modal { background: #161A23; border: 1px solid #232936; border-radius: 12px; padding: 24px; width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 16px; }
+.ea-modal-title { font-size: 15px; font-weight: 600; color: #EEF0F4; margin: 0; }
+.ea-textarea { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; resize: vertical; min-height: 80px; }
+.ea-textarea:focus { border-color: #6B5BFF; }
+.ea-modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
+.ea-btn-ghost { background: transparent; border: 1px solid #232936; color: #7A8299; border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+.ea-btn-ghost:hover { background: #232936; color: #EEF0F4; }
+.ea-modal-action-btn { border: none; border-radius: 7px; padding: 8px 18px; font-size: 13px; font-weight: 500; color: #fff; cursor: pointer; }
+.ea-modal-action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ea-modal-btn-green { background: #2A9D6A; }
+.ea-modal-btn-green:hover:not(:disabled) { background: #248A5C; }
+.ea-modal-btn-red { background: #C04B52; }
+.ea-modal-btn-red:hover:not(:disabled) { background: #A83D44; }
+.ea-modal-btn-yellow { background: #C07C14; }
+.ea-modal-btn-yellow:hover:not(:disabled) { background: #A96B10; }
+</style>

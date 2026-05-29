@@ -33,12 +33,12 @@ const form = ref({
 })
 
 const badges: Record<string, { emoji: string; label: string }> = {
-  star: { emoji: '\u2B50', label: 'Star' },
-  rockstar: { emoji: '\uD83C\uDF1F', label: 'Rockstar' },
-  innovator: { emoji: '\uD83D\uDCA1', label: 'Innovator' },
-  teamplayer: { emoji: '\uD83E\uDD1D', label: 'Team Player' },
-  leader: { emoji: '\uD83C\uDFC6', label: 'Leader' },
-  above_and_beyond: { emoji: '\uD83D\uDE80', label: 'Above & Beyond' },
+  star: { emoji: '⭐', label: 'Star' },
+  rockstar: { emoji: '🌟', label: 'Rockstar' },
+  innovator: { emoji: '💡', label: 'Innovator' },
+  teamplayer: { emoji: '🤝', label: 'Team Player' },
+  leader: { emoji: '🏆', label: 'Leader' },
+  above_and_beyond: { emoji: '🚀', label: 'Above & Beyond' },
 }
 
 const endpoint = computed(() => {
@@ -83,7 +83,7 @@ async function submitRecognition() {
 }
 
 function getBadge(key: string) {
-  return badges[key] || { emoji: '\u2B50', label: key }
+  return badges[key] || { emoji: '⭐', label: key }
 }
 
 function timeAgo(dateStr: string) {
@@ -102,6 +102,10 @@ function switchTab(tab: 'all' | 'received' | 'given') {
   fetchRecognitions()
 }
 
+function getInitial(name: string) {
+  return name?.charAt(0)?.toUpperCase() || 'U'
+}
+
 onMounted(() => {
   fetchRecognitions()
   fetchEmployees()
@@ -109,34 +113,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="pr-page">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <header class="pr-head">
       <div>
-        <p class="mt-1 text-sm text-gray-400">Celebrate your colleagues and their achievements</p>
+        <div class="pr-eyebrow">Recognition · Kudos wall · Peer to peer</div>
+        <h1 class="pr-title">Peer recognition</h1>
+        <p class="pr-sub">Celebrate your colleagues and the moments that lift the bar.</p>
       </div>
-      <button
-        class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        @click="showForm = !showForm"
-      >
-        {{ showForm ? 'Cancel' : 'Give Recognition' }}
+      <button class="btn-primary" @click="showForm = !showForm">
+        {{ showForm ? 'Cancel' : '+ Give kudos' }}
       </button>
-    </div>
+    </header>
 
     <!-- Give Recognition Form -->
-    <div
-      v-if="showForm"
-      class="rounded-lg border border-gray-700 bg-gray-800 p-6 space-y-4"
-    >
-      <h3 class="text-lg font-semibold text-white">Recognize a Colleague</h3>
-      <form class="space-y-4" @submit.prevent="submitRecognition">
-        <div>
-          <label class="mb-1 block text-sm text-gray-400">Who would you like to recognize?</label>
-          <select
-            v-model="form.receiver_user_id"
-            required
-            class="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
-          >
+    <section v-if="showForm" class="card form-card">
+      <div class="card-head">
+        <h3 class="card-title">Recognize a colleague</h3>
+      </div>
+      <form class="form-body" @submit.prevent="submitRecognition">
+        <div class="field">
+          <label>Who would you like to recognize?</label>
+          <select v-model="form.receiver_user_id" required>
             <option value="" disabled>Select employee</option>
             <option
               v-for="emp in employees"
@@ -148,106 +146,348 @@ onMounted(() => {
           </select>
         </div>
 
-        <div>
-          <label class="mb-2 block text-sm text-gray-400">Select a Badge</label>
-          <div class="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        <div class="field">
+          <label>Select a badge</label>
+          <div class="badge-grid">
             <button
               v-for="(b, key) in badges"
               :key="key"
               type="button"
-              :class="[
-                'flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-colors',
-                form.badge === key
-                  ? 'border-blue-500 bg-blue-500/10'
-                  : 'border-gray-600 bg-gray-700 hover:border-gray-500',
-              ]"
+              class="badge-tile"
+              :class="{ active: form.badge === key }"
               @click="form.badge = key as string"
             >
-              <span class="text-2xl">{{ b.emoji }}</span>
-              <span class="text-xs text-gray-300">{{ b.label }}</span>
+              <span class="badge-emoji">{{ b.emoji }}</span>
+              <span class="badge-label">{{ b.label }}</span>
             </button>
           </div>
         </div>
 
-        <div>
-          <label class="mb-1 block text-sm text-gray-400">Message</label>
+        <div class="field">
+          <label>Message</label>
           <textarea
             v-model="form.message"
             rows="3"
             required
             placeholder="What did they do that was awesome?"
-            class="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white placeholder-gray-500"
           />
         </div>
 
-        <div class="flex justify-end">
-          <button
-            type="submit"
-            :disabled="submitting"
-            class="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {{ submitting ? 'Sending...' : 'Send Recognition' }}
+        <div class="form-actions">
+          <button type="submit" :disabled="submitting" class="btn-primary">
+            {{ submitting ? 'Sending...' : 'Send recognition' }}
           </button>
         </div>
       </form>
-    </div>
+    </section>
 
     <!-- Tabs -->
-    <div class="border-b border-gray-700">
-      <nav class="-mb-px flex space-x-8">
-        <button
-          v-for="tab in (['all', 'received', 'given'] as const)"
-          :key="tab"
-          :class="[
-            activeTab === tab
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500',
-            'whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors capitalize',
-          ]"
-          @click="switchTab(tab)"
-        >
-          {{ tab === 'all' ? 'All Recognition' : tab === 'received' ? 'I Received' : 'I Gave' }}
-        </button>
-      </nav>
-    </div>
+    <nav class="tab-row">
+      <button
+        v-for="tab in (['all', 'received', 'given'] as const)"
+        :key="tab"
+        class="tab"
+        :class="{ active: activeTab === tab }"
+        @click="switchTab(tab)"
+      >
+        {{ tab === 'all' ? 'All recognition' : tab === 'received' ? 'I received' : 'I gave' }}
+      </button>
+    </nav>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-12">
-      <div class="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-    </div>
+    <div v-if="loading" class="loading-row">Loading kudos…</div>
 
-    <!-- Recognition Feed -->
-    <div v-else-if="recognitions.length" class="space-y-4">
-      <div
+    <!-- Recognition Wall -->
+    <section v-else-if="recognitions.length" class="kudos-grid">
+      <article
         v-for="r in recognitions"
         :key="r.id"
-        class="rounded-lg border border-gray-700 bg-gray-800 p-5"
+        class="kudo-card"
       >
-        <div class="flex items-start gap-4">
-          <span class="text-3xl">{{ getBadge(r.badge).emoji }}</span>
-          <div class="min-w-0 flex-1">
-            <p class="text-sm text-gray-300">
-              <span class="font-semibold text-white">{{ r.giver_name }}</span>
-              <span class="mx-1 text-gray-500">recognized</span>
-              <span class="font-semibold text-white">{{ r.receiver_name }}</span>
-              <span class="ml-1 rounded bg-gray-700 px-1.5 py-0.5 text-xs text-gray-400">
-                {{ getBadge(r.badge).label }}
-              </span>
-            </p>
-            <p class="mt-2 text-sm text-gray-300">{{ r.message }}</p>
-            <p class="mt-2 text-xs text-gray-500">{{ timeAgo(r.created_at) }}</p>
+        <span class="kudo-tag">{{ getBadge(r.badge).label }}</span>
+        <div class="kudo-people">
+          <div class="ava ava-from">{{ getInitial(r.giver_name) }}</div>
+          <span class="kudo-arrow">→</span>
+          <div class="ava ava-to">{{ getInitial(r.receiver_name) }}</div>
+          <span class="kudo-emoji">{{ getBadge(r.badge).emoji }}</span>
+        </div>
+        <p class="kudo-line">
+          <span class="kudo-name">{{ r.giver_name }}</span>
+          recognized
+          <span class="kudo-name">{{ r.receiver_name }}</span>
+        </p>
+        <blockquote class="kudo-msg">"{{ r.message }}"</blockquote>
+        <div class="kudo-foot">
+          <span class="kudo-time">{{ timeAgo(r.created_at) }}</span>
+          <div class="kudo-reactions">
+            <span>♡ 14</span>
+            <span>💬 3</span>
+            <span>🎉 8</span>
           </div>
         </div>
-      </div>
-    </div>
+      </article>
+    </section>
 
     <!-- Empty state -->
-    <div
-      v-else
-      class="flex flex-col items-center justify-center rounded-lg border border-gray-700 bg-gray-800 py-16"
-    >
-      <p class="text-gray-400">No recognitions yet</p>
-      <p class="mt-1 text-sm text-gray-500">Be the first to recognize a colleague</p>
+    <div v-else class="empty-state">
+      <p class="empty-title">No recognitions yet</p>
+      <p class="empty-sub">Be the first to recognize a colleague.</p>
     </div>
   </div>
 </template>
+
+<style scoped>
+.pr-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #EEF0F4;
+}
+
+.pr-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pr-eyebrow {
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #7A8299;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.pr-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 38px;
+  letter-spacing: -.02em;
+  line-height: 1;
+  margin: 0;
+  color: #EEF0F4;
+}
+.pr-sub {
+  font-size: 13px;
+  color: #7A8299;
+  margin-top: 6px;
+}
+
+.btn-primary {
+  background: #6B5BFF;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+}
+.btn-primary:hover { background: #5a4ce6; }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+.card {
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+.card-head { margin-bottom: 14px; }
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #EEF0F4;
+  margin: 0;
+}
+
+.form-body { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label {
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #7A8299;
+  font-weight: 600;
+}
+.field select,
+.field textarea {
+  background: #0D0F17;
+  border: 1px solid #232936;
+  border-radius: 6px;
+  padding: 9px 12px;
+  color: #EEF0F4;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.field select:focus,
+.field textarea:focus { border-color: #6B5BFF; }
+.field textarea { resize: vertical; min-height: 72px; }
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .badge-grid { grid-template-columns: repeat(6, 1fr); }
+}
+.badge-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: #0D0F17;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.badge-tile:hover { border-color: #2e3547; }
+.badge-tile.active {
+  border-color: #6B5BFF;
+  background: rgba(107, 91, 255, .08);
+}
+.badge-emoji { font-size: 22px; }
+.badge-label { font-size: 11px; color: #7A8299; }
+.badge-tile.active .badge-label { color: #EEF0F4; }
+
+.form-actions { display: flex; justify-content: flex-end; }
+
+.tab-row {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #232936;
+}
+.tab {
+  background: transparent;
+  border: none;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #7A8299;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+.tab:hover { color: #EEF0F4; }
+.tab.active {
+  color: #6B5BFF;
+  border-bottom-color: #6B5BFF;
+}
+
+.loading-row {
+  padding: 32px;
+  text-align: center;
+  color: #7A8299;
+  font-size: 13px;
+}
+
+.kudos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.kudo-card {
+  position: relative;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  padding: 16px;
+  transition: border-color .2s;
+}
+.kudo-card:hover { border-color: #2e3547; }
+.kudo-tag {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(107, 91, 255, .14);
+  border: 1px solid rgba(107, 91, 255, .4);
+  font-size: 10px;
+  color: #B28DFF;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.kudo-people {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ava {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.ava-from { background: linear-gradient(135deg, #4DD39A, #36b97f); }
+.ava-to   { background: linear-gradient(135deg, #6B5BFF, #9B6EFF); }
+.kudo-arrow { font-size: 13px; color: #7A8299; }
+.kudo-emoji { margin-left: auto; font-size: 18px; }
+.kudo-line {
+  font-size: 11.5px;
+  color: #7A8299;
+  margin: 0 0 8px;
+}
+.kudo-name { color: #EEF0F4; font-weight: 500; }
+.kudo-msg {
+  font-size: 13px;
+  color: #EEF0F4;
+  line-height: 1.55;
+  font-style: italic;
+  margin: 0 0 12px;
+  border-left: 2px solid #6B5BFF;
+  padding-left: 10px;
+}
+.kudo-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #232936;
+  padding-top: 10px;
+  margin-top: 4px;
+}
+.kudo-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: #7A8299;
+}
+.kudo-reactions {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #7A8299;
+}
+
+.empty-state {
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  padding: 56px 24px;
+  text-align: center;
+}
+.empty-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 22px;
+  color: #EEF0F4;
+  margin: 0;
+}
+.empty-sub {
+  font-size: 13px;
+  color: #7A8299;
+  margin-top: 6px;
+}
+</style>

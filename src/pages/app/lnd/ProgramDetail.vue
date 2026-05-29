@@ -45,141 +45,143 @@ async function handleComplete() {
   }
 }
 
+function statusBadge(status: string) {
+  const map: Record<string, string> = {
+    active: 'pd-badge-green',
+    draft: 'pd-badge-muted',
+    completed: 'pd-badge-blue',
+    archived: 'pd-badge-red',
+  }
+  return map[status] ?? 'pd-badge-muted'
+}
+
 onMounted(loadProgram)
 </script>
 
 <template>
-  <div>
-    <RouterLink
-      :to="{ name: 'lnd.programs' }"
-      class="text-gray-400 hover:text-white text-sm mb-4 inline-flex items-center gap-1"
-    >
-      &larr; Back to Programs
-    </RouterLink>
+  <div class="pd-page">
+    <RouterLink :to="{ name: 'lnd.programs' }" class="pd-back-link">&larr; Back to Programs</RouterLink>
 
-    <div
-      v-if="error"
-      class="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded-lg mb-4"
-    >
-      {{ error }}
-    </div>
+    <div v-if="error" class="pd-error">{{ error }}</div>
 
-    <div v-if="loading" class="bg-gray-800 border border-gray-700 rounded-lg p-6 animate-pulse">
-      <div class="h-6 bg-gray-700 rounded w-1/3 mb-4" />
-      <div class="h-4 bg-gray-700 rounded w-2/3" />
+    <div v-if="loading" class="pd-card pd-loading">
+      <div v-for="i in 3" :key="i" class="pd-skeleton"></div>
     </div>
 
     <template v-if="!loading && program">
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="flex items-center gap-3 mb-2">
-              <h2 class="text-xl font-bold text-white">{{ program.title }}</h2>
-              <span
-                class="text-xs px-2 py-0.5 rounded-full"
-                :class="{
-                  'bg-green-900/50 text-green-400': program.status === 'active',
-                  'bg-gray-700 text-gray-400': program.status === 'draft',
-                  'bg-blue-900/50 text-blue-400': program.status === 'completed',
-                  'bg-red-900/50 text-red-400': program.status === 'archived',
-                }"
-              >
-                {{ program.status }}
-              </span>
+      <div class="pd-header-card">
+        <div class="pd-header-body">
+          <div class="pd-header-info">
+            <div class="pd-title-row">
+              <h2 class="pd-title">{{ program.title }}</h2>
+              <span :class="['pd-badge', statusBadge(program.status)]">{{ program.status }}</span>
             </div>
-            <p class="text-gray-400 text-sm mb-3">{{ program.description || 'No description' }}</p>
-            <div class="flex items-center gap-4 text-sm text-gray-400">
+            <p class="pd-desc">{{ program.description || 'No description' }}</p>
+            <div class="pd-meta">
               <span>{{ program.program_type.replace('_', ' ') }}</span>
               <span>{{ program.enrolled_count }} enrolled</span>
-              <span v-if="program.start_date">
-                {{ program.start_date }} - {{ program.end_date || 'ongoing' }}
-              </span>
+              <span v-if="program.start_date">{{ program.start_date }} - {{ program.end_date || 'ongoing' }}</span>
             </div>
           </div>
-          <div v-if="canManage" class="flex items-center gap-2">
-            <button
-              v-if="program.status === 'draft'"
-              class="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1.5 rounded-lg"
-              @click="handleActivate"
-            >
-              Activate
-            </button>
-            <button
-              v-if="program.status === 'active'"
-              class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded-lg"
-              @click="handleComplete"
-            >
-              Mark Complete
-            </button>
+          <div v-if="canManage" class="pd-header-actions">
+            <button v-if="program.status === 'draft'" class="pd-btn-activate" @click="handleActivate">Activate</button>
+            <button v-if="program.status === 'active'" class="pd-btn-complete" @click="handleComplete">Mark Complete</button>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="pd-content-grid">
         <!-- Courses -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg">
-          <div class="px-5 py-4 border-b border-gray-700">
-            <h3 class="text-white font-semibold">
-              Courses ({{ program.courses?.length || 0 }})
-            </h3>
-          </div>
-          <div v-if="program.courses?.length" class="divide-y divide-gray-700">
+        <div class="pd-card">
+          <div class="pd-card-head">Courses ({{ program.courses?.length || 0 }})</div>
+          <div v-if="program.courses?.length">
             <RouterLink
               v-for="course in program.courses"
               :key="course.id"
               :to="{ name: 'lnd.courses.show', params: { id: course.id } }"
-              class="px-5 py-3 flex items-center justify-between hover:bg-gray-700/50 block"
+              class="pd-course-row"
             >
               <div>
-                <p class="text-white text-sm">{{ course.title }}</p>
-                <p class="text-gray-400 text-xs">{{ course.duration_minutes }} min</p>
+                <p class="pd-course-title">{{ course.title }}</p>
+                <p class="pd-course-meta">{{ course.duration_minutes }} min</p>
               </div>
-              <span class="text-xs text-gray-500">{{ course.difficulty_level }}</span>
+              <span class="pd-course-level">{{ course.difficulty_level }}</span>
             </RouterLink>
           </div>
-          <div v-else class="px-5 py-8 text-center text-gray-400 text-sm">No courses assigned.</div>
+          <div v-else class="pd-card-empty">No courses assigned.</div>
         </div>
 
         <!-- Enrollments -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg">
-          <div class="px-5 py-4 border-b border-gray-700">
-            <h3 class="text-white font-semibold">
-              Enrollments ({{ program.enrollments?.length || 0 }})
-            </h3>
-          </div>
-          <div v-if="program.enrollments?.length" class="divide-y divide-gray-700">
-            <div
-              v-for="enrollment in program.enrollments"
-              :key="enrollment.id"
-              class="px-5 py-3 flex items-center justify-between"
-            >
+        <div class="pd-card">
+          <div class="pd-card-head">Enrollments ({{ program.enrollments?.length || 0 }})</div>
+          <div v-if="program.enrollments?.length">
+            <div v-for="enrollment in program.enrollments" :key="enrollment.id" class="pd-enroll-row">
               <div>
-                <p class="text-white text-sm">
-                  {{ enrollment.employee?.name || 'Employee' }}
-                </p>
-                <p class="text-gray-400 text-xs">
-                  {{ enrollment.employee?.email }}
-                </p>
+                <p class="pd-enroll-name">{{ enrollment.employee?.name || 'Employee' }}</p>
+                <p class="pd-enroll-email">{{ enrollment.employee?.email }}</p>
               </div>
-              <div class="flex items-center gap-3">
-                <div class="w-20 bg-gray-700 rounded-full h-1.5">
+              <div class="pd-progress-col">
+                <div class="pd-progress-track">
                   <div
-                    class="h-1.5 rounded-full"
-                    :class="
-                      enrollment.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'
-                    "
+                    class="pd-progress-fill"
+                    :class="enrollment.status === 'completed' ? 'pd-fill-green' : 'pd-fill-blue'"
                     :style="{ width: enrollment.progress_percent + '%' }"
                   />
                 </div>
-                <span class="text-gray-400 text-xs w-8 text-right">
-                  {{ enrollment.progress_percent }}%
-                </span>
+                <span class="pd-progress-pct">{{ enrollment.progress_percent }}%</span>
               </div>
             </div>
           </div>
-          <div v-else class="px-5 py-8 text-center text-gray-400 text-sm">No enrollments yet.</div>
+          <div v-else class="pd-card-empty">No enrollments yet.</div>
         </div>
       </div>
     </template>
   </div>
 </template>
+
+<style scoped>
+.pd-page { display: flex; flex-direction: column; gap: 16px; }
+.pd-back-link { font-size: 13px; color: #7A8299; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.pd-back-link:hover { color: #EEF0F4; }
+.pd-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.pd-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.pd-loading { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.pd-skeleton { height: 36px; background: #232936; border-radius: 6px; animation: pd-pulse 1.2s ease-in-out infinite; }
+@keyframes pd-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.pd-header-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 20px; }
+.pd-header-body { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.pd-header-info { flex: 1; min-width: 0; }
+.pd-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.pd-title { font-size: 18px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.pd-desc { font-size: 13px; color: #7A8299; margin: 0 0 8px; }
+.pd-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #7A8299; text-transform: capitalize; }
+.pd-header-actions { display: flex; gap: 8px; }
+.pd-btn-activate { background: rgba(77,211,154,0.15); border: 1px solid rgba(77,211,154,0.3); color: #4DD39A; border-radius: 7px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.pd-btn-activate:hover { background: rgba(77,211,154,0.25); }
+.pd-btn-complete { background: rgba(126,215,255,0.12); border: 1px solid rgba(126,215,255,0.25); color: #7ED7FF; border-radius: 7px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.pd-btn-complete:hover { background: rgba(126,215,255,0.22); }
+.pd-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; text-transform: capitalize; white-space: nowrap; }
+.pd-badge-green  { background: rgba(77,211,154,0.12); color: #4DD39A; }
+.pd-badge-blue   { background: rgba(126,215,255,0.12); color: #7ED7FF; }
+.pd-badge-red    { background: rgba(243,130,136,0.12); color: #F38288; }
+.pd-badge-muted  { background: rgba(122,130,153,0.12); color: #7A8299; }
+.pd-content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pd-card-head { padding: 12px 16px; border-bottom: 1px solid #232936; font-size: 13px; font-weight: 600; color: #EEF0F4; }
+.pd-card-empty { padding: 32px 16px; text-align: center; font-size: 13px; color: #7A8299; }
+.pd-course-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #1C2030; text-decoration: none; }
+.pd-course-row:last-child { border-bottom: none; }
+.pd-course-row:hover { background: rgba(255,255,255,0.02); }
+.pd-course-title { font-size: 13px; color: #EEF0F4; margin: 0; }
+.pd-course-meta { font-size: 11px; color: #7A8299; margin: 2px 0 0; }
+.pd-course-level { font-size: 11px; color: #7A8299; text-transform: capitalize; }
+.pd-enroll-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #1C2030; }
+.pd-enroll-row:last-child { border-bottom: none; }
+.pd-enroll-name { font-size: 13px; color: #EEF0F4; margin: 0; }
+.pd-enroll-email { font-size: 11px; color: #7A8299; margin: 2px 0 0; }
+.pd-progress-col { display: flex; align-items: center; gap: 8px; }
+.pd-progress-track { width: 72px; height: 6px; background: #232936; border-radius: 4px; overflow: hidden; }
+.pd-progress-fill { height: 100%; border-radius: 4px; }
+.pd-fill-green { background: #4DD39A; }
+.pd-fill-blue { background: #6B5BFF; }
+.pd-progress-pct { font-size: 11px; color: #7A8299; width: 28px; text-align: right; }
+</style>

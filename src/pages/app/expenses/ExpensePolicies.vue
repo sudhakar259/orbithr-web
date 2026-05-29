@@ -12,11 +12,9 @@ const error = ref('')
 const categories = ref<ExpenseCategory[]>([])
 const policies = ref<ExpensePolicy[]>([])
 
-// Category form
 const newCat = ref({ name: '', color: '#4F7EFF', is_active: true })
 const catSaving = ref(false)
 
-// Policy form
 const showPolicyForm = ref(false)
 const policySaving = ref(false)
 const newPolicy = ref({
@@ -113,65 +111,62 @@ onMounted(fetchData)
 </script>
 
 <template>
-  <div class="space-y-8">
-    <h1 class="text-2xl font-bold text-white">Expense Policies</h1>
+  <div class="ep-page">
+    <h1 class="ep-title">Expense Policies</h1>
 
-    <!-- Error -->
-    <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-400">{{ error }}</div>
+    <div v-if="error" class="ep-error">{{ error }}</div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="bg-gray-800 border border-gray-700 rounded-lg p-8 animate-pulse">
-      <div v-for="i in 4" :key="i" class="h-4 bg-gray-700 rounded mb-4" />
+    <div v-if="loading" class="ep-card ep-loading">
+      <div v-for="i in 4" :key="i" class="ep-skeleton"></div>
     </div>
 
     <template v-else>
-      <!-- Section 1: Categories -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-700">
-          <h2 class="text-lg font-semibold text-white">Categories</h2>
+      <!-- Categories -->
+      <div class="ep-section-card">
+        <div class="ep-section-head">
+          <span class="ep-section-title">Categories</span>
         </div>
-        <table class="w-full">
+        <table class="ep-table">
           <thead>
-            <tr class="bg-gray-700/50">
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Name</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Color</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Active</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Actions</th>
+            <tr>
+              <th class="ep-th">Name</th>
+              <th class="ep-th">Color</th>
+              <th class="ep-th">Active</th>
+              <th class="ep-th">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-700">
-            <tr v-for="cat in categories" :key="cat.id" class="hover:bg-gray-700/30">
-              <td class="px-5 py-3 text-white text-sm">{{ cat.name }}</td>
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-2">
-                  <span class="w-4 h-4 rounded-full inline-block" :style="{ backgroundColor: cat.color ?? '#4F7EFF' }" />
-                  <span class="text-gray-400 text-xs">{{ cat.color }}</span>
+          <tbody>
+            <tr v-for="cat in categories" :key="cat.id" class="ep-row">
+              <td class="ep-td ep-td-name">{{ cat.name }}</td>
+              <td class="ep-td">
+                <div class="ep-color-cell">
+                  <span class="ep-color-dot" :style="{ backgroundColor: cat.color ?? '#4F7EFF' }" />
+                  <span class="ep-color-label">{{ cat.color }}</span>
                 </div>
               </td>
-              <td class="px-5 py-3">
+              <td class="ep-td">
                 <button
-                  :class="[cat.is_active ? 'bg-green-900/50 text-green-400' : 'bg-gray-700 text-gray-400', 'text-xs px-2 py-0.5 rounded-full font-medium']"
+                  :class="['ep-status-btn', cat.is_active ? 'ep-status-active' : 'ep-status-inactive']"
                   @click="toggleCatActive(cat)"
                 >
                   {{ cat.is_active ? 'Active' : 'Inactive' }}
                 </button>
               </td>
-              <td class="px-5 py-3">
-                <button class="text-sm text-red-400 hover:text-red-300" @click="removeCat(cat.id)">Delete</button>
+              <td class="ep-td">
+                <button class="ep-btn-delete" @click="removeCat(cat.id)">Delete</button>
               </td>
             </tr>
-            <!-- Inline create -->
-            <tr class="bg-gray-700/20">
-              <td class="px-5 py-3">
-                <input v-model="newCat.name" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-full" placeholder="Category name" />
+            <tr class="ep-add-row">
+              <td class="ep-td">
+                <input v-model="newCat.name" type="text" class="ep-input-sm" placeholder="Category name" />
               </td>
-              <td class="px-5 py-3">
-                <input v-model="newCat.color" type="color" class="w-8 h-8 rounded border border-gray-600 cursor-pointer" />
+              <td class="ep-td">
+                <input v-model="newCat.color" type="color" class="ep-color-picker" />
               </td>
-              <td class="px-5 py-3" />
-              <td class="px-5 py-3">
-                <button :disabled="catSaving || !newCat.name.trim()" class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40" @click="addCategory">
-                  {{ catSaving ? 'Adding...' : 'Add' }}
+              <td class="ep-td" />
+              <td class="ep-td">
+                <button :disabled="catSaving || !newCat.name.trim()" class="ep-btn-add" @click="addCategory">
+                  {{ catSaving ? 'Adding…' : 'Add' }}
                 </button>
               </td>
             </tr>
@@ -179,81 +174,72 @@ onMounted(fetchData)
         </table>
       </div>
 
-      <!-- Section 2: Policies -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-white">Policies</h2>
-          <button
-            v-if="!showPolicyForm"
-            class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-            @click="showPolicyForm = true"
-          >
-            Add Policy
-          </button>
+      <!-- Policies -->
+      <div class="ep-section-card">
+        <div class="ep-section-head">
+          <span class="ep-section-title">Policies</span>
+          <button v-if="!showPolicyForm" class="ep-btn-primary" @click="showPolicyForm = true">Add Policy</button>
         </div>
-        <table class="w-full">
+        <table class="ep-table">
           <thead>
-            <tr class="bg-gray-700/50">
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Category</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Name</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Daily Limit</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Per Claim Limit</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Monthly Cap</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Attachment</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Actions</th>
+            <tr>
+              <th class="ep-th">Category</th>
+              <th class="ep-th">Name</th>
+              <th class="ep-th">Daily Limit</th>
+              <th class="ep-th">Per Claim</th>
+              <th class="ep-th">Monthly Cap</th>
+              <th class="ep-th">Attachment</th>
+              <th class="ep-th">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-700">
-            <tr v-for="p in policies" :key="p.id" class="hover:bg-gray-700/30">
-              <td class="px-5 py-3 text-gray-300 text-sm">{{ p.category?.name || catName(p.category_id) }}</td>
-              <td class="px-5 py-3 text-white text-sm">{{ p.name }}</td>
-              <td class="px-5 py-3 text-gray-300 text-sm">{{ p.daily_limit != null ? '$' + p.daily_limit : '-' }}</td>
-              <td class="px-5 py-3 text-gray-300 text-sm">{{ p.per_claim_limit != null ? '$' + p.per_claim_limit : '-' }}</td>
-              <td class="px-5 py-3 text-gray-300 text-sm">{{ p.monthly_cap != null ? '$' + p.monthly_cap : '-' }}</td>
-              <td class="px-5 py-3">
-                <span :class="[p.requires_attachment ? 'text-green-400' : 'text-gray-500', 'text-sm']">
+          <tbody>
+            <tr v-for="p in policies" :key="p.id" class="ep-row">
+              <td class="ep-td">{{ p.category?.name || catName(p.category_id) }}</td>
+              <td class="ep-td ep-td-name">{{ p.name }}</td>
+              <td class="ep-td ep-td-mono">{{ p.daily_limit != null ? '$' + p.daily_limit : '-' }}</td>
+              <td class="ep-td ep-td-mono">{{ p.per_claim_limit != null ? '$' + p.per_claim_limit : '-' }}</td>
+              <td class="ep-td ep-td-mono">{{ p.monthly_cap != null ? '$' + p.monthly_cap : '-' }}</td>
+              <td class="ep-td">
+                <span :class="p.requires_attachment ? 'ep-req-yes' : 'ep-req-no'">
                   {{ p.requires_attachment ? 'Required' : 'No' }}
                 </span>
               </td>
-              <td class="px-5 py-3">
-                <button class="text-sm text-red-400 hover:text-red-300" @click="removePolicy(p.id)">Delete</button>
+              <td class="ep-td">
+                <button class="ep-btn-delete" @click="removePolicy(p.id)">Delete</button>
               </td>
             </tr>
             <tr v-if="!policies.length && !showPolicyForm">
-              <td colspan="7" class="px-5 py-8 text-center text-gray-500">No policies configured</td>
+              <td colspan="7" class="ep-td-empty">No policies configured</td>
             </tr>
-            <!-- Inline add form -->
-            <tr v-if="showPolicyForm" class="bg-gray-700/20">
-              <td class="px-5 py-3">
-                <select v-model="newPolicy.category_id" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-full">
-                  <option :value="null">Select...</option>
+            <tr v-if="showPolicyForm" class="ep-add-row">
+              <td class="ep-td">
+                <select v-model="newPolicy.category_id" class="ep-input-sm">
+                  <option :value="null">Select…</option>
                   <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                 </select>
               </td>
-              <td class="px-5 py-3">
-                <input v-model="newPolicy.name" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-full" placeholder="Policy name" />
+              <td class="ep-td">
+                <input v-model="newPolicy.name" type="text" class="ep-input-sm" placeholder="Policy name" />
               </td>
-              <td class="px-5 py-3">
-                <input v-model="newPolicy.daily_limit" type="number" step="0.01" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-20" placeholder="0" />
+              <td class="ep-td">
+                <input v-model="newPolicy.daily_limit" type="number" step="0.01" class="ep-input-num" placeholder="0" />
               </td>
-              <td class="px-5 py-3">
-                <input v-model="newPolicy.per_claim_limit" type="number" step="0.01" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-20" placeholder="0" />
+              <td class="ep-td">
+                <input v-model="newPolicy.per_claim_limit" type="number" step="0.01" class="ep-input-num" placeholder="0" />
               </td>
-              <td class="px-5 py-3">
-                <input v-model="newPolicy.monthly_cap" type="number" step="0.01" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none w-20" placeholder="0" />
+              <td class="ep-td">
+                <input v-model="newPolicy.monthly_cap" type="number" step="0.01" class="ep-input-num" placeholder="0" />
               </td>
-              <td class="px-5 py-3">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input v-model="newPolicy.requires_attachment" type="checkbox" class="rounded bg-gray-700 border-gray-600" />
-                  <span class="text-sm text-gray-300">Req.</span>
+              <td class="ep-td">
+                <label class="ep-checkbox-row">
+                  <input v-model="newPolicy.requires_attachment" type="checkbox" class="ep-checkbox" />
+                  <span>Req.</span>
                 </label>
               </td>
-              <td class="px-5 py-3">
-                <div class="flex gap-2">
-                  <button :disabled="policySaving" class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40" @click="addPolicy">
-                    {{ policySaving ? 'Saving...' : 'Save' }}
-                  </button>
-                  <button class="text-sm text-gray-400 hover:text-white" @click="showPolicyForm = false">Cancel</button>
+              <td class="ep-td">
+                <div class="ep-inline-actions">
+                  <button :disabled="policySaving" class="ep-btn-add" @click="addPolicy">{{ policySaving ? 'Saving…' : 'Save' }}</button>
+                  <button class="ep-btn-cancel-sm" @click="showPolicyForm = false">Cancel</button>
                 </div>
               </td>
             </tr>
@@ -263,3 +249,51 @@ onMounted(fetchData)
     </template>
   </div>
 </template>
+
+<style scoped>
+.ep-page { display: flex; flex-direction: column; gap: 20px; }
+.ep-title { font-size: 20px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.ep-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.ep-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; }
+.ep-loading { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.ep-skeleton { height: 36px; background: #232936; border-radius: 6px; animation: ep-pulse 1.2s ease-in-out infinite; }
+@keyframes ep-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.ep-section-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.ep-section-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #232936; }
+.ep-section-title { font-size: 13px; font-weight: 600; color: #EEF0F4; text-transform: uppercase; letter-spacing: 0.08em; }
+.ep-btn-primary { background: #6B5BFF; border: none; color: #fff; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.ep-btn-primary:hover { opacity: 0.88; }
+.ep-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ep-th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; background: #11141C; border-bottom: 1px solid #232936; }
+.ep-row { border-bottom: 1px solid #1C2030; transition: background 0.12s; }
+.ep-row:last-child { border-bottom: none; }
+.ep-row:hover { background: rgba(255,255,255,0.02); }
+.ep-add-row { background: rgba(255,255,255,0.01); border-top: 1px solid #232936; }
+.ep-td { padding: 10px 14px; color: #B6BED0; vertical-align: middle; }
+.ep-td-name { color: #EEF0F4; font-weight: 500; }
+.ep-td-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.ep-td-empty { padding: 32px 14px; text-align: center; color: #7A8299; font-size: 13px; }
+.ep-color-cell { display: flex; align-items: center; gap: 8px; }
+.ep-color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.ep-color-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7A8299; }
+.ep-status-btn { border: none; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 500; cursor: pointer; }
+.ep-status-active { background: rgba(77,211,154,0.12); color: #4DD39A; }
+.ep-status-inactive { background: rgba(122,130,153,0.1); color: #7A8299; }
+.ep-req-yes { color: #4DD39A; font-size: 12px; }
+.ep-req-no { color: #7A8299; font-size: 12px; }
+.ep-btn-delete { background: none; border: none; color: #F38288; font-size: 12px; cursor: pointer; }
+.ep-btn-delete:hover { text-decoration: underline; }
+.ep-input-sm { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 6px; padding: 6px 10px; font-size: 12px; outline: none; width: 100%; box-sizing: border-box; }
+.ep-input-sm:focus { border-color: #6B5BFF; }
+.ep-input-num { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 6px; padding: 6px 8px; font-size: 12px; outline: none; width: 72px; }
+.ep-input-num:focus { border-color: #6B5BFF; }
+.ep-color-picker { width: 32px; height: 32px; border-radius: 6px; border: 1px solid #232936; cursor: pointer; background: none; }
+.ep-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #B6BED0; cursor: pointer; }
+.ep-checkbox { accent-color: #6B5BFF; }
+.ep-inline-actions { display: flex; gap: 8px; align-items: center; }
+.ep-btn-add { background: #6B5BFF; border: none; color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.ep-btn-add:hover:not(:disabled) { opacity: 0.88; }
+.ep-btn-add:disabled { opacity: 0.45; cursor: not-allowed; }
+.ep-btn-cancel-sm { background: none; border: none; color: #7A8299; font-size: 12px; cursor: pointer; }
+.ep-btn-cancel-sm:hover { color: #EEF0F4; }
+</style>

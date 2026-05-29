@@ -365,13 +365,22 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
 <template>
   <div class="rp-page">
 
-    <!-- Header -->
-    <div class="rp-header">
-      <div class="rp-view-tabs">
-        <button :class="['rp-view-tab', activeView === 'roles' ? 'rp-view-tab-active' : '']" @click="switchView('roles')">Roles</button>
-        <button :class="['rp-view-tab', activeView === 'matrix' ? 'rp-view-tab-active' : '']" @click="switchView('matrix')">Permission Matrix</button>
+    <!-- Page header (eyebrow + title + subtitle, JSX style) -->
+    <div class="page-header">
+      <div class="page-header-text">
+        <div class="eyebrow">
+          {{ items.length }} role{{ items.length === 1 ? '' : 's' }} ·
+          {{ items.reduce((s, r) => s + r.users_count, 0) }} users ·
+          {{ groupedPermissions.length }} modules
+        </div>
+        <h1 class="page-title">Roles &amp; access</h1>
+        <p class="page-subtitle">Define what each persona can see and do across the platform.</p>
       </div>
-      <div class="rp-header-right">
+      <div class="page-header-actions">
+        <div class="rp-view-tabs">
+          <button :class="['rp-view-tab', activeView === 'roles' ? 'rp-view-tab-active' : '']" @click="switchView('roles')">Roles</button>
+          <button :class="['rp-view-tab', activeView === 'matrix' ? 'rp-view-tab-active' : '']" @click="switchView('matrix')">Matrix</button>
+        </div>
         <div class="rp-search-wrap">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" class="rp-search-icon">
             <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.8"/>
@@ -380,10 +389,10 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
           <input v-model="searchQuery" type="text" placeholder="Search roles…" class="rp-search" @input="onSearch" />
         </div>
         <button class="btn-primary" @click="openCreate">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+          <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
           </svg>
-          New Role
+          New role
         </button>
       </div>
     </div>
@@ -391,8 +400,14 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
     <!-- Permission Matrix View -->
     <div v-if="activeView === 'matrix'" class="mx-card">
       <div class="mx-toolbar">
+        <div class="mx-toolbar-title">
+          <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+            <path d="M10 2L3 5v5c0 4 3 7 7 8 4-1 7-4 7-8V5l-7-3z" stroke="#F38288" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+          <span>Permission matrix</span>
+        </div>
         <input v-model="matrixFilter" type="text" placeholder="Filter by module or permission…" class="mx-filter" />
-        <span class="mx-hint">Click a cell to toggle. Changes auto-save after 0.8s.</span>
+        <span class="mx-hint">Click a cell to toggle. Auto-saves after 0.8s.</span>
       </div>
       <div v-if="matrixLoading" class="mx-state">
         <span class="spinner spinner-lg" /> Loading matrix…
@@ -402,10 +417,10 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
         <table class="mx-table">
           <thead>
             <tr>
-              <th class="mx-th-perm">Permission</th>
+              <th class="mx-th-perm">Module · op</th>
               <th v-for="r in matrixRoles" :key="r.id" class="mx-th-role">
                 <div class="mx-role-head">
-                  <div class="role-icon" style="width:22px;height:22px;font-size:9px;margin:0 auto 3px">{{ initials(formatRoleName(r.name)) }}</div>
+                  <div class="role-icon role-icon-sm">{{ initials(formatRoleName(r.name)) }}</div>
                   <span>{{ formatRoleName(r.name) }}</span>
                   <span v-if="savingRoleIds.has(r.id)" class="mx-saving">saving…</span>
                 </div>
@@ -423,10 +438,14 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
                   <code class="mx-perm-code">{{ perm.name }}</code>
                 </td>
                 <td v-for="(r, rIdx) in matrixRoles" :key="r.id" class="mx-cell" @click="toggleMatrixPerm(rIdx, perm.id)">
-                  <span :class="['mx-dot', hasPerm(rIdx, perm.id) ? 'mx-dot-on' : 'mx-dot-off']">
-                    <svg v-if="hasPerm(rIdx, perm.id)" width="10" height="10" viewBox="0 0 12 12" fill="currentColor">
-                      <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                  <span :class="['mx-pill', hasPerm(rIdx, perm.id) ? 'mx-pill-on' : 'mx-pill-off']">
+                    <svg v-if="hasPerm(rIdx, perm.id)" width="10" height="10" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
+                    <svg v-else width="10" height="10" viewBox="0 0 12 12" fill="none">
+                      <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    {{ hasPerm(rIdx, perm.id) ? 'Full' : 'None' }}
                   </span>
                 </td>
               </tr>
@@ -437,21 +456,37 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
           </tbody>
         </table>
       </div>
+
+      <!-- Audit footer -->
+      <div class="mx-audit">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="none">
+          <path d="M10 2L3 5v5c0 4 3 7 7 8 4-1 7-4 7-8V5l-7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        </svg>
+        <span>Click cells to toggle role permissions</span>
+        <span class="mx-audit-sep">·</span>
+        <span>Changes auto-save</span>
+        <div class="mx-audit-spacer"></div>
+        <span>SOC 2 audit trail · 24-month retention</span>
+      </div>
     </div>
 
-    <!-- Master-detail layout -->
+    <!-- Master-detail layout (Roles list view) -->
     <div v-if="activeView === 'roles'" class="rp-layout" :class="{ 'panel-open': panelMode !== 'none' }">
 
-      <!-- Left: roles list -->
+      <!-- Left: roles list (sidebar style from JSX) -->
       <div class="rp-list-col">
         <div class="rp-card">
+          <div class="rp-card-head">
+            <div class="rp-card-eyebrow">Roles</div>
+          </div>
+
           <div class="rp-table-wrap">
             <table class="rp-table">
               <thead>
                 <tr>
                   <th>Role</th>
                   <th>Users</th>
-                  <th>Permissions</th>
+                  <th>Perms</th>
                   <th v-if="panelMode === 'none'">Created</th>
                   <th class="th-actions"></th>
                 </tr>
@@ -472,8 +507,10 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
                 >
                   <td>
                     <div class="role-cell">
-                      <div class="role-icon">{{ initials(formatRoleName(row.name)) }}</div>
-                      <span class="role-name">{{ formatRoleName(row.name) }}</span>
+                      <span class="role-dot"></span>
+                      <div class="role-info">
+                        <span class="role-name">{{ formatRoleName(row.name) }}</span>
+                      </div>
                     </div>
                   </td>
                   <td><span class="count-pill">{{ row.users_count }}</span></td>
@@ -536,7 +573,7 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
                   <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
                 </svg>
               </div>
-              <h3 class="panel-title">{{ panelMode === 'create' ? 'New Role' : `Edit — ${form.name}` }}</h3>
+              <h3 class="panel-title">{{ panelMode === 'create' ? 'New role' : `Edit — ${form.name}` }}</h3>
             </div>
             <button class="panel-close" @click="closePanel" title="Close">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
@@ -553,7 +590,7 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
           <template v-else>
             <!-- Role details section -->
             <div class="panel-section">
-              <div class="panel-section-title">Role Details</div>
+              <div class="panel-section-title">Role details</div>
               <div class="field">
                 <label class="field-label">Role name</label>
                 <input v-model="form.name" type="text" class="field-input" placeholder="e.g. HR Manager" />
@@ -605,7 +642,7 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
               <button class="btn-ghost" @click="closePanel">Cancel</button>
               <button class="btn-primary" :disabled="saving || !form.name.trim()" @click="saveRole">
                 <span v-if="saving" class="spinner" />
-                {{ saving ? 'Saving…' : panelMode === 'create' ? 'Create Role' : 'Save Changes' }}
+                {{ saving ? 'Saving…' : panelMode === 'create' ? 'Create role' : 'Save changes' }}
               </button>
             </div>
           </template>
@@ -614,184 +651,370 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
     </div>
 
     <!-- ── Assign Users Modal ─────────────────────────────────────── -->
-    <Transition name="fade">
-      <div v-if="showAssignModal" class="modal-overlay" @click.self="showAssignModal = false">
-        <div class="modal-card">
-          <div class="modal-head">
-            <h3 class="modal-title">Assign Users — <span class="modal-title-role">{{ selectedRole?.name }}</span></h3>
-            <button class="modal-close" @click="showAssignModal = false">
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-              </svg>
-            </button>
-          </div>
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showAssignModal" class="modal-overlay" @click.self="showAssignModal = false">
+          <div class="modal-card">
+            <div class="modal-head">
+              <h3 class="modal-title">Assign users — <span class="modal-title-role">{{ selectedRole ? formatRoleName(selectedRole.name) : '' }}</span></h3>
+              <button class="modal-close" @click="showAssignModal = false">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            </div>
 
-          <div class="modal-body">
-            <div class="assign-search-wrap">
-              <input
-                v-model="empSearch"
-                type="text"
-                class="field-input"
-                placeholder="Search employee by name or email…"
-                @input="onEmpSearch"
-              />
-              <div v-if="empSearching" class="assign-state"><span class="spinner" /> Searching…</div>
-              <div v-else-if="empSearch && empResults.length === 0 && !empSearching" class="assign-state">No employees found.</div>
-              <div v-if="empResults.length" class="assign-results">
-                <div v-for="e in empResults" :key="e.id" class="assign-result-row" @click="attachUser(e)">
-                  <div class="assign-avatar">{{ initials(e.name) }}</div>
-                  <div class="assign-info">
-                    <div class="assign-name">{{ e.name }}</div>
-                    <div class="assign-email">{{ e.email }}</div>
+            <div class="modal-body">
+              <div class="assign-search-wrap">
+                <input
+                  v-model="empSearch"
+                  type="text"
+                  class="field-input"
+                  placeholder="Search employee by name or email…"
+                  @input="onEmpSearch"
+                />
+                <div v-if="empSearching" class="assign-state"><span class="spinner" /> Searching…</div>
+                <div v-else-if="empSearch && empResults.length === 0 && !empSearching" class="assign-state">No employees found.</div>
+                <div v-if="empResults.length" class="assign-results">
+                  <div v-for="e in empResults" :key="e.id" class="assign-result-row" @click="attachUser(e)">
+                    <div class="assign-avatar">{{ initials(e.name) }}</div>
+                    <div class="assign-info">
+                      <div class="assign-name">{{ e.name }}</div>
+                      <div class="assign-email">{{ e.email }}</div>
+                    </div>
+                    <span class="assign-add-badge">+ Add</span>
                   </div>
-                  <span class="assign-add-badge">+ Add</span>
+                </div>
+              </div>
+
+              <div class="assign-list-head">Assigned users ({{ assignedUsers.length }})</div>
+              <div class="assign-list">
+                <div v-if="assignLoading" class="assign-state"><span class="spinner" /> Loading…</div>
+                <div v-else-if="!assignedUsers.length" class="assign-state">No users assigned yet.</div>
+                <div v-else v-for="u in assignedUsers" :key="u.id" class="assign-row">
+                  <div class="assign-avatar">{{ initials(u.name) }}</div>
+                  <div class="assign-info">
+                    <div class="assign-name">{{ u.name }}</div>
+                    <div class="assign-email">{{ u.email }}</div>
+                  </div>
+                  <button class="act-btn act-delete assign-remove" @click="detachUser(u.id)">Remove</button>
                 </div>
               </div>
             </div>
 
-            <div class="assign-list-head">Assigned Users ({{ assignedUsers.length }})</div>
-            <div class="assign-list">
-              <div v-if="assignLoading" class="assign-state"><span class="spinner" /> Loading…</div>
-              <div v-else-if="!assignedUsers.length" class="assign-state">No users assigned yet.</div>
-              <div v-else v-for="u in assignedUsers" :key="u.id" class="assign-row">
-                <div class="assign-avatar">{{ initials(u.name) }}</div>
-                <div class="assign-info">
-                  <div class="assign-name">{{ u.name }}</div>
-                  <div class="assign-email">{{ u.email }}</div>
-                </div>
-                <button class="act-btn act-delete" style="margin-left:auto" @click="detachUser(u.id)">Remove</button>
-              </div>
+            <div class="modal-footer">
+              <button class="btn-ghost" @click="showAssignModal = false">Close</button>
             </div>
-          </div>
-
-          <div class="modal-footer">
-            <button class="btn-ghost" @click="showAssignModal = false">Close</button>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
-.rp-page { display: flex; flex-direction: column; gap: 20px; }
+/* ── Design tokens ─────────────────────────────────────── */
+.rp-page {
+  --bg: #0D0F17;
+  --surface: #161A23;
+  --surface2: #1C2030;
+  --surface3: #222840;
+  --border: #232936;
+  --border-hi: #2D3447;
+  --text: #EEF0F4;
+  --muted: #7A8299;
+  --dim: #B6BCCC;
+  --accent: #6B5BFF;
+  --accent-soft: rgba(107, 91, 255, 0.16);
+  --accent-soft-hi: rgba(107, 91, 255, 0.28);
+  --green: #4DD39A;
+  --red: #F38288;
+  --yellow: #F5A623;
+  --r: 12px;
+  --rs: 8px;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--text);
+}
 
-/* Header */
-.rp-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.rp-sub    { font-size: 13px; color: var(--muted); }
-.rp-header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* ── Page header ───────────────────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.page-header-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.page-title {
+  font-family: var(--font-serif);
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.page-subtitle { font-size: 13px; color: var(--muted); max-width: 540px; }
+.page-header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* View tabs */
+.rp-view-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 3px;
+}
+.rp-view-tab {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rp-view-tab:hover { color: var(--text); }
+.rp-view-tab-active {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border-hi);
+}
 
 /* Search */
 .rp-search-wrap { position: relative; display: flex; align-items: center; }
 .rp-search-icon { position: absolute; left: 10px; color: var(--muted); pointer-events: none; }
 .rp-search {
-  height: 36px; padding: 0 12px 0 32px; font-size: 13px; width: 220px;
-  background: var(--surface2); border: 1px solid var(--border-hi);
-  border-radius: 8px; color: var(--text); outline: none; transition: border-color .15s;
+  height: 34px;
+  padding: 0 12px 0 32px;
+  font-size: 13px;
+  width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
 }
 .rp-search::placeholder { color: var(--muted); }
 .rp-search:focus { border-color: var(--accent); }
 
-/* Master-detail layout */
+/* ── Master-detail layout ──────────────────────────────── */
 .rp-layout {
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
   align-items: start;
 }
-.rp-layout.panel-open {
-  grid-template-columns: 1fr 400px;
-}
-
-/* List column */
+.rp-layout.panel-open { grid-template-columns: 1fr 420px; }
 .rp-list-col { min-width: 0; }
 
-/* Card */
-.rp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+/* ── Card ──────────────────────────────────────────────── */
+.rp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.rp-card-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.rp-card-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .rp-table-wrap { overflow-x: auto; }
 
-/* Table */
+/* ── Table ─────────────────────────────────────────────── */
 .rp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.rp-table thead tr { background: var(--surface2); border-bottom: 1px solid var(--border-hi); }
+.rp-table thead tr {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border-hi);
+}
 .rp-table th {
-  padding: 11px 16px; text-align: left;
-  font-size: 11px; font-weight: 600; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap;
+  padding: 11px 16px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 .th-actions { width: 130px; }
-.rp-row { border-bottom: 1px solid var(--border); transition: background .12s; }
+.rp-row { border-bottom: 1px solid var(--border); transition: background 0.12s; }
 .rp-row:last-child { border-bottom: none; }
 .rp-row:hover { background: var(--surface2); }
-.rp-row-active { background: rgba(79,126,255,.06) !important; border-left: 2px solid var(--accent); }
-.rp-table td { padding: 11px 16px; color: var(--text); vertical-align: middle; }
-.td-state   { padding: 40px 16px; text-align: center; color: var(--muted); }
-.td-dim     { color: var(--dim); font-size: 13px; }
+.rp-row-active {
+  background: var(--accent-soft) !important;
+  border-left: 3px solid var(--accent);
+}
+.rp-table td { padding: 12px 16px; color: var(--text); vertical-align: middle; }
+.td-state { padding: 40px 16px; text-align: center; color: var(--muted); }
+.td-dim {
+  color: var(--muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
 .td-actions { padding-right: 12px; }
 
 /* Role cell */
 .role-cell { display: flex; align-items: center; gap: 10px; }
-.role-icon {
-  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--accent), var(--purple));
-  display: grid; place-items: center;
-  font-size: 11px; font-weight: 700; color: #fff;
+.role-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--accent);
+  flex-shrink: 0;
 }
-.role-name { font-weight: 500; color: var(--text); }
+.role-info { min-width: 0; }
+.role-name { font-weight: 500; color: var(--text); font-size: 12.5px; }
+
+.role-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent), #8B7BFF);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.role-icon-sm {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+  margin: 0 auto 3px;
+}
 
 /* Count pills */
 .count-pill {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 28px; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600;
-  background: var(--surface3); border: 1px solid var(--border-hi); color: var(--dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--dim);
 }
-.count-pill.accent { color: var(--accent); border-color: rgba(79,126,255,.3); background: rgba(79,126,255,.08); }
+.count-pill.accent {
+  color: var(--accent);
+  border-color: var(--accent-soft-hi);
+  background: var(--accent-soft);
+}
 
 /* Action buttons */
 .action-row { display: flex; align-items: center; gap: 5px; }
 .act-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 8px; border-radius: 6px; font-size: 11px; font-weight: 500;
-  border: 1px solid; cursor: pointer; background: none; transition: opacity .15s, transform .1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+  cursor: pointer;
+  background: none;
+  transition: opacity 0.15s, transform 0.1s, background 0.15s;
 }
-.act-btn:hover { opacity: .85; transform: translateY(-1px); }
-.act-assign { color: var(--accent);  border-color: rgba(79,126,255,.4); }
-.act-assign:hover { background: rgba(79,126,255,.1) !important; }
-.act-edit   { color: var(--dim);    border-color: var(--border-hi); }
-.act-edit:hover   { color: var(--text); background: var(--surface2) !important; }
-.act-delete { color: var(--red);    border-color: rgba(255,107,107,.3); }
-.act-delete:hover { background: rgba(255,107,107,.1) !important; }
+.act-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+.act-assign { color: var(--accent); border-color: var(--accent-soft-hi); }
+.act-assign:hover { background: var(--accent-soft); }
+.act-edit { color: var(--dim); border-color: var(--border-hi); }
+.act-edit:hover { color: var(--text); background: var(--surface2); }
+.act-delete { color: var(--red); border-color: rgba(243, 130, 136, 0.3); }
+.act-delete:hover { background: rgba(243, 130, 136, 0.1); }
 
 /* Spinner */
 .spinner {
-  display: inline-block; width: 13px; height: 13px; vertical-align: middle; margin-right: 5px;
-  border: 2px solid rgba(255,255,255,.12); border-top-color: var(--accent);
-  border-radius: 50%; animation: spin .7s linear infinite;
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  vertical-align: middle;
+  margin-right: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }
 .spinner-lg { width: 18px; height: 18px; margin-right: 8px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Pagination */
 .rp-pagination {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+  flex-wrap: wrap;
+  gap: 8px;
 }
-.pg-info     { font-size: 12px; color: var(--muted); }
+.pg-info { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
 .pg-controls { display: flex; align-items: center; gap: 8px; }
 .pg-select {
-  height: 30px; padding: 0 8px; font-size: 12px;
-  background: var(--surface2); border: 1px solid var(--border-hi);
-  border-radius: 6px; color: var(--dim); cursor: pointer; outline: none;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--dim);
+  cursor: pointer;
+  outline: none;
 }
 .pg-btn {
-  width: 28px; height: 28px; border-radius: 6px; font-size: 15px;
-  background: var(--surface2); border: 1px solid var(--border-hi);
-  color: var(--dim); cursor: pointer; transition: all .15s;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  cursor: pointer;
+  transition: all 0.15s;
 }
-.pg-btn:not(:disabled):hover { background: var(--surface3); color: var(--text); border-color: var(--accent); }
-.pg-btn:disabled { opacity: .35; cursor: not-allowed; }
-.pg-current { font-size: 12px; color: var(--dim); min-width: 50px; text-align: center; }
+.pg-btn:not(:disabled):hover {
+  background: var(--surface3);
+  color: var(--text);
+  border-color: var(--accent);
+}
+.pg-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.pg-current {
+  font-size: 12px;
+  color: var(--dim);
+  min-width: 50px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
 
-/* ── Inline panel ─────────────────────────────────────────────────── */
+/* ── Inline panel ──────────────────────────────────────── */
 .rp-panel {
   background: var(--surface);
   border: 1px solid var(--border-hi);
@@ -804,29 +1027,49 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
   top: 16px;
   max-height: calc(100vh - 120px);
 }
-
 .panel-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 .panel-head-info { display: flex; align-items: center; gap: 10px; }
 .panel-icon {
-  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
-  background: rgba(79,126,255,.15); border: 1px solid rgba(79,126,255,.3);
-  display: grid; place-items: center; color: var(--accent);
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft-hi);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
 }
 .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
 .panel-close {
-  width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center;
-  background: var(--surface2); border: 1px solid var(--border-hi); color: var(--muted); cursor: pointer;
-  transition: color .12s;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.12s;
 }
 .panel-close:hover { color: var(--text); }
 
 .panel-loading {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  color: var(--muted); font-size: 13px; padding: 40px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 40px;
 }
 
 .panel-section {
@@ -846,34 +1089,74 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
   border-bottom: none;
 }
 .panel-section-title {
-  font-size: 11px; font-weight: 600; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.6px;
-  display: flex; align-items: center; gap: 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .perm-count-badge {
-  font-size: 10px; font-weight: 600; text-transform: none; letter-spacing: 0;
-  color: var(--accent); background: rgba(79,126,255,.1); border: 1px solid rgba(79,126,255,.25);
-  padding: 1px 7px; border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft-hi);
+  padding: 1px 8px;
+  border-radius: 20px;
 }
 
 /* Fields */
-.field { display: flex; flex-direction: column; gap: 5px; }
-.field-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.field-optional { font-weight: 400; text-transform: none; font-size: 10px; color: var(--dim); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.field-optional {
+  font-weight: 400;
+  text-transform: none;
+  font-size: 10px;
+  color: var(--dim);
+}
 .field-hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.field-hint code { font-family: monospace; color: var(--accent); font-size: 11px; }
+.field-hint code {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 11px;
+}
 .field-input {
-  height: 36px; padding: 0 10px; font-size: 13px;
-  background: var(--surface2); border: 1px solid var(--border-hi);
-  border-radius: 8px; color: var(--text); outline: none; transition: border-color .15s;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .field-input::placeholder { color: var(--muted); }
-.field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,126,255,.12); }
+.field-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
 
 /* Warn box */
 .warn-box {
-  padding: 8px 12px; border-radius: 8px; font-size: 12px;
-  background: rgba(249,168,37,.08); border: 1px solid rgba(249,168,37,.3); color: var(--yellow);
+  padding: 9px 12px;
+  border-radius: var(--rs);
+  font-size: 12px;
+  background: rgba(245, 166, 35, 0.08);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  color: var(--yellow);
 }
 
 /* Permissions */
@@ -884,186 +1167,444 @@ onMounted(() => Promise.all([load(), loadPermissionsOnce()]))
   padding-bottom: 4px;
 }
 .perm-group + .perm-group { margin-top: 8px; }
-.perm-group { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.perm-group {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  overflow: hidden;
+}
 .perm-group-head {
-  padding: 7px 12px;
-  background: var(--surface3); border-bottom: 1px solid var(--border);
+  padding: 8px 12px;
+  background: var(--surface3);
+  border-bottom: 1px solid var(--border);
 }
 .perm-group-check-label {
-  display: flex; align-items: center; gap: 8px; cursor: pointer;
-  font-size: 11px; font-weight: 600; color: var(--dim);
-  text-transform: capitalize; letter-spacing: 0.4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dim);
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
   user-select: none;
 }
 .perm-group-check-label:hover { color: var(--text); }
-.perm-items { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 8px 12px; }
-.perm-item {
-  display: flex; align-items: center; gap: 6px; font-size: 12px;
-  color: var(--dim); cursor: pointer; padding: 4px 5px; border-radius: 4px;
-  transition: color .12s, background .12s; user-select: none;
+.perm-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  padding: 8px 12px;
 }
-.perm-item:hover { color: var(--text); background: rgba(255,255,255,.04); }
-.perm-check { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; flex-shrink: 0; }
-.perm-empty { padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
+.perm-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dim);
+  cursor: pointer;
+  padding: 4px 5px;
+  border-radius: 4px;
+  transition: color 0.12s, background 0.12s;
+  user-select: none;
+}
+.perm-item:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
+.perm-check {
+  accent-color: var(--accent);
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.perm-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
 
 /* Panel footer */
 .panel-footer {
-  display: flex; justify-content: flex-end; gap: 10px;
-  padding: 14px 18px; border-top: 1px solid var(--border); flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--surface2);
 }
 
-/* Assign users modal */
+/* ── Assign users modal ────────────────────────────────── */
 .modal-overlay {
-  position: fixed; inset: 0; z-index: 50;
-  background: rgba(0,0,0,.7); backdrop-filter: blur(3px);
-  display: grid; place-items: center; padding: 20px;
-}
-.modal-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 24px; border-bottom: 1px solid var(--border);
-}
-.modal-title { font-size: 15px; font-weight: 600; color: var(--text); }
-.modal-title-role { color: var(--accent); }
-.modal-close {
-  width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
-  background: var(--surface2); border: 1px solid var(--border-hi); color: var(--muted); cursor: pointer;
-}
-.modal-close:hover { color: var(--text); }
-.modal-footer {
-  display: flex; justify-content: flex-end; gap: 10px;
-  padding: 16px 24px; border-top: 1px solid var(--border);
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
 }
 .modal-card {
-  background: var(--surface); border: 1px solid var(--border-hi);
-  border-radius: var(--r); width: 100%; max-width: 500px;
-  display: flex; flex-direction: column; max-height: 85vh;
-  animation: fadeUp .2s ease;
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--r);
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  animation: fadeUp 0.2s ease;
+  color: var(--text);
 }
-.modal-body { padding: 20px 24px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.modal-title-role { color: var(--accent); }
+.modal-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body {
+  padding: 18px 22px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+
 .assign-search-wrap { display: flex; flex-direction: column; gap: 6px; }
 .assign-results {
-  border: 1px solid var(--border-hi); border-radius: 8px; overflow: hidden;
-  max-height: 180px; overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  overflow: hidden;
+  max-height: 180px;
+  overflow-y: auto;
+  background: var(--surface2);
 }
 .assign-result-row {
-  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
-  cursor: pointer; transition: background .12s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.12s;
 }
-.assign-result-row:hover { background: var(--surface2); }
+.assign-result-row:hover { background: var(--surface3); }
 .assign-result-row + .assign-result-row { border-top: 1px solid var(--border); }
 .assign-add-badge {
-  margin-left: auto; font-size: 11px; font-weight: 600; color: var(--accent);
-  background: rgba(79,126,255,.1); border: 1px solid rgba(79,126,255,.25);
-  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft-hi);
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
-.assign-list-head { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.assign-list { display: flex; flex-direction: column; gap: 2px; }
-.assign-state { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+.assign-list-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.assign-list { display: flex; flex-direction: column; gap: 4px; }
+.assign-state {
+  padding: 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
 .assign-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--rs);
+  background: var(--surface2);
+  border: 1px solid var(--border);
 }
 .assign-avatar {
-  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--accent), var(--purple));
-  display: grid; place-items: center;
-  font-size: 11px; font-weight: 700; color: #fff;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent), #8B7BFF);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
 }
-.assign-name  { font-size: 13px; font-weight: 500; color: var(--text); }
+.assign-name { font-size: 13px; font-weight: 500; color: var(--text); }
 .assign-email { font-size: 11px; color: var(--muted); }
+.assign-remove { margin-left: auto; }
 
-/* Shared buttons */
+/* ── Shared buttons ────────────────────────────────────── */
 .btn-primary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
-  background: var(--accent); color: #fff; border: none; cursor: pointer;
-  box-shadow: 0 0 14px rgba(79,126,255,.3); transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--rs);
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(107, 91, 255, 0.3);
+  transition: all 0.15s;
 }
-.btn-primary:hover:not(:disabled) { background: #3d6ee8; }
-.btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary:hover:not(:disabled) { background: #5849EF; }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-ghost {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
-  background: var(--surface2); border: 1px solid var(--border-hi); color: var(--dim); cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--rs);
+  font-size: 12.5px;
+  font-weight: 500;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  cursor: pointer;
 }
 .btn-ghost:hover { background: var(--surface3); color: var(--text); }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } }
-.fade-enter-active, .fade-leave-active { transition: opacity .15s; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* Panel slide transition */
-.slide-panel-enter-active { transition: opacity .2s, transform .2s; }
-.slide-panel-leave-active { transition: opacity .15s, transform .15s; }
-.slide-panel-enter-from  { opacity: 0; transform: translateX(20px); }
-.slide-panel-leave-to    { opacity: 0; transform: translateX(20px); }
+.slide-panel-enter-active { transition: opacity 0.2s, transform 0.2s; }
+.slide-panel-leave-active { transition: opacity 0.15s, transform 0.15s; }
+.slide-panel-enter-from { opacity: 0; transform: translateX(20px); }
+.slide-panel-leave-to { opacity: 0; transform: translateX(20px); }
 
-/* View tabs */
-.rp-view-tabs { display: flex; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
-.rp-view-tab  {
-  padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 500;
-  color: var(--muted); background: none; border: none; cursor: pointer; transition: all .15s;
+/* ── Permission Matrix ─────────────────────────────────── */
+.mx-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
 }
-.rp-view-tab:hover { color: var(--text); }
-.rp-view-tab-active { background: var(--surface3); color: var(--text); border: 1px solid var(--border-hi); }
-
-/* Matrix */
-.mx-card   { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
 .mx-toolbar {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.mx-toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
 }
 .mx-filter {
-  height: 34px; padding: 0 10px; font-size: 13px; width: 260px;
-  background: var(--surface2); border: 1px solid var(--border-hi);
-  border-radius: 7px; color: var(--text); outline: none; transition: border-color .15s;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12.5px;
+  width: 240px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
 }
 .mx-filter::placeholder { color: var(--muted); }
 .mx-filter:focus { border-color: var(--accent); }
-.mx-hint  { font-size: 11px; color: var(--muted); }
-.mx-state { padding: 40px; text-align: center; color: var(--muted); font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.mx-scroll { overflow-x: auto; max-height: calc(100vh - 220px); overflow-y: auto; }
+.mx-hint { font-size: 11px; color: var(--muted); margin-left: auto; }
+.mx-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.mx-scroll {
+  overflow-x: auto;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+}
 
 .mx-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .mx-th-perm {
-  position: sticky; left: 0; z-index: 2; top: 0;
-  background: var(--surface2); padding: 9px 14px;
-  text-align: left; font-size: 10px; font-weight: 600; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
-  border-bottom: 1px solid var(--border-hi); min-width: 180px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  top: 0;
+  background: var(--surface2);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-hi);
+  min-width: 200px;
 }
 .mx-th-role {
-  position: sticky; top: 0; z-index: 1;
-  background: var(--surface2); padding: 9px 8px;
-  text-align: center; border-bottom: 1px solid var(--border-hi);
-  min-width: 80px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface2);
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-hi);
+  border-left: 1px solid var(--border);
+  min-width: 88px;
 }
-.mx-role-head { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; font-weight: 600; color: var(--dim); white-space: nowrap; }
+.mx-role-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
 .mx-saving { font-size: 9px; color: var(--accent); font-weight: 500; }
 
-.mx-group-row { background: var(--surface3); }
+.mx-group-row { background: #11141C; }
 .mx-group-label {
-  position: sticky; left: 0;
-  padding: 6px 14px; font-size: 10px; font-weight: 700; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.8px; border-top: 1px solid var(--border);
+  position: sticky;
+  left: 0;
+  padding: 8px 16px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: capitalize;
+  letter-spacing: -0.005em;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
-.mx-perm-row { border-bottom: 1px solid var(--border); transition: background .1s; }
+.mx-perm-row {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
 .mx-perm-row:hover { background: var(--surface2); }
 .mx-perm-row:last-child { border-bottom: none; }
 .mx-perm-name {
-  position: sticky; left: 0; z-index: 1; background: inherit;
-  padding: 6px 14px; white-space: nowrap;
-  display: flex; flex-direction: column; gap: 1px;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  padding: 10px 16px 10px 28px;
+  white-space: nowrap;
 }
 .mx-perm-row:hover .mx-perm-name { background: var(--surface2); }
-.mx-perm-label { font-size: 12px; color: var(--dim); }
-.mx-perm-code  { font-family: monospace; font-size: 10px; color: var(--muted); letter-spacing: 0; }
-.mx-cell { text-align: center; padding: 6px 8px; cursor: pointer; }
-.mx-dot {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 20px; height: 20px; border-radius: 6px; transition: all .15s;
+.mx-perm-label {
+  font-size: 12px;
+  color: var(--text);
+  display: block;
 }
-.mx-dot-on  { background: rgba(54,211,153,.15); border: 1px solid rgba(54,211,153,.4); color: #36d399; }
-.mx-dot-off { background: var(--surface2); border: 1px solid var(--border); color: transparent; }
-.mx-cell:hover .mx-dot-off { border-color: var(--border-hi); background: var(--surface3); }
+.mx-perm-code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0;
+  display: block;
+  margin-top: 1px;
+}
+.mx-cell {
+  padding: 6px;
+  border-left: 1px solid var(--border);
+  text-align: center;
+  cursor: pointer;
+}
+.mx-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 92%;
+  min-height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  transition: all 0.15s;
+  border: 1px solid;
+}
+.mx-pill-on {
+  background: rgba(77, 211, 154, 0.16);
+  border-color: rgba(77, 211, 154, 0.4);
+  color: var(--green);
+}
+.mx-pill-off {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--muted);
+}
+.mx-cell:hover .mx-pill-off {
+  border-color: var(--border-hi);
+  background: var(--surface3);
+  color: var(--dim);
+}
+
+/* Audit footer */
+.mx-audit {
+  padding: 12px 18px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  flex-wrap: wrap;
+}
+.mx-audit-sep { color: var(--border-hi); }
+.mx-audit-spacer { flex: 1; }
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .rp-layout.panel-open { grid-template-columns: 1fr; }
+  .rp-panel { position: static; max-height: none; }
+}
+@media (max-width: 640px) {
+  .page-title { font-size: 28px; }
+  .rp-search { width: 160px; }
+}
 </style>

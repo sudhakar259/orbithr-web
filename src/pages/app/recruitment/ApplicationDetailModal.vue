@@ -37,38 +37,38 @@ const canReject = computed(() =>
   ),
 )
 
-const getStatusClasses = (status: string) => {
+const getStatusClass = (status: string) => {
   const map: Record<string, string> = {
-    submitted: 'bg-blue-900/50 text-blue-400',
-    under_review: 'bg-yellow-900/50 text-yellow-400',
-    shortlisted: 'bg-purple-900/50 text-purple-400',
-    interview_scheduled: 'bg-indigo-900/50 text-indigo-400',
-    interviewed: 'bg-cyan-900/50 text-cyan-400',
-    offered: 'bg-green-900/50 text-green-400',
-    hired: 'bg-emerald-900/50 text-emerald-400',
-    rejected: 'bg-red-900/50 text-red-400',
-    withdrawn: 'bg-gray-700 text-gray-400',
+    submitted: 'adm-badge-blue',
+    under_review: 'adm-badge-yellow',
+    shortlisted: 'adm-badge-purple',
+    interview_scheduled: 'adm-badge-indigo',
+    interviewed: 'adm-badge-teal',
+    offered: 'adm-badge-green',
+    hired: 'adm-badge-green',
+    rejected: 'adm-badge-red',
+    withdrawn: 'adm-badge-muted',
   }
-  return map[status] ?? 'bg-gray-700 text-gray-300'
+  return map[status] ?? 'adm-badge-muted'
 }
 
-const getStageStatusClasses = (status: string) => {
+const getStageClass = (status: string) => {
   const map: Record<string, string> = {
-    pending: 'border-yellow-500 bg-yellow-900/20',
-    completed: 'border-green-500 bg-green-900/20',
-    cancelled: 'border-gray-600 bg-gray-800',
+    pending: 'adm-stage-yellow',
+    completed: 'adm-stage-green',
+    cancelled: 'adm-stage-muted',
   }
-  return map[status] ?? 'border-gray-600 bg-gray-800'
+  return map[status] ?? 'adm-stage-muted'
 }
 
 const formatDate = (date?: string) => {
   if (!date) return '-'
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
+
+const initials = computed(() =>
+  props.application.applicant_name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
+)
 
 const handleAction = async (action: () => Promise<unknown>) => {
   loading.value = true
@@ -87,304 +87,217 @@ const handleAction = async (action: () => Promise<unknown>) => {
 const shortlist = () => handleAction(() => recruitmentService.shortlistApplication(props.application.id))
 
 const reject = () => {
-  if (!rejectionReason.value.trim()) {
-    error.value = 'Please provide a rejection reason'
-    return
-  }
+  if (!rejectionReason.value.trim()) { error.value = 'Please provide a rejection reason'; return }
   handleAction(() => recruitmentService.rejectApplication(props.application.id, rejectionReason.value))
 }
 
 const scheduleInterview = () => {
-  if (!interviewDate.value) {
-    error.value = 'Please select a date'
-    return
-  }
-  handleAction(() =>
-    recruitmentService.scheduleInterview(props.application.id, {
-      date: interviewDate.value,
-      notes: interviewNotes.value || undefined,
-    }),
-  )
+  if (!interviewDate.value) { error.value = 'Please select a date'; return }
+  handleAction(() => recruitmentService.scheduleInterview(props.application.id, { date: interviewDate.value, notes: interviewNotes.value || undefined }))
 }
 
-const markInterviewed = () =>
-  handleAction(() => recruitmentService.updateStatus(props.application.id, 'interviewed'))
-
+const markInterviewed = () => handleAction(() => recruitmentService.updateStatus(props.application.id, 'interviewed'))
 const makeOffer = () => handleAction(() => recruitmentService.makeOffer(props.application.id))
 const hire = () => handleAction(() => recruitmentService.hireApplicant(props.application.id))
-
-const submitRating = () =>
-  handleAction(() =>
-    recruitmentService.rateApplication(props.application.id, { rating: ratingValue.value }),
-  )
+const submitRating = () => handleAction(() => recruitmentService.rateApplication(props.application.id, { rating: ratingValue.value }))
 </script>
 
 <template>
-  <!-- Slide-over backdrop -->
-  <div class="fixed inset-0 z-50 overflow-hidden">
-    <div class="absolute inset-0 bg-black/50" @click="emit('close')"></div>
-
-    <!-- Slide-over panel -->
-    <div class="absolute inset-y-0 right-0 max-w-lg w-full">
-      <div class="h-full bg-gray-800 border-l border-gray-700 flex flex-col overflow-y-auto">
+  <Teleport to="body">
+    <div class="adm-overlay">
+      <div class="adm-backdrop" @click="emit('close')"></div>
+      <div class="adm-panel">
         <!-- Header -->
-        <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
-          <h2 class="text-lg font-semibold text-white">Application Details</h2>
-          <button @click="emit('close')" class="text-gray-400 hover:text-white transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        <div class="adm-head">
+          <h2 class="adm-head-title">Application Details</h2>
+          <button class="adm-close" @click="emit('close')">&#10005;</button>
         </div>
 
         <!-- Body -->
-        <div class="flex-1 px-6 py-6 space-y-6 overflow-y-auto">
-          <!-- Error -->
-          <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-3">
-            <p class="text-sm text-red-400">{{ error }}</p>
-          </div>
+        <div class="adm-body">
+          <div v-if="error" class="adm-error">{{ error }}</div>
 
-          <!-- Applicant info -->
-          <div class="space-y-3">
-            <div class="flex items-center space-x-4">
-              <div class="w-14 h-14 rounded-full bg-gray-700 flex items-center justify-center text-lg font-semibold text-gray-300">
-                {{ application.applicant_name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() }}
-              </div>
-              <div>
-                <h3 class="text-lg font-semibold text-white">{{ application.applicant_name }}</h3>
-                <p class="text-sm text-gray-400">{{ application.applicant_email }}</p>
-                <p v-if="application.applicant_phone" class="text-sm text-gray-400">{{ application.applicant_phone }}</p>
-              </div>
-            </div>
-
-            <div class="flex items-center space-x-3 text-sm">
-              <span
-                :class="[getStatusClasses(application.status), 'px-2.5 py-0.5 text-xs font-semibold rounded-full']"
-              >
-                {{ application.status.replace(/_/g, ' ') }}
-              </span>
-              <span class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-gray-700 text-gray-300">
-                {{ application.source }}
-              </span>
-              <span class="text-gray-500">Submitted {{ formatDate(application.submitted_at) }}</span>
+          <!-- Applicant -->
+          <div class="adm-applicant">
+            <div class="adm-avatar">{{ initials }}</div>
+            <div>
+              <h3 class="adm-name">{{ application.applicant_name }}</h3>
+              <p class="adm-email">{{ application.applicant_email }}</p>
+              <p v-if="application.applicant_phone" class="adm-email">{{ application.applicant_phone }}</p>
             </div>
           </div>
 
-          <!-- Cover letter -->
-          <div v-if="application.cover_letter" class="space-y-2">
-            <h4 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Cover Letter</h4>
-            <p class="text-sm text-gray-400 whitespace-pre-wrap bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-              {{ application.cover_letter }}
-            </p>
+          <div class="adm-badges-row">
+            <span :class="['adm-badge', getStatusClass(application.status)]">{{ application.status.replace(/_/g, ' ') }}</span>
+            <span class="adm-badge adm-badge-muted">{{ application.source }}</span>
+            <span class="adm-submitted">Submitted {{ formatDate(application.submitted_at) }}</span>
+          </div>
+
+          <!-- Cover Letter -->
+          <div v-if="application.cover_letter" class="adm-section">
+            <h4 class="adm-section-title">Cover Letter</h4>
+            <p class="adm-cover">{{ application.cover_letter }}</p>
           </div>
 
           <!-- Links -->
-          <div class="space-y-2">
-            <div v-if="application.resume_path" class="flex items-center space-x-2">
-              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <a
-                :href="application.resume_path"
-                target="_blank"
-                class="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                Download Resume
-              </a>
-            </div>
-            <div v-if="application.portfolio_url" class="flex items-center space-x-2">
-              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              <a
-                :href="application.portfolio_url"
-                target="_blank"
-                class="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                Portfolio
-              </a>
-            </div>
+          <div class="adm-section">
+            <a v-if="application.resume_path" :href="application.resume_path" target="_blank" class="adm-link">&#8595; Download Resume</a>
+            <a v-if="application.portfolio_url" :href="application.portfolio_url" target="_blank" class="adm-link">&#8599; Portfolio</a>
           </div>
 
           <!-- Rating -->
-          <div class="space-y-2">
-            <h4 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Rating</h4>
-            <div class="flex items-center space-x-2">
+          <div class="adm-section">
+            <h4 class="adm-section-title">Rating</h4>
+            <div class="adm-stars">
               <button
                 v-for="(_, i) in 5"
                 :key="i"
+                class="adm-star"
+                :class="{ 'adm-star-filled': i < ratingValue }"
                 @click="ratingValue = i + 1"
-                class="focus:outline-none"
-              >
-                <svg
-                  class="w-6 h-6 transition-colors"
-                  :class="i < ratingValue ? 'text-yellow-400' : 'text-gray-600 hover:text-gray-500'"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              </button>
+              >&#9733;</button>
               <button
                 v-if="ratingValue !== (application.rating ?? 0)"
-                @click="submitRating"
+                class="adm-save-rating"
                 :disabled="loading"
-                class="ml-3 px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                Save
-              </button>
+                @click="submitRating"
+              >Save</button>
             </div>
           </div>
 
-          <!-- Interview stages timeline -->
-          <div v-if="stages.length" class="space-y-2">
-            <h4 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Interview Stages</h4>
-            <div class="space-y-3">
-              <div
-                v-for="(stage, i) in stages"
-                :key="i"
-                :class="[getStageStatusClasses(stage.status), 'border-l-2 pl-4 py-2 rounded-r-lg']"
-              >
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-medium text-white">{{ stage.stage }}</span>
-                  <span class="text-xs text-gray-400">{{ formatDate(stage.date) }}</span>
-                </div>
-                <p v-if="stage.interviewer" class="text-xs text-gray-400 mt-1">Interviewer: {{ stage.interviewer }}</p>
-                <p v-if="stage.notes" class="text-xs text-gray-500 mt-1">{{ stage.notes }}</p>
+          <!-- Interview Stages -->
+          <div v-if="stages.length" class="adm-section">
+            <h4 class="adm-section-title">Interview Stages</h4>
+            <div v-for="(stage, i) in stages" :key="i" :class="['adm-stage', getStageClass(stage.status)]">
+              <div class="adm-stage-row">
+                <span class="adm-stage-name">{{ stage.stage }}</span>
+                <span class="adm-stage-date">{{ formatDate(stage.date) }}</span>
               </div>
+              <p v-if="stage.interviewer" class="adm-stage-meta">Interviewer: {{ stage.interviewer }}</p>
+              <p v-if="stage.notes" class="adm-stage-note">{{ stage.notes }}</p>
             </div>
           </div>
 
           <!-- Feedback -->
-          <div v-if="application.feedback" class="space-y-2">
-            <h4 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Feedback</h4>
-            <p class="text-sm text-gray-400">{{ application.feedback }}</p>
+          <div v-if="application.feedback" class="adm-section">
+            <h4 class="adm-section-title">Feedback</h4>
+            <p class="adm-text-muted">{{ application.feedback }}</p>
           </div>
 
           <!-- Rejection reason -->
-          <div v-if="application.rejection_reason" class="space-y-2">
-            <h4 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Rejection Reason</h4>
-            <p class="text-sm text-red-400">{{ application.rejection_reason }}</p>
+          <div v-if="application.rejection_reason" class="adm-section">
+            <h4 class="adm-section-title">Rejection Reason</h4>
+            <p class="adm-text-red">{{ application.rejection_reason }}</p>
           </div>
         </div>
 
-        <!-- Actions footer -->
-        <div class="px-6 py-4 border-t border-gray-700 flex-shrink-0 space-y-3">
-          <!-- Schedule interview form -->
-          <div v-if="showScheduleForm" class="space-y-3 mb-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Interview Date</label>
-              <input
-                v-model="interviewDate"
-                type="date"
-                class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-              />
+        <!-- Footer Actions -->
+        <div class="adm-footer">
+          <!-- Schedule form -->
+          <div v-if="showScheduleForm" class="adm-sub-form">
+            <div class="adm-field">
+              <label class="adm-label">Interview Date</label>
+              <input v-model="interviewDate" type="date" class="adm-input" />
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Notes (optional)</label>
-              <textarea
-                v-model="interviewNotes"
-                rows="2"
-                class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500"
-                placeholder="Interview details..."
-              ></textarea>
+            <div class="adm-field">
+              <label class="adm-label">Notes (optional)</label>
+              <textarea v-model="interviewNotes" rows="2" class="adm-input adm-textarea" placeholder="Interview details…"></textarea>
             </div>
-            <div class="flex space-x-2">
-              <button
-                @click="scheduleInterview"
-                :disabled="loading"
-                class="flex-1 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-              >
-                Confirm Schedule
-              </button>
-              <button
-                @click="showScheduleForm = false"
-                class="px-3 py-2 text-sm font-medium text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
+            <div class="adm-sub-actions">
+              <button class="adm-btn-indigo" :disabled="loading" @click="scheduleInterview">Confirm Schedule</button>
+              <button class="adm-btn-ghost" @click="showScheduleForm = false">Cancel</button>
             </div>
           </div>
 
-          <!-- Reject input -->
-          <div v-if="showRejectInput" class="space-y-3 mb-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Rejection Reason</label>
-              <textarea
-                v-model="rejectionReason"
-                rows="3"
-                class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500"
-                placeholder="Reason for rejection..."
-              ></textarea>
+          <!-- Reject form -->
+          <div v-if="showRejectInput" class="adm-sub-form">
+            <div class="adm-field">
+              <label class="adm-label">Rejection Reason</label>
+              <textarea v-model="rejectionReason" rows="3" class="adm-input adm-textarea" placeholder="Reason for rejection…"></textarea>
             </div>
-            <div class="flex space-x-2">
-              <button
-                @click="reject"
-                :disabled="loading"
-                class="flex-1 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                Confirm Rejection
-              </button>
-              <button
-                @click="showRejectInput = false"
-                class="px-3 py-2 text-sm font-medium text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
+            <div class="adm-sub-actions">
+              <button class="adm-btn-red" :disabled="loading" @click="reject">Confirm Rejection</button>
+              <button class="adm-btn-ghost" @click="showRejectInput = false">Cancel</button>
             </div>
           </div>
 
           <!-- Action buttons -->
-          <div v-if="!showRejectInput && !showScheduleForm" class="flex flex-wrap gap-2">
-            <button
-              v-if="canShortlist"
-              @click="shortlist"
-              :disabled="loading"
-              class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-            >
-              Shortlist
-            </button>
-            <button
-              v-if="canScheduleInterview"
-              @click="showScheduleForm = true"
-              class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Schedule Interview
-            </button>
-            <button
-              v-if="canMarkInterviewed"
-              @click="markInterviewed"
-              :disabled="loading"
-              class="px-4 py-2 text-sm font-medium text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50"
-            >
-              Mark Interviewed
-            </button>
-            <button
-              v-if="canMakeOffer"
-              @click="makeOffer"
-              :disabled="loading"
-              class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              Make Offer
-            </button>
-            <button
-              v-if="canHire"
-              @click="hire"
-              :disabled="loading"
-              class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
-            >
-              Mark Hired
-            </button>
-            <button
-              v-if="canReject"
-              @click="showRejectInput = true"
-              class="px-4 py-2 text-sm font-medium text-red-400 bg-red-900/30 border border-red-700 rounded-lg hover:bg-red-900/50 transition-colors"
-            >
-              Reject
-            </button>
+          <div v-if="!showRejectInput && !showScheduleForm" class="adm-action-btns">
+            <button v-if="canShortlist" class="adm-btn-purple" :disabled="loading" @click="shortlist">Shortlist</button>
+            <button v-if="canScheduleInterview" class="adm-btn-indigo" @click="showScheduleForm = true">Schedule Interview</button>
+            <button v-if="canMarkInterviewed" class="adm-btn-teal" :disabled="loading" @click="markInterviewed">Mark Interviewed</button>
+            <button v-if="canMakeOffer" class="adm-btn-green" :disabled="loading" @click="makeOffer">Make Offer</button>
+            <button v-if="canHire" class="adm-btn-green" :disabled="loading" @click="hire">Mark Hired</button>
+            <button v-if="canReject" class="adm-btn-reject" @click="showRejectInput = true">Reject</button>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
+
+<style scoped>
+.adm-overlay { position: fixed; inset: 0; z-index: 50; overflow: hidden; }
+.adm-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.55); }
+.adm-panel { position: absolute; inset-y: 0; right: 0; width: 100%; max-width: 480px; background: #161A23; border-left: 1px solid #232936; display: flex; flex-direction: column; overflow: hidden; }
+.adm-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #232936; flex-shrink: 0; }
+.adm-head-title { font-size: 15px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.adm-close { background: none; border: none; color: #7A8299; font-size: 16px; cursor: pointer; line-height: 1; }
+.adm-close:hover { color: #EEF0F4; }
+.adm-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.adm-error { padding: 10px 14px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.adm-applicant { display: flex; align-items: center; gap: 14px; }
+.adm-avatar { width: 48px; height: 48px; border-radius: 50%; background: #232936; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: #B6BED0; flex-shrink: 0; }
+.adm-name { font-size: 15px; font-weight: 700; color: #EEF0F4; margin: 0 0 2px; }
+.adm-email { font-size: 12px; color: #7A8299; margin: 0; }
+.adm-badges-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.adm-submitted { font-size: 12px; color: #7A8299; }
+.adm-section { display: flex; flex-direction: column; gap: 8px; }
+.adm-section-title { font-size: 11px; font-weight: 600; color: #7A8299; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; }
+.adm-cover { font-size: 13px; color: #B6BED0; background: rgba(13,15,23,0.5); border: 1px solid #232936; border-radius: 7px; padding: 12px; white-space: pre-wrap; margin: 0; }
+.adm-link { font-size: 13px; color: #6B5BFF; text-decoration: none; display: inline-block; margin-right: 12px; }
+.adm-link:hover { color: #8A7BFF; }
+.adm-stars { display: flex; align-items: center; gap: 4px; }
+.adm-star { background: none; border: none; font-size: 20px; color: #2D3448; cursor: pointer; padding: 0; line-height: 1; }
+.adm-star-filled { color: #F5A623; }
+.adm-save-rating { margin-left: 8px; background: #6B5BFF; border: none; color: #fff; border-radius: 5px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+.adm-save-rating:disabled { opacity: 0.5; }
+.adm-stage { border-left: 2px solid; padding-left: 12px; padding-top: 6px; padding-bottom: 6px; border-radius: 0 6px 6px 0; }
+.adm-stage-green { border-color: #4DD39A; background: rgba(77,211,154,0.05); }
+.adm-stage-yellow { border-color: #F5A623; background: rgba(245,166,35,0.05); }
+.adm-stage-muted { border-color: #2D3448; background: rgba(35,41,54,0.3); }
+.adm-stage-row { display: flex; align-items: center; justify-content: space-between; }
+.adm-stage-name { font-size: 13px; font-weight: 500; color: #EEF0F4; }
+.adm-stage-date { font-size: 12px; color: #7A8299; }
+.adm-stage-meta { font-size: 12px; color: #7A8299; margin: 2px 0 0; }
+.adm-stage-note { font-size: 12px; color: #7A8299; margin: 2px 0 0; }
+.adm-text-muted { font-size: 13px; color: #7A8299; margin: 0; }
+.adm-text-red { font-size: 13px; color: #F38288; margin: 0; }
+.adm-footer { padding: 16px 20px; border-top: 1px solid #232936; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
+.adm-sub-form { display: flex; flex-direction: column; gap: 10px; }
+.adm-field { display: flex; flex-direction: column; gap: 4px; }
+.adm-label { font-size: 12px; color: #B6BED0; }
+.adm-input { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 7px 10px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+.adm-input:focus { border-color: #6B5BFF; }
+.adm-textarea { resize: vertical; min-height: 60px; }
+.adm-sub-actions { display: flex; gap: 8px; }
+.adm-action-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-btn-purple { background: rgba(178,141,255,0.15); border: 1px solid rgba(178,141,255,0.3); color: #B28DFF; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.adm-btn-indigo { background: rgba(107,91,255,0.15); border: 1px solid rgba(107,91,255,0.3); color: #8A7BFF; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.adm-btn-teal { background: rgba(77,211,154,0.12); border: 1px solid rgba(77,211,154,0.25); color: #4DD39A; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.adm-btn-green { background: rgba(77,211,154,0.15); border: 1px solid rgba(77,211,154,0.3); color: #4DD39A; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.adm-btn-red { background: rgba(243,130,136,0.15); border: 1px solid rgba(243,130,136,0.3); color: #F38288; border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.adm-btn-reject { background: rgba(243,130,136,0.08); border: 1px solid rgba(243,130,136,0.2); color: #F38288; border-radius: 7px; padding: 7px 14px; font-size: 12px; cursor: pointer; }
+.adm-btn-ghost { background: #232936; border: 1px solid #2D3448; color: #B6BED0; border-radius: 7px; padding: 7px 14px; font-size: 12px; cursor: pointer; }
+.adm-btn-ghost:hover { color: #EEF0F4; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.adm-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; text-transform: capitalize; white-space: nowrap; }
+.adm-badge-blue    { background: rgba(126,215,255,0.12); color: #7ED7FF; }
+.adm-badge-yellow  { background: rgba(245,166,35,0.12); color: #F5A623; }
+.adm-badge-purple  { background: rgba(178,141,255,0.12); color: #B28DFF; }
+.adm-badge-indigo  { background: rgba(107,91,255,0.12); color: #8A7BFF; }
+.adm-badge-teal    { background: rgba(77,211,154,0.10); color: #4DD39A; }
+.adm-badge-green   { background: rgba(77,211,154,0.12); color: #4DD39A; }
+.adm-badge-red     { background: rgba(243,130,136,0.12); color: #F38288; }
+.adm-badge-muted   { background: rgba(122,130,153,0.12); color: #7A8299; }
+</style>

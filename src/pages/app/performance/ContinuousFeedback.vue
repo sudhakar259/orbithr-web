@@ -3,8 +3,6 @@ defineOptions({ name: 'ContinuousFeedback' })
 import { ref, onMounted } from 'vue'
 import api from '@/services/api'
 import { useToast } from '@/composables/useToast'
-import PageHeader from '@/components/ui/PageHeader.vue'
-import EmptyState from '@/components/ui/EmptyState.vue'
 
 interface FeedbackItem {
   id: number
@@ -93,7 +91,12 @@ const submitFeedback = async () => {
       is_anonymous: form.value.is_anonymous,
     })
     toast.success('Feedback submitted')
-    form.value = { receiver_id: null, feedback_type: 'positive', message: '', is_anonymous: false }
+    form.value = {
+      receiver_id: null,
+      feedback_type: 'positive',
+      message: '',
+      is_anonymous: false,
+    }
   } catch {
     toast.error('Failed to submit feedback')
   } finally {
@@ -103,11 +106,20 @@ const submitFeedback = async () => {
 
 const getInitials = (name?: string) => {
   if (!name) return '?'
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
 }
 
 const getTypeClass = (t: string) => {
-  const m: Record<string, string> = { positive: 'type-positive', constructive: 'type-constructive', neutral: 'type-neutral' }
+  const m: Record<string, string> = {
+    positive: 'type-positive',
+    constructive: 'type-constructive',
+    neutral: 'type-neutral',
+  }
   return m[t] || 'type-neutral'
 }
 
@@ -123,40 +135,64 @@ onMounted(() => loadReceived())
 </script>
 
 <template>
-  <div class="page">
-    <PageHeader title="Continuous Feedback" subtitle="Share and receive feedback with your team" />
+  <div class="cfb">
+    <header class="cfb-head">
+      <div class="cfb-eyebrow">Continuous</div>
+      <h1 class="cfb-title">Continuous feedback</h1>
+      <p class="cfb-subtitle">Share and receive feedback with your team.</p>
+    </header>
 
     <!-- Tabs -->
-    <div class="tabs">
-      <button :class="['tab', activeTab === 'received' && 'tab-active']" @click="switchTab('received')">Received</button>
-      <button :class="['tab', activeTab === 'given' && 'tab-active']" @click="switchTab('given')">Given</button>
-      <button :class="['tab', activeTab === 'give' && 'tab-active']" @click="switchTab('give')">Give Feedback</button>
+    <div class="sub-tabs">
+      <button
+        :class="['sub-tab', activeTab === 'received' && 'is-active']"
+        @click="switchTab('received')"
+      >
+        Received
+      </button>
+      <button
+        :class="['sub-tab', activeTab === 'given' && 'is-active']"
+        @click="switchTab('given')"
+      >
+        Given
+      </button>
+      <button
+        :class="['sub-tab', activeTab === 'give' && 'is-active']"
+        @click="switchTab('give')"
+      >
+        Give feedback
+      </button>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="loader"><div class="spinner" /></div>
+    <div v-if="loading" class="state-block">
+      <div class="spinner"></div>
+    </div>
 
     <!-- Received -->
-    <div v-else-if="activeTab === 'received'">
-      <EmptyState v-if="!receivedFeedback.length" icon="📬" message="No feedback received yet" />
+    <template v-else-if="activeTab === 'received'">
+      <div v-if="!receivedFeedback.length" class="empty-pad">No feedback received yet.</div>
       <div v-else class="fb-list">
         <div v-for="item in receivedFeedback" :key="item.id" class="fb-card">
           <div class="fb-top">
-            <div class="avatar">{{ item.is_anonymous ? '?' : getInitials(getDisplayName(item, 'giver')) }}</div>
+            <div class="avatar">
+              {{ item.is_anonymous ? '?' : getInitials(getDisplayName(item, 'giver')) }}
+            </div>
             <div class="fb-meta">
               <span class="fb-name">{{ getDisplayName(item, 'giver') }}</span>
               <span class="fb-date">{{ formatDate(item.given_at || item.created_at) }}</span>
             </div>
-            <span :class="['type-badge', getTypeClass(item.feedback_type)]">{{ item.feedback_type }}</span>
+            <span :class="['type-badge', getTypeClass(item.feedback_type)]">
+              {{ item.feedback_type }}
+            </span>
           </div>
-          <p class="fb-msg">{{ item.message }}</p>
+          <p class="fb-msg">"{{ item.message }}"</p>
         </div>
       </div>
-    </div>
+    </template>
 
     <!-- Given -->
-    <div v-else-if="activeTab === 'given'">
-      <EmptyState v-if="!givenFeedback.length" icon="📤" message="No feedback given yet" />
+    <template v-else-if="activeTab === 'given'">
+      <div v-if="!givenFeedback.length" class="empty-pad">No feedback given yet.</div>
       <div v-else class="fb-list">
         <div v-for="item in givenFeedback" :key="item.id" class="fb-card">
           <div class="fb-top">
@@ -165,131 +201,465 @@ onMounted(() => loadReceived())
               <span class="fb-name">To: {{ getDisplayName(item, 'receiver') }}</span>
               <span class="fb-date">{{ formatDate(item.given_at || item.created_at) }}</span>
             </div>
-            <span :class="['type-badge', getTypeClass(item.feedback_type)]">{{ item.feedback_type }}</span>
+            <span :class="['type-badge', getTypeClass(item.feedback_type)]">
+              {{ item.feedback_type }}
+            </span>
           </div>
-          <p class="fb-msg">{{ item.message }}</p>
+          <p class="fb-msg">"{{ item.message }}"</p>
         </div>
       </div>
-    </div>
+    </template>
 
-    <!-- Give Feedback -->
-    <div v-else-if="activeTab === 'give'" class="give-section">
-      <div class="card form-card">
-        <form @submit.prevent="submitFeedback" class="form">
-          <div class="field">
-            <label>Recipient <span class="req">*</span></label>
-            <select v-model="form.receiver_id" class="input" required>
-              <option :value="null" disabled>Select an employee...</option>
-              <option v-for="emp in employees" :key="emp.id" :value="emp.id">
-                {{ emp.first_name }} {{ emp.last_name || '' }} ({{ emp.email }})
-              </option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label>Feedback Type</label>
-            <div class="radio-group">
-              <label class="radio-item">
-                <input v-model="form.feedback_type" type="radio" value="positive" name="fbtype" />
-                <span class="radio-label positive-label">Positive</span>
-              </label>
-              <label class="radio-item">
-                <input v-model="form.feedback_type" type="radio" value="constructive" name="fbtype" />
-                <span class="radio-label constructive-label">Constructive</span>
-              </label>
-              <label class="radio-item">
-                <input v-model="form.feedback_type" type="radio" value="neutral" name="fbtype" />
-                <span class="radio-label neutral-label">Neutral</span>
-              </label>
+    <!-- Give -->
+    <template v-else>
+      <div class="give-section">
+        <div class="card">
+          <form class="form" @submit.prevent="submitFeedback">
+            <div class="field">
+              <label>Recipient <span class="req">*</span></label>
+              <select v-model="form.receiver_id" class="input" required>
+                <option :value="null" disabled>Select an employee...</option>
+                <option v-for="emp in employees" :key="emp.id" :value="emp.id">
+                  {{ emp.first_name }} {{ emp.last_name || '' }} ({{ emp.email }})
+                </option>
+              </select>
             </div>
-          </div>
 
-          <div class="field">
-            <label>Message <span class="req">*</span></label>
-            <textarea v-model="form.message" class="input textarea" rows="5" required placeholder="Share your feedback..." />
-          </div>
+            <div class="field">
+              <label>Feedback type</label>
+              <div class="radio-group">
+                <label class="radio-item">
+                  <input
+                    v-model="form.feedback_type"
+                    type="radio"
+                    value="positive"
+                    name="fbtype"
+                  />
+                  <span class="radio-label positive-label">Positive</span>
+                </label>
+                <label class="radio-item">
+                  <input
+                    v-model="form.feedback_type"
+                    type="radio"
+                    value="constructive"
+                    name="fbtype"
+                  />
+                  <span class="radio-label constructive-label">Constructive</span>
+                </label>
+                <label class="radio-item">
+                  <input
+                    v-model="form.feedback_type"
+                    type="radio"
+                    value="neutral"
+                    name="fbtype"
+                  />
+                  <span class="radio-label neutral-label">Neutral</span>
+                </label>
+              </div>
+            </div>
 
-          <div class="toggle-row">
-            <label class="toggle">
-              <input v-model="form.is_anonymous" type="checkbox" />
-              <span class="toggle-slider" />
-            </label>
-            <span class="toggle-text">Submit anonymously</span>
-          </div>
+            <div class="field">
+              <label>Message <span class="req">*</span></label>
+              <textarea
+                v-model="form.message"
+                class="input textarea"
+                rows="5"
+                required
+                placeholder="Share your feedback..."
+              />
+            </div>
 
-          <div class="form-actions">
-            <button type="submit" class="btn-primary" :disabled="saving || !form.receiver_id || !form.message.trim()">
-              {{ saving ? 'Submitting...' : 'Send Feedback' }}
-            </button>
-          </div>
-        </form>
+            <div class="toggle-row">
+              <label class="toggle">
+                <input v-model="form.is_anonymous" type="checkbox" />
+                <span class="toggle-slider" />
+              </label>
+              <span class="toggle-text">Submit anonymously</span>
+            </div>
+
+            <div class="form-actions">
+              <button
+                type="submit"
+                class="btn btn-primary"
+                :disabled="saving || !form.receiver_id || !form.message.trim()"
+              >
+                {{ saving ? 'Submitting...' : 'Send feedback' }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
-.page { display: flex; flex-direction: column; gap: 20px; }
+.cfb {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: #eef0f4;
+}
 
-/* Tabs */
-.tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--rs); padding: 4px; width: fit-content; }
-.tab { padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--muted); background: transparent; border: none; border-radius: calc(var(--rs) - 2px); cursor: pointer; transition: all .15s; }
-.tab:hover { color: var(--text); }
-.tab-active { background: var(--surface2); color: var(--text); }
+.cfb-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
-.loader { display: flex; justify-content: center; padding: 48px 0; }
-.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.cfb-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b5bff;
+  font-weight: 600;
+}
 
-/* Feedback list */
-.fb-list { display: flex; flex-direction: column; gap: 12px; }
-.fb-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rs); padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
-.fb-top { display: flex; align-items: center; gap: 12px; }
-.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface3); color: var(--muted); font-size: 12px; font-weight: 700; display: grid; place-items: center; flex-shrink: 0; }
-.fb-meta { display: flex; flex-direction: column; flex: 1; }
-.fb-name { font-size: 13px; font-weight: 600; color: var(--text); }
-.fb-date { font-size: 11px; color: var(--muted); }
-.fb-msg { font-size: 13px; color: var(--text); line-height: 1.6; opacity: .9; }
+.cfb-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  color: #eef0f4;
+  margin: 0;
+  font-weight: 400;
+}
 
-/* Type badges */
-.type-badge { display: inline-flex; padding: 2px 10px; font-size: 11px; font-weight: 600; border-radius: 20px; text-transform: capitalize; white-space: nowrap; }
-.type-positive { background: rgba(54,211,153,.15); color: var(--green); }
-.type-constructive { background: rgba(249,168,37,.15); color: var(--yellow); }
-.type-neutral { background: rgba(79,126,255,.15); color: var(--accent); }
+.cfb-subtitle {
+  font-size: 12.5px;
+  color: #7a8299;
+  margin: 0;
+}
 
-/* Form */
-.give-section { max-width: 640px; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rs); }
-.form-card { padding: 24px; }
-.form { display: flex; flex-direction: column; gap: 18px; }
-.field { display: flex; flex-direction: column; gap: 5px; }
-.field label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
-.req { color: var(--red); }
-.input { padding: 9px 12px; font-size: 13px; color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: calc(var(--rs) - 2px); outline: none; transition: border-color .15s; font-family: inherit; }
-.input:focus { border-color: var(--accent); }
-.textarea { resize: vertical; min-height: 100px; }
+.sub-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #232936;
+}
 
-/* Radio */
-.radio-group { display: flex; gap: 16px; }
-.radio-item { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-.radio-item input { accent-color: var(--accent); }
-.radio-label { font-size: 13px; font-weight: 500; }
-.positive-label { color: var(--green); }
-.constructive-label { color: var(--yellow); }
-.neutral-label { color: var(--accent); }
+.sub-tab {
+  padding: 9px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #7a8299;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
 
-/* Toggle */
-.toggle-row { display: flex; align-items: center; gap: 10px; }
-.toggle { position: relative; width: 38px; height: 20px; display: inline-block; }
-.toggle input { opacity: 0; width: 0; height: 0; }
-.toggle-slider { position: absolute; inset: 0; background: var(--surface3); border-radius: 10px; cursor: pointer; transition: background .2s; }
-.toggle-slider::before { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--muted); border-radius: 50%; transition: all .2s; }
-.toggle input:checked + .toggle-slider { background: var(--accent); }
-.toggle input:checked + .toggle-slider::before { left: 20px; background: #fff; }
-.toggle-text { font-size: 13px; color: var(--muted); }
+.sub-tab:hover {
+  color: #eef0f4;
+}
 
-.form-actions { display: flex; justify-content: flex-end; }
-.btn-primary { padding: 10px 22px; font-size: 13px; font-weight: 600; color: #fff; background: var(--accent); border: none; border-radius: calc(var(--rs) - 2px); cursor: pointer; transition: opacity .15s; }
-.btn-primary:hover { opacity: .85; }
-.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.sub-tab.is-active {
+  color: #eef0f4;
+  border-bottom-color: #6b5bff;
+}
+
+.state-block {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #232936;
+  border-top-color: #6b5bff;
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty-pad {
+  padding: 56px 16px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 13px;
+  background: #161a23;
+  border: 1px dashed #232936;
+  border-radius: 12px;
+}
+
+.fb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fb-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fb-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(107, 91, 255, 0.18);
+  color: #6b5bff;
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.fb-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.fb-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #eef0f4;
+}
+
+.fb-date {
+  font-size: 11px;
+  color: #7a8299;
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.fb-msg {
+  font-size: 12.5px;
+  color: #eef0f4;
+  line-height: 1.55;
+  margin: 0;
+  font-style: italic;
+  opacity: 0.92;
+}
+
+.type-badge {
+  display: inline-flex;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.type-positive {
+  background: rgba(77, 211, 154, 0.12);
+  color: #4dd39a;
+  border-color: rgba(77, 211, 154, 0.25);
+}
+
+.type-constructive {
+  background: rgba(245, 166, 35, 0.12);
+  color: #f5a623;
+  border-color: rgba(245, 166, 35, 0.3);
+}
+
+.type-neutral {
+  background: rgba(107, 91, 255, 0.12);
+  color: #6b5bff;
+  border-color: rgba(107, 91, 255, 0.3);
+}
+
+.give-section {
+  max-width: 640px;
+}
+
+.card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 22px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #7a8299;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.req {
+  color: #f38288;
+}
+
+.input {
+  padding: 9px 12px;
+  font-size: 12.5px;
+  color: #eef0f4;
+  background: #0d0f17;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  font-family: inherit;
+}
+
+.input:focus {
+  border-color: #6b5bff;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.radio-group {
+  display: flex;
+  gap: 18px;
+}
+
+.radio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.radio-item input {
+  accent-color: #6b5bff;
+}
+
+.radio-label {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.positive-label {
+  color: #4dd39a;
+}
+
+.constructive-label {
+  color: #f5a623;
+}
+
+.neutral-label {
+  color: #6b5bff;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle {
+  position: relative;
+  width: 38px;
+  height: 20px;
+  display: inline-block;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: #232936;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #7a8299;
+  border-radius: 50%;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.toggle input:checked + .toggle-slider {
+  background: #6b5bff;
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+  background: #fff;
+}
+
+.toggle-text {
+  font-size: 12.5px;
+  color: #7a8299;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn {
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 9px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.btn-primary {
+  background: #6b5bff;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #5a4ce6;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 </style>

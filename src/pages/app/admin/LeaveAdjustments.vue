@@ -1,23 +1,28 @@
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <button class="inline-flex items-center rounded-md bg-brand-600 px-4 py-2 text-white hover:bg-brand-700" @click="openCreate()">
+  <section class="la-page">
+    <div class="la-header">
+      <div>
+        <h1 class="la-title">Leave Adjustments</h1>
+        <p class="la-sub">Manually credit, debit or override employee leave balances.</p>
+      </div>
+      <button class="la-btn-primary" @click="openCreate()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         New Adjustment
       </button>
     </div>
 
     <!-- Filters -->
-    <div class="flex flex-wrap gap-3">
-      <select v-model="filters.balance_year" class="rounded-md border border-slate-300 px-3 py-2 text-sm" @change="loadAdjustments">
+    <div class="la-filters">
+      <select v-model="filters.balance_year" class="la-select" @change="loadAdjustments">
         <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
       </select>
-      <select v-model="filters.adjustment_type" class="rounded-md border border-slate-300 px-3 py-2 text-sm" @change="loadAdjustments">
+      <select v-model="filters.adjustment_type" class="la-select" @change="loadAdjustments">
         <option value="">All Types</option>
         <option value="credit">Credit</option>
         <option value="debit">Debit</option>
         <option value="override">Override</option>
       </select>
-      <select v-model="filters.reason_type" class="rounded-md border border-slate-300 px-3 py-2 text-sm" @change="loadAdjustments">
+      <select v-model="filters.reason_type" class="la-select" @change="loadAdjustments">
         <option value="">All Reasons</option>
         <option value="encashment">Encashment</option>
         <option value="carry_forward_correction">Carry Forward Correction</option>
@@ -28,150 +33,151 @@
     </div>
 
     <!-- Table -->
-    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
+    <div class="la-card">
+      <table class="la-table">
+        <thead>
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Employee</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Leave Type</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Type</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Amount</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Reason</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Year</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Created By</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Date</th>
-            <th class="px-4 py-3"></th>
+            <th class="la-th">Employee</th>
+            <th class="la-th">Leave Type</th>
+            <th class="la-th">Type</th>
+            <th class="la-th">Amount</th>
+            <th class="la-th">Reason</th>
+            <th class="la-th">Year</th>
+            <th class="la-th">Created By</th>
+            <th class="la-th">Date</th>
+            <th class="la-th"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200">
-          <tr v-for="adj in adjustments" :key="adj.id" class="hover:bg-slate-50">
-            <td class="px-4 py-3 font-medium text-slate-800">
+        <tbody>
+          <tr v-for="adj in adjustments" :key="adj.id" class="la-row">
+            <td class="la-td la-td-name">
               {{ adj.employee ? `${adj.employee.first_name} ${adj.employee.last_name || ''}`.trim() : `#${adj.employee_id}` }}
             </td>
-            <td class="px-4 py-3 text-slate-600">{{ adj.leaveType?.name || adj.leave_type?.name || `#${adj.leave_type_id}` }}</td>
-            <td class="px-4 py-3">
-              <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold"
-                :class="{
-                  'bg-green-100 text-green-800': adj.adjustment_type === 'credit',
-                  'bg-red-100 text-red-800': adj.adjustment_type === 'debit',
-                  'bg-blue-100 text-blue-800': adj.adjustment_type === 'override',
-                }">
+            <td class="la-td">{{ adj.leaveType?.name || adj.leave_type?.name || `#${adj.leave_type_id}` }}</td>
+            <td class="la-td">
+              <span :class="['la-badge', adj.adjustment_type === 'credit' ? 'la-badge-green' : adj.adjustment_type === 'debit' ? 'la-badge-red' : 'la-badge-blue']">
                 {{ adj.adjustment_type }}
               </span>
             </td>
-            <td class="px-4 py-3 font-mono text-slate-800">
-              <span :class="adj.adjustment_type === 'debit' ? 'text-red-600' : 'text-green-600'">
-                {{ adj.adjustment_type === 'debit' ? '-' : '+' }}{{ adj.adjustment_amount }}
+            <td class="la-td la-td-amount">
+              <span :class="adj.adjustment_type === 'debit' ? 'la-neg' : 'la-pos'">
+                {{ adj.adjustment_type === 'debit' ? '−' : '+' }}{{ adj.adjustment_amount }}
               </span>
             </td>
-            <td class="px-4 py-3 text-slate-600">
-              <div class="text-xs font-medium capitalize">{{ adj.reason_type?.replace(/_/g, ' ') }}</div>
-              <div class="max-w-xs truncate text-xs text-slate-400">{{ adj.reason }}</div>
+            <td class="la-td la-td-reason">
+              <div class="la-reason-type">{{ adj.reason_type?.replace(/_/g, ' ') }}</div>
+              <div class="la-reason-note">{{ adj.reason }}</div>
             </td>
-            <td class="px-4 py-3 text-slate-600">{{ adj.balance_year }}</td>
-            <td class="px-4 py-3 text-slate-600">{{ adj.created_by_user?.name || adj.createdBy?.name || '—' }}</td>
-            <td class="px-4 py-3 text-xs text-slate-400">{{ adj.created_at ? new Date(adj.created_at).toLocaleDateString() : '—' }}</td>
-            <td class="px-4 py-3 text-right">
-              <button v-if="adj.adjustment_type !== 'override'" class="rounded border border-red-300 bg-red-50 px-3 py-1 text-sm text-red-700 hover:bg-red-100" @click="removeAdjustment(adj)">
+            <td class="la-td la-td-year">{{ adj.balance_year }}</td>
+            <td class="la-td">{{ adj.created_by_user?.name || adj.createdBy?.name || '—' }}</td>
+            <td class="la-td la-td-date">{{ adj.created_at ? new Date(adj.created_at).toLocaleDateString() : '—' }}</td>
+            <td class="la-td la-td-right">
+              <button v-if="adj.adjustment_type !== 'override'" class="la-btn-danger" @click="removeAdjustment(adj)">
                 Reverse
               </button>
             </td>
           </tr>
           <tr v-if="!adjustments.length && !loading">
-            <td colspan="9" class="px-4 py-8 text-center text-slate-400">No adjustments found.</td>
+            <td colspan="9" class="la-empty">No adjustments found.</td>
           </tr>
           <tr v-if="loading">
-            <td colspan="9" class="px-4 py-8 text-center text-slate-400">Loading…</td>
+            <td colspan="9" class="la-empty">Loading…</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-center gap-2">
+    <div v-if="totalPages > 1" class="la-pagination">
       <button v-for="p in totalPages" :key="p"
-        class="rounded border px-3 py-1 text-sm"
-        :class="p === currentPage ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'"
+        :class="['la-page-btn', p === currentPage && 'la-page-btn-active']"
         @click="goToPage(p)">
         {{ p }}
       </button>
     </div>
 
     <!-- Create Modal -->
-    <div v-if="showCreate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-        <h2 class="mb-4 text-lg font-semibold text-slate-800">New Leave Adjustment</h2>
-
-        <div v-if="formError" class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{{ formError }}</div>
-
-        <div class="space-y-4">
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700">Employee *</label>
-            <select v-model="form.employee_id" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-              <option value="">Select employee</option>
-              <option v-for="emp in employees" :key="emp.id" :value="emp.id">
-                {{ emp.first_name }} {{ emp.last_name || '' }} {{ emp.employee_id ? `(${emp.employee_id})` : '' }}
-              </option>
-            </select>
+    <Teleport to="body">
+      <div v-if="showCreate" class="la-overlay" @click.self="showCreate = false">
+        <div class="la-modal">
+          <div class="la-modal-head">
+            <h2 class="la-modal-title">New Leave Adjustment</h2>
+            <button class="la-modal-close" @click="showCreate = false">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
           </div>
 
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700">Leave Type *</label>
-            <select v-model="form.leave_type_id" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-              <option value="">Select leave type</option>
-              <option v-for="lt in leaveTypes" :key="lt.id" :value="lt.id">{{ lt.name }} ({{ lt.code }})</option>
-            </select>
-          </div>
+          <div v-if="formError" class="la-form-error">{{ formError }}</div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="mb-1 block text-sm font-medium text-slate-700">Adjustment Type *</label>
-              <select v-model="form.adjustment_type" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-                <option value="credit">Credit (Add)</option>
-                <option value="debit">Debit (Subtract)</option>
-                <option value="override">Override (Set)</option>
+          <div class="la-form-body">
+            <div class="la-field">
+              <label class="la-label">Employee *</label>
+              <select v-model="form.employee_id" class="la-input">
+                <option value="">Select employee</option>
+                <option v-for="emp in employees" :key="emp.id" :value="emp.id">
+                  {{ emp.first_name }} {{ emp.last_name || '' }} {{ emp.employee_id ? `(${emp.employee_id})` : '' }}
+                </option>
               </select>
             </div>
-            <div>
-              <label class="mb-1 block text-sm font-medium text-slate-700">Amount (days) *</label>
-              <input v-model.number="form.adjustment_amount" type="number" step="0.5" min="0.5" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
-            </div>
-          </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="mb-1 block text-sm font-medium text-slate-700">Reason Type *</label>
-              <select v-model="form.reason_type" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-                <option value="encashment">Encashment</option>
-                <option value="carry_forward_correction">Carry Forward Correction</option>
-                <option value="unpaid_leave_conversion">Unpaid Leave Conversion</option>
-                <option value="manual_correction">Manual Correction</option>
-                <option value="other">Other</option>
+            <div class="la-field">
+              <label class="la-label">Leave Type *</label>
+              <select v-model="form.leave_type_id" class="la-input">
+                <option value="">Select leave type</option>
+                <option v-for="lt in leaveTypes" :key="lt.id" :value="lt.id">{{ lt.name }} ({{ lt.code }})</option>
               </select>
             </div>
-            <div>
-              <label class="mb-1 block text-sm font-medium text-slate-700">Balance Year *</label>
-              <select v-model.number="form.balance_year" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-                <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
-              </select>
+
+            <div class="la-grid-2">
+              <div class="la-field">
+                <label class="la-label">Adjustment Type *</label>
+                <select v-model="form.adjustment_type" class="la-input">
+                  <option value="credit">Credit (Add)</option>
+                  <option value="debit">Debit (Subtract)</option>
+                  <option value="override">Override (Set)</option>
+                </select>
+              </div>
+              <div class="la-field">
+                <label class="la-label">Amount (days) *</label>
+                <input v-model.number="form.adjustment_amount" type="number" step="0.5" min="0.5" class="la-input" />
+              </div>
+            </div>
+
+            <div class="la-grid-2">
+              <div class="la-field">
+                <label class="la-label">Reason Type *</label>
+                <select v-model="form.reason_type" class="la-input">
+                  <option value="encashment">Encashment</option>
+                  <option value="carry_forward_correction">Carry Forward Correction</option>
+                  <option value="unpaid_leave_conversion">Unpaid Leave Conversion</option>
+                  <option value="manual_correction">Manual Correction</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="la-field">
+                <label class="la-label">Balance Year *</label>
+                <select v-model.number="form.balance_year" class="la-input">
+                  <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="la-field">
+              <label class="la-label">Reason / Notes *</label>
+              <textarea v-model="form.reason" rows="3" class="la-input la-textarea" placeholder="Explain the reason for this adjustment…"></textarea>
             </div>
           </div>
 
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700">Reason / Notes *</label>
-            <textarea v-model="form.reason" rows="3" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Explain the reason for this adjustment…"></textarea>
+          <div class="la-modal-foot">
+            <button class="la-btn-ghost" @click="showCreate = false">Cancel</button>
+            <button class="la-btn-primary" :disabled="saving" @click="submitAdjustment">
+              {{ saving ? 'Saving…' : 'Create Adjustment' }}
+            </button>
           </div>
-        </div>
-
-        <div class="mt-6 flex justify-end gap-3">
-          <button class="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50" @click="showCreate = false">Cancel</button>
-          <button class="rounded-md bg-brand-600 px-4 py-2 text-sm text-white hover:bg-brand-700 disabled:opacity-50" :disabled="saving" @click="submitAdjustment">
-            {{ saving ? 'Saving…' : 'Create Adjustment' }}
-          </button>
         </div>
       </div>
-    </div>
-  </div>
+    </Teleport>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -220,7 +226,7 @@ async function loadAdjustments(page = 1) {
     const params: Record<string, unknown> = { page, balance_year: filters.balance_year }
     if (filters.adjustment_type) params.adjustment_type = filters.adjustment_type
     if (filters.reason_type) params.reason_type = filters.reason_type
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await leaveService.getLeaveAdjustments(params as any)
     adjustments.value = result.data
     currentPage.value = result.current_page
@@ -307,3 +313,86 @@ onMounted(() => {
   loadFormData()
 })
 </script>
+
+<style scoped>
+.la-page { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+.la-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.la-title { margin: 0; font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: #EEF0F4; letter-spacing: -0.02em; }
+.la-sub { margin: 4px 0 0; font-size: 13px; color: #7A8299; }
+
+.la-btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #6B5BFF; border: none; color: #fff;
+  border-radius: 7px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.la-btn-primary:hover { opacity: 0.88; }
+.la-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.la-filters { display: flex; flex-wrap: wrap; gap: 10px; }
+.la-select {
+  background: #161A23; border: 1px solid #232936; color: #EEF0F4;
+  border-radius: 7px; padding: 7px 12px; font-size: 13px; outline: none; cursor: pointer;
+}
+.la-select:focus { border-color: #6B5BFF; }
+
+.la-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.la-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.la-th { padding: 11px 14px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; background: #11141C; border-bottom: 1px solid #232936; }
+.la-row { border-bottom: 1px solid #1C2030; transition: background 0.12s; }
+.la-row:last-child { border-bottom: none; }
+.la-row:hover { background: rgba(255,255,255,0.02); }
+.la-td { padding: 12px 14px; color: #B6BED0; vertical-align: middle; }
+.la-td-name { color: #EEF0F4; font-weight: 500; }
+.la-td-amount { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; }
+.la-td-year { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7A8299; }
+.la-td-date { font-size: 12px; color: #7A8299; white-space: nowrap; }
+.la-td-right { text-align: right; }
+.la-td-reason { max-width: 200px; }
+.la-reason-type { font-size: 11px; font-weight: 500; text-transform: capitalize; color: #B6BED0; }
+.la-reason-note { font-size: 11px; color: #7A8299; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+.la-pos { color: #4DD39A; }
+.la-neg { color: #F38288; }
+.la-empty { padding: 32px; text-align: center; color: #7A8299; }
+
+.la-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; text-transform: capitalize; }
+.la-badge-green { background: rgba(77,211,154,0.12); color: #4DD39A; }
+.la-badge-red { background: rgba(243,130,136,0.12); color: #F38288; }
+.la-badge-blue { background: rgba(126,215,255,0.12); color: #7ED7FF; }
+
+.la-pagination { display: flex; justify-content: center; gap: 6px; }
+.la-page-btn { background: #161A23; border: 1px solid #232936; color: #7A8299; border-radius: 6px; padding: 5px 11px; font-size: 13px; cursor: pointer; transition: background 0.12s; }
+.la-page-btn:hover { background: #232936; color: #EEF0F4; }
+.la-page-btn-active { border-color: #6B5BFF; color: #6B5BFF; background: rgba(107,91,255,0.08); }
+
+/* Modal */
+.la-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+.la-modal { background: #161A23; border: 1px solid #232936; border-radius: 12px; width: 100%; max-width: 560px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+.la-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #232936; }
+.la-modal-title { margin: 0; font-family: 'Instrument Serif', serif; font-size: 20px; font-weight: 400; color: #EEF0F4; }
+.la-modal-close { background: none; border: none; color: #7A8299; cursor: pointer; padding: 4px; border-radius: 4px; }
+.la-modal-close:hover { color: #EEF0F4; background: #232936; }
+.la-form-error { margin: 12px 20px 0; padding: 10px 14px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 6px; font-size: 13px; color: #F38288; }
+.la-form-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+.la-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.la-field { display: flex; flex-direction: column; gap: 5px; }
+.la-label { font-size: 12px; font-weight: 500; color: #B6BED0; }
+.la-input {
+  background: #0D0F17; border: 1px solid #232936; border-radius: 7px;
+  color: #EEF0F4; font-size: 13px; padding: 8px 12px; outline: none; width: 100%; box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.la-input:focus { border-color: #6B5BFF; }
+.la-textarea { resize: vertical; min-height: 80px; }
+.la-modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 20px; border-top: 1px solid #232936; }
+.la-btn-ghost {
+  background: transparent; border: 1px solid #232936; color: #7A8299;
+  border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer;
+}
+.la-btn-ghost:hover { background: #232936; color: #EEF0F4; }
+.la-btn-danger {
+  background: rgba(243,130,136,0.08); border: 1px solid rgba(243,130,136,0.2); color: #F38288;
+  border-radius: 6px; padding: 5px 11px; font-size: 12px; cursor: pointer;
+}
+.la-btn-danger:hover { background: rgba(243,130,136,0.16); }
+</style>

@@ -1,11 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'ReportsHeadcount' })
 import { ref, computed, onMounted } from 'vue'
-import {
-  reportService,
-  type HeadcountReportRow,
-  type ReportFilter,
-} from '@/services/reportService'
+import { reportService, type HeadcountReportRow, type ReportFilter } from '@/services/reportService'
 
 const loading = ref(false)
 const error = ref('')
@@ -32,109 +28,89 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex flex-wrap gap-4 items-end">
-      <button
-        @click="load"
-        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-      >
-        Refresh
-      </button>
+  <div class="hc-page">
+    <div class="hc-filter-bar">
+      <button class="hc-btn-primary" @click="load">Refresh</button>
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-        <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Total Headcount</p>
-        <p class="text-2xl font-bold text-white">{{ totalHeadcount }}</p>
+    <div class="hc-stats">
+      <div class="hc-stat-card">
+        <div class="hc-stat-label">Total Headcount</div>
+        <div class="hc-stat-value">{{ totalHeadcount }}</div>
       </div>
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-        <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Active Employees</p>
-        <p class="text-2xl font-bold text-green-400">{{ totalActive }}</p>
+      <div class="hc-stat-card">
+        <div class="hc-stat-label">Active Employees</div>
+        <div class="hc-stat-value hc-green">{{ totalActive }}</div>
       </div>
     </div>
 
-    <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4">
-      <p class="text-sm text-red-400">{{ error }}</p>
+    <div v-if="error" class="hc-error">{{ error }}</div>
+
+    <div v-if="loading" class="hc-card hc-loading">
+      <div v-for="i in 5" :key="i" class="hc-skeleton"></div>
     </div>
 
-    <div v-if="loading" class="bg-gray-800 border border-gray-700 rounded-lg p-8 animate-pulse">
-      <div class="space-y-3">
-        <div v-for="i in 5" :key="i" class="h-10 bg-gray-700 rounded"></div>
-      </div>
-    </div>
-
-    <div
-      v-else-if="rows.length"
-      class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden"
-    >
-      <table class="min-w-full divide-y divide-gray-700">
-        <thead class="bg-gray-700/50">
+    <div v-else-if="rows.length" class="hc-card">
+      <table class="hc-table">
+        <thead>
           <tr>
-            <th
-              class="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider"
-            >
-              Department
-            </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold text-gray-300 uppercase tracking-wider"
-            >
-              Total
-            </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold text-gray-300 uppercase tracking-wider"
-            >
-              Active
-            </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold text-gray-300 uppercase tracking-wider"
-            >
-              Inactive
-            </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold text-gray-300 uppercase tracking-wider"
-            >
-              Male
-            </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold text-gray-300 uppercase tracking-wider"
-            >
-              Female
-            </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold text-gray-300 uppercase tracking-wider"
-            >
-              Full-time
-            </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-semibold text-gray-300 uppercase tracking-wider"
-            >
-              Part-time
-            </th>
+            <th class="hc-th">Department</th>
+            <th class="hc-th hc-th-right">Total</th>
+            <th class="hc-th hc-th-right">Active</th>
+            <th class="hc-th hc-th-right">Inactive</th>
+            <th class="hc-th hc-th-right">Male</th>
+            <th class="hc-th hc-th-right">Female</th>
+            <th class="hc-th hc-th-right">Full-time</th>
+            <th class="hc-th hc-th-right">Part-time</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-700">
-          <tr
-            v-for="row in rows"
-            :key="row.department"
-            class="hover:bg-gray-700/30 transition-colors"
-          >
-            <td class="px-4 py-3 text-sm font-medium text-white">{{ row.department }}</td>
-            <td class="px-4 py-3 text-sm text-right text-gray-300 font-semibold">
-              {{ row.total }}
-            </td>
-            <td class="px-4 py-3 text-sm text-right text-green-400">{{ row.active }}</td>
-            <td class="px-4 py-3 text-sm text-right text-red-400">{{ row.inactive }}</td>
-            <td class="px-4 py-3 text-sm text-right text-blue-400">{{ row.male }}</td>
-            <td class="px-4 py-3 text-sm text-right text-purple-400">{{ row.female }}</td>
-            <td class="px-4 py-3 text-sm text-right text-gray-300">{{ row.full_time }}</td>
-            <td class="px-4 py-3 text-sm text-right text-gray-300">{{ row.part_time }}</td>
+        <tbody>
+          <tr v-for="row in rows" :key="row.department" class="hc-row">
+            <td class="hc-td hc-td-name">{{ row.department }}</td>
+            <td class="hc-td hc-td-right hc-mono hc-bold">{{ row.total }}</td>
+            <td class="hc-td hc-td-right hc-mono hc-green">{{ row.active }}</td>
+            <td class="hc-td hc-td-right hc-mono hc-red">{{ row.inactive }}</td>
+            <td class="hc-td hc-td-right hc-mono hc-blue">{{ row.male }}</td>
+            <td class="hc-td hc-td-right hc-mono hc-purple">{{ row.female }}</td>
+            <td class="hc-td hc-td-right hc-mono">{{ row.full_time }}</td>
+            <td class="hc-td hc-td-right hc-mono">{{ row.part_time }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div v-else-if="!loading" class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center">
-      <p class="text-gray-500">No employee data found.</p>
-    </div>
+    <div v-else-if="!loading" class="hc-empty">No employee data found.</div>
   </div>
 </template>
+
+<style scoped>
+.hc-page { display: flex; flex-direction: column; gap: 16px; }
+.hc-filter-bar { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; align-items: center; }
+.hc-btn-primary { background: #6B5BFF; border: none; color: #fff; border-radius: 7px; padding: 8px 18px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.hc-btn-primary:hover { opacity: 0.88; }
+.hc-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hc-stat-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 16px; }
+.hc-stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; }
+.hc-stat-value { font-family: 'Instrument Serif', serif; font-size: 28px; color: #EEF0F4; letter-spacing: -0.02em; margin-top: 4px; }
+.hc-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.hc-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.hc-loading { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.hc-skeleton { height: 36px; background: #232936; border-radius: 6px; animation: hc-pulse 1.2s ease-in-out infinite; }
+@keyframes hc-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.hc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hc-th { padding: 11px 16px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; background: #11141C; border-bottom: 1px solid #232936; }
+.hc-th-right { text-align: right; }
+.hc-row { border-bottom: 1px solid #1C2030; transition: background 0.12s; }
+.hc-row:last-child { border-bottom: none; }
+.hc-row:hover { background: rgba(255,255,255,0.02); }
+.hc-td { padding: 11px 16px; color: #B6BED0; vertical-align: middle; }
+.hc-td-name { color: #EEF0F4; font-weight: 500; }
+.hc-td-right { text-align: right; }
+.hc-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.hc-bold { font-weight: 600; }
+.hc-green { color: #4DD39A; }
+.hc-red { color: #F38288; }
+.hc-blue { color: #7ED7FF; }
+.hc-purple { color: #B28DFF; }
+.hc-empty { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 48px; text-align: center; font-size: 14px; color: #7A8299; }
+</style>

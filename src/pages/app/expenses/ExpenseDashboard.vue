@@ -16,12 +16,12 @@ const error = ref('')
 const stats = ref<DashboardStats | null>(null)
 
 const statusClass: Record<string, string> = {
-  draft: 'bg-gray-700 text-gray-300',
-  submitted: 'bg-blue-900/50 text-blue-400',
-  under_review: 'bg-yellow-900/50 text-yellow-400',
-  approved: 'bg-green-900/50 text-green-400',
-  rejected: 'bg-red-900/50 text-red-400',
-  paid: 'bg-teal-900/50 text-teal-400',
+  draft: 'badge badge--muted',
+  submitted: 'badge badge--info',
+  under_review: 'badge badge--warn',
+  approved: 'badge badge--ok',
+  rejected: 'badge badge--err',
+  paid: 'badge badge--paid',
 }
 
 function fmtCurrency(amount: number) {
@@ -46,83 +46,300 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <h1 class="text-2xl font-bold text-white">Expense Dashboard</h1>
+  <div class="exp-dash">
+    <header class="exp-dash__head">
+      <span class="eyebrow">Expenses · overview</span>
+      <h1 class="page-title">Expense dashboard</h1>
+      <p class="page-sub">Track claim volume, approvals and reimbursements at a glance.</p>
+    </header>
 
-    <!-- Loading skeleton -->
-    <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div v-for="i in 4" :key="i" class="bg-gray-800 border border-gray-700 rounded-lg p-5 animate-pulse">
-        <div class="h-3 w-24 bg-gray-700 rounded mb-3" />
-        <div class="h-7 w-16 bg-gray-700 rounded" />
-      </div>
+    <div v-if="loading" class="kpi-grid">
+      <div v-for="i in 4" :key="i" class="kpi skeleton" />
     </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="alert alert--err">{{ error }}</div>
 
     <template v-else-if="stats">
-      <!-- Stat cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-          <p class="text-gray-400 text-sm">Total Claims</p>
-          <p class="text-2xl font-bold text-white mt-1">{{ stats.total_claims }}</p>
+      <div class="kpi-grid">
+        <div class="kpi">
+          <span class="eyebrow">Total claims</span>
+          <div class="kpi__value">{{ stats.total_claims }}</div>
+          <div class="kpi__sub">All-time submissions</div>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-          <p class="text-gray-400 text-sm">Pending Approval</p>
-          <p class="text-2xl font-bold text-yellow-400 mt-1">{{ stats.pending_approval }}</p>
+        <div class="kpi">
+          <span class="eyebrow">Pending approval</span>
+          <div class="kpi__value kpi__value--warn">{{ stats.pending_approval }}</div>
+          <div class="kpi__sub">Awaiting reviewer action</div>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-          <p class="text-gray-400 text-sm">Approved This Month</p>
-          <p class="text-2xl font-bold text-green-400 mt-1">{{ stats.approved_this_month ?? stats.approved ?? 0 }}</p>
+        <div class="kpi">
+          <span class="eyebrow">Approved this month</span>
+          <div class="kpi__value kpi__value--ok">{{ stats.approved_this_month ?? stats.approved ?? 0 }}</div>
+          <div class="kpi__sub">Cleared for reimbursement</div>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-          <p class="text-gray-400 text-sm">Total Reimbursed This Month</p>
-          <p class="text-2xl font-bold text-teal-400 mt-1">{{ fmtCurrency(stats.total_reimbursed_this_month ?? stats.reimbursed_this_month ?? 0) }}</p>
+        <div class="kpi">
+          <span class="eyebrow">Reimbursed this month</span>
+          <div class="kpi__value kpi__value--accent">{{ fmtCurrency(stats.total_reimbursed_this_month ?? stats.reimbursed_this_month ?? 0) }}</div>
+          <div class="kpi__sub">Disbursed to employees</div>
         </div>
       </div>
 
-      <!-- Recent claims table -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-white">Recent Claims</h2>
-          <RouterLink :to="{ name: 'expenses.my-claims' }" class="text-sm text-blue-400 hover:text-blue-300">
-            View all
-          </RouterLink>
+      <section class="card">
+        <header class="card__head">
+          <div>
+            <h2 class="card__title">Recent claims</h2>
+            <p class="card__sub">Latest submissions across the team</p>
+          </div>
+          <RouterLink :to="{ name: 'expenses.my-claims' }" class="link">View all</RouterLink>
+        </header>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th class="num">Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="claim in (stats.recent_claims || []).slice(0, 5)"
+                :key="claim.id"
+              >
+                <td>
+                  <RouterLink :to="{ name: 'expenses.claims.show', params: { id: claim.id } }" class="row-link">
+                    {{ claim.title }}
+                  </RouterLink>
+                </td>
+                <td class="num mono">{{ fmtCurrency(claim.total_amount) }}</td>
+                <td>
+                  <span :class="statusClass[claim.status] || 'badge badge--muted'">
+                    {{ claim.status.replace('_', ' ') }}
+                  </span>
+                </td>
+                <td class="muted">{{ fmtDate(claim.submitted_at || claim.created_at || null) }}</td>
+              </tr>
+              <tr v-if="!stats.recent_claims?.length">
+                <td colspan="4" class="empty">No claims yet</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <table class="w-full">
-          <thead>
-            <tr class="bg-gray-700/50">
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Title</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Amount</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Status</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Date</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-700">
-            <tr
-              v-for="claim in (stats.recent_claims || []).slice(0, 5)"
-              :key="claim.id"
-              class="hover:bg-gray-700/30"
-            >
-              <td class="px-5 py-3">
-                <RouterLink :to="{ name: 'expenses.claims.show', params: { id: claim.id } }" class="text-white hover:text-blue-400">
-                  {{ claim.title }}
-                </RouterLink>
-              </td>
-              <td class="px-5 py-3 text-gray-300">{{ fmtCurrency(claim.total_amount) }}</td>
-              <td class="px-5 py-3">
-                <span :class="[statusClass[claim.status] || 'bg-gray-700 text-gray-300', 'text-xs px-2 py-1 rounded-full font-medium']">
-                  {{ claim.status.replace('_', ' ') }}
-                </span>
-              </td>
-              <td class="px-5 py-3 text-gray-400 text-sm">{{ fmtDate(claim.submitted_at || claim.created_at || null) }}</td>
-            </tr>
-            <tr v-if="!stats.recent_claims?.length">
-              <td colspan="4" class="px-5 py-8 text-center text-gray-500">No claims yet</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      </section>
     </template>
   </div>
 </template>
+
+<style scoped>
+.exp-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.exp-dash__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+}
+
+.page-title {
+  margin: 0;
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  color: #EEF0F4;
+  font-weight: 400;
+}
+
+.page-sub {
+  margin: 0;
+  font-size: 13px;
+  color: #7A8299;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+}
+
+.kpi {
+  position: relative;
+  padding: 16px;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.kpi.skeleton {
+  height: 96px;
+  background: linear-gradient(90deg, #161A23 0%, #1B1F2A 50%, #161A23 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.kpi__value {
+  margin-top: 6px;
+  font-family: 'Instrument Serif', serif;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  color: #EEF0F4;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi__value--warn { color: #F5A623; }
+.kpi__value--ok { color: #4DD39A; }
+.kpi__value--accent { color: #6B5BFF; }
+
+.kpi__sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: #7A8299;
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.alert--err {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #F38288;
+}
+
+.card {
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #232936;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #EEF0F4;
+}
+
+.card__sub {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: #7A8299;
+}
+
+.link {
+  font-size: 12px;
+  color: #6B5BFF;
+  text-decoration: none;
+}
+
+.link:hover { color: #8A7BFF; }
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table thead th {
+  padding: 10px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid #232936;
+}
+
+.data-table thead th.num { text-align: right; }
+
+.data-table tbody td {
+  padding: 12px 18px;
+  border-bottom: 1px solid #1F2430;
+  color: #C9CDD9;
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: rgba(107, 91, 255, 0.04); }
+
+.data-table td.num { text-align: right; }
+.data-table td.muted { color: #7A8299; font-size: 12px; }
+
+.mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+.row-link {
+  color: #EEF0F4;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.row-link:hover { color: #6B5BFF; }
+
+.empty {
+  padding: 32px 0 !important;
+  text-align: center;
+  color: #7A8299;
+  font-size: 12.5px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+}
+
+.badge--muted { color: #C9CDD9; background: rgba(255, 255, 255, 0.04); border-color: #2A3142; }
+.badge--info { color: #6B5BFF; background: rgba(107, 91, 255, 0.12); border-color: rgba(107, 91, 255, 0.32); }
+.badge--warn { color: #F5A623; background: rgba(245, 166, 35, 0.1); border-color: rgba(245, 166, 35, 0.3); }
+.badge--ok { color: #4DD39A; background: rgba(77, 211, 154, 0.1); border-color: rgba(77, 211, 154, 0.3); }
+.badge--err { color: #F38288; background: rgba(243, 130, 136, 0.1); border-color: rgba(243, 130, 136, 0.3); }
+.badge--paid { color: #4DD39A; background: rgba(77, 211, 154, 0.14); border-color: rgba(77, 211, 154, 0.34); }
+</style>

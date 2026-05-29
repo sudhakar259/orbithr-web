@@ -21,7 +21,7 @@ const tabs = computed(() => {
   if (isAdminOrHR.value) {
     items.push({ name: 'Appraisal Cycles', to: 'performance.cycles' })
   }
-  items.push({ name: '360 Feedback', to: 'performance.feedback' })
+  items.push({ name: '360° Feedback', to: 'performance.feedback' })
   if (isManager.value) {
     items.push({ name: 'Reports', to: 'performance.reports' })
   }
@@ -36,31 +36,104 @@ const isActive = (name: string, exact = false) => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight text-white">Performance Management</h1>
-      <p class="text-gray-400">Manage goals, appraisals, reviews, and feedback.</p>
-    </div>
+  <div class="perf-layout">
+    <header class="perf-header">
+      <div class="perf-eyebrow">Review cycle &middot; Q2 2026</div>
+      <h1 class="perf-title">Performance</h1>
+      <p class="perf-subtitle">
+        OKR progress, review cycles and 360&deg; feedback. Self-review opens May 15.
+      </p>
+    </header>
 
-    <!-- Tab Navigation -->
-    <div class="border-b border-gray-700">
-      <nav class="-mb-px flex space-x-8">
-        <RouterLink
-          v-for="tab in tabs"
-          :key="tab.to"
-          :to="{ name: tab.to }"
-          :class="[
-            isActive(tab.to, tab.exact)
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500',
-            'whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm',
-          ]"
-        >
-          {{ tab.name }}
-        </RouterLink>
-      </nav>
-    </div>
+    <nav class="perf-tabs">
+      <RouterLink
+        v-for="tab in tabs"
+        :key="tab.to"
+        :to="{ name: tab.to }"
+        class="perf-tab"
+        :class="{ 'is-active': isActive(tab.to, tab.exact) }"
+      >
+        {{ tab.name }}
+      </RouterLink>
+    </nav>
 
-    <RouterView />
+    <div class="perf-content">
+      <RouterView />
+    </div>
   </div>
 </template>
+
+<style scoped>
+.perf-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  color: #eef0f4;
+}
+
+.perf-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.perf-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b5bff;
+  font-weight: 600;
+}
+
+.perf-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 34px;
+  letter-spacing: -0.02em;
+  color: #eef0f4;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.perf-subtitle {
+  font-size: 13px;
+  color: #7a8299;
+  margin: 0;
+  max-width: 720px;
+  line-height: 1.55;
+}
+
+.perf-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #232936;
+  overflow-x: auto;
+}
+
+.perf-tab {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #7a8299;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.perf-tab:hover {
+  color: #eef0f4;
+}
+
+.perf-tab.is-active {
+  color: #eef0f4;
+  border-bottom-color: #6b5bff;
+}
+
+.perf-content {
+  margin-top: 4px;
+}
+</style>

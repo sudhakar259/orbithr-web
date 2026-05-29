@@ -19,12 +19,12 @@ const pagination = ref({ current_page: 1, last_page: 1, total: 0 })
 const statusOptions = ['', 'draft', 'submitted', 'under_review', 'approved', 'rejected', 'paid']
 
 const statusClass: Record<string, string> = {
-  draft: 'bg-gray-700 text-gray-300',
-  submitted: 'bg-blue-900/50 text-blue-400',
-  under_review: 'bg-yellow-900/50 text-yellow-400',
-  approved: 'bg-green-900/50 text-green-400',
-  rejected: 'bg-red-900/50 text-red-400',
-  paid: 'bg-teal-900/50 text-teal-400',
+  draft: 'badge badge--muted',
+  submitted: 'badge badge--info',
+  under_review: 'badge badge--warn',
+  approved: 'badge badge--ok',
+  rejected: 'badge badge--err',
+  paid: 'badge badge--paid',
 }
 
 function fmtCurrency(amount: number) {
@@ -72,83 +72,334 @@ onMounted(() => fetchClaims())
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-white">My Claims</h1>
-      <RouterLink :to="{ name: 'expenses.claims.create' }" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-        New Claim
+  <div class="claims-page">
+    <header class="page-head">
+      <div>
+        <span class="eyebrow">My expenses · claims</span>
+        <h1 class="page-title">My claims</h1>
+        <p class="page-sub">Drafts, submissions and reimbursement status.</p>
+      </div>
+      <RouterLink :to="{ name: 'expenses.claims.create' }" class="btn btn--primary">
+        + New claim
       </RouterLink>
-    </div>
+    </header>
 
-    <!-- Filter -->
-    <div class="flex items-center gap-3">
-      <label class="text-sm text-gray-400">Status:</label>
-      <select v-model="statusFilter" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+    <div class="filter-bar">
+      <span class="filter-bar__label">Status</span>
+      <select v-model="statusFilter" class="select">
         <option v-for="s in statusOptions" :key="s" :value="s">{{ s ? s.replace('_', ' ') : 'All' }}</option>
       </select>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="bg-gray-800 border border-gray-700 rounded-lg p-8 animate-pulse">
-      <div v-for="i in 5" :key="i" class="h-4 bg-gray-700 rounded mb-4" />
+    <div v-if="loading" class="card skeleton-card">
+      <div v-for="i in 5" :key="i" class="skeleton-row" />
     </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="alert alert--err">{{ error }}</div>
 
-    <!-- Table -->
-    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-      <table class="w-full">
-        <thead>
-          <tr class="bg-gray-700/50">
-            <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Title</th>
-            <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Total</th>
-            <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Status</th>
-            <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Submitted At</th>
-            <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-700">
-          <tr v-for="claim in claims" :key="claim.id" class="hover:bg-gray-700/30">
-            <td class="px-5 py-3 text-white">{{ claim.title }}</td>
-            <td class="px-5 py-3 text-gray-300">{{ fmtCurrency(claim.total_amount) }}</td>
-            <td class="px-5 py-3">
-              <span :class="[statusClass[claim.status] || 'bg-gray-700 text-gray-300', 'text-xs px-2 py-1 rounded-full font-medium']">
-                {{ claim.status.replace('_', ' ') }}
-              </span>
-            </td>
-            <td class="px-5 py-3 text-gray-400 text-sm">{{ fmtDate(claim.submitted_at) }}</td>
-            <td class="px-5 py-3">
-              <div class="flex items-center gap-2">
-                <RouterLink :to="{ name: 'expenses.claims.show', params: { id: claim.id } }" class="text-sm text-blue-400 hover:text-blue-300">View</RouterLink>
-                <RouterLink v-if="claim.status === 'draft'" :to="{ name: 'expenses.claims.edit', params: { id: claim.id } }" class="text-sm text-yellow-400 hover:text-yellow-300">Edit</RouterLink>
-                <button v-if="claim.status === 'draft'" class="text-sm text-red-400 hover:text-red-300" @click="handleDelete(claim.id)">Delete</button>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="!claims.length">
-            <td colspan="5" class="px-5 py-8 text-center text-gray-500">No claims found</td>
-          </tr>
-        </tbody>
-      </table>
+    <section v-else class="card">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th class="num">Total</th>
+              <th>Status</th>
+              <th>Submitted</th>
+              <th class="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="claim in claims" :key="claim.id">
+              <td>
+                <span class="row-title">{{ claim.title }}</span>
+              </td>
+              <td class="num mono">{{ fmtCurrency(claim.total_amount) }}</td>
+              <td>
+                <span :class="statusClass[claim.status] || 'badge badge--muted'">
+                  {{ claim.status.replace('_', ' ') }}
+                </span>
+              </td>
+              <td class="muted">{{ fmtDate(claim.submitted_at) }}</td>
+              <td>
+                <div class="actions">
+                  <RouterLink :to="{ name: 'expenses.claims.show', params: { id: claim.id } }" class="action-link">View</RouterLink>
+                  <RouterLink v-if="claim.status === 'draft'" :to="{ name: 'expenses.claims.edit', params: { id: claim.id } }" class="action-link action-link--warn">Edit</RouterLink>
+                  <button v-if="claim.status === 'draft'" class="action-link action-link--err" @click="handleDelete(claim.id)">Delete</button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!claims.length">
+              <td colspan="5" class="empty">No claims found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-      <!-- Pagination -->
-      <div v-if="pagination.last_page > 1" class="px-5 py-3 border-t border-gray-700 flex items-center justify-between">
-        <p class="text-sm text-gray-400">{{ pagination.total }} total</p>
-        <div class="flex gap-2">
+      <div v-if="pagination.last_page > 1" class="pagination">
+        <span class="pagination__info">{{ pagination.total }} total</span>
+        <div class="pagination__nav">
           <button
             :disabled="pagination.current_page <= 1"
-            class="px-3 py-1 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-40"
+            class="btn btn--ghost btn--sm"
             @click="fetchClaims(pagination.current_page - 1)"
           >Prev</button>
+          <span class="pagination__page mono">{{ pagination.current_page }} / {{ pagination.last_page }}</span>
           <button
             :disabled="pagination.current_page >= pagination.last_page"
-            class="px-3 py-1 text-sm rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-40"
+            class="btn btn--ghost btn--sm"
             @click="fetchClaims(pagination.current_page + 1)"
           >Next</button>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
+
+<style scoped>
+.claims-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+}
+
+.page-title {
+  margin: 4px 0 2px;
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  color: #EEF0F4;
+  font-weight: 400;
+}
+
+.page-sub {
+  margin: 0;
+  font-size: 13px;
+  color: #7A8299;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn--primary {
+  background: #6B5BFF;
+  color: #fff;
+}
+.btn--primary:hover { background: #7C6CFF; }
+
+.btn--ghost {
+  background: transparent;
+  color: #C9CDD9;
+  border-color: #232936;
+}
+.btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.03);
+  color: #EEF0F4;
+}
+
+.btn--sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-bar__label {
+  font-size: 11.5px;
+  color: #7A8299;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.select {
+  padding: 7px 10px;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  color: #EEF0F4;
+  font-size: 12.5px;
+  outline: none;
+  text-transform: capitalize;
+}
+
+.select:focus { border-color: #6B5BFF; }
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.alert--err {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #F38288;
+}
+
+.card {
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.skeleton-card { padding: 18px; }
+.skeleton-row {
+  height: 14px;
+  margin-bottom: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #1B1F2A 0%, #232936 50%, #1B1F2A 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.table-wrap { overflow-x: auto; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table thead th {
+  padding: 10px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid #232936;
+}
+
+.data-table thead th.num { text-align: right; }
+.data-table thead th.actions-col { width: 180px; }
+
+.data-table tbody td {
+  padding: 12px 18px;
+  border-bottom: 1px solid #1F2430;
+  color: #C9CDD9;
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: rgba(107, 91, 255, 0.04); }
+
+.data-table td.num { text-align: right; }
+.data-table td.muted { color: #7A8299; font-size: 12px; }
+
+.mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+.row-title {
+  color: #EEF0F4;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.action-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #6B5BFF;
+  text-decoration: none;
+  padding: 0;
+}
+
+.action-link:hover { color: #8A7BFF; }
+.action-link--warn { color: #F5A623; }
+.action-link--warn:hover { color: #FFB94D; }
+.action-link--err { color: #F38288; }
+.action-link--err:hover { color: #FF9DA3; }
+
+.empty {
+  padding: 36px 0 !important;
+  text-align: center;
+  color: #7A8299;
+  font-size: 12.5px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-top: 1px solid #232936;
+}
+
+.pagination__info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: #7A8299;
+}
+
+.pagination__nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination__page { color: #C9CDD9; font-size: 12px; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+}
+
+.badge--muted { color: #C9CDD9; background: rgba(255, 255, 255, 0.04); border-color: #2A3142; }
+.badge--info { color: #6B5BFF; background: rgba(107, 91, 255, 0.12); border-color: rgba(107, 91, 255, 0.32); }
+.badge--warn { color: #F5A623; background: rgba(245, 166, 35, 0.1); border-color: rgba(245, 166, 35, 0.3); }
+.badge--ok { color: #4DD39A; background: rgba(77, 211, 154, 0.1); border-color: rgba(77, 211, 154, 0.3); }
+.badge--err { color: #F38288; background: rgba(243, 130, 136, 0.1); border-color: rgba(243, 130, 136, 0.3); }
+.badge--paid { color: #4DD39A; background: rgba(77, 211, 154, 0.14); border-color: rgba(77, 211, 154, 0.34); }
+</style>

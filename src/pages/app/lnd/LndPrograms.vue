@@ -27,31 +27,31 @@ async function loadPrograms() {
   }
 }
 
-function programTypeColor(type: string) {
+function programTypeClass(type: string) {
   switch (type) {
     case 'onboarding':
-      return 'bg-blue-900/50 text-blue-400'
+      return 'pill-purple'
     case 'compliance':
-      return 'bg-red-900/50 text-red-400'
+      return 'pill-red'
     case 'role_based':
-      return 'bg-purple-900/50 text-purple-400'
+      return 'pill-yellow'
     default:
-      return 'bg-gray-700 text-gray-400'
+      return 'pill-muted'
   }
 }
 
-function statusColor(status: string) {
+function statusClass(status: string) {
   switch (status) {
     case 'active':
-      return 'bg-green-900/50 text-green-400'
+      return 'pill-green'
     case 'completed':
-      return 'bg-blue-900/50 text-blue-400'
+      return 'pill-purple'
     case 'draft':
-      return 'bg-gray-700 text-gray-400'
+      return 'pill-muted'
     case 'archived':
-      return 'bg-red-900/50 text-red-400'
+      return 'pill-red'
     default:
-      return 'bg-gray-700 text-gray-400'
+      return 'pill-muted'
   }
 }
 
@@ -59,14 +59,10 @@ onMounted(loadPrograms)
 </script>
 
 <template>
-  <div>
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <select
-          v-model="statusFilter"
-          class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          @change="loadPrograms"
-        >
+  <div class="lnd-programs">
+    <div class="page-toolbar">
+      <div class="filter-row">
+        <select v-model="statusFilter" class="input" @change="loadPrograms">
           <option value="">All Status</option>
           <option value="draft">Draft</option>
           <option value="active">Active</option>
@@ -77,76 +73,260 @@ onMounted(loadPrograms)
       <RouterLink
         v-if="canManage"
         :to="{ name: 'lnd.programs.create' }"
-        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        class="btn-primary"
       >
         + New Program
       </RouterLink>
     </div>
 
-    <div
-      v-if="error"
-      class="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded-lg mb-4"
-    >
-      {{ error }}
-    </div>
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
 
-    <div v-if="loading" class="space-y-3">
-      <div
-        v-for="n in 4"
-        :key="n"
-        class="bg-gray-800 border border-gray-700 rounded-lg p-5 animate-pulse"
-      >
-        <div class="h-5 bg-gray-700 rounded w-1/3 mb-2" />
-        <div class="h-3 bg-gray-700 rounded w-2/3" />
+    <div v-if="loading" class="program-list">
+      <div v-for="n in 4" :key="n" class="program-card skeleton">
+        <div class="skeleton-line w-1-3" />
+        <div class="skeleton-line w-2-3" />
       </div>
     </div>
 
-    <div v-else-if="programs.length" class="space-y-3">
+    <div v-else-if="programs.length" class="program-list">
       <RouterLink
         v-for="program in programs"
         :key="program.id"
         :to="{ name: 'lnd.programs.show', params: { id: program.id } }"
-        class="bg-gray-800 border border-gray-700 rounded-lg p-5 block hover:border-gray-600 transition-colors"
+        class="program-card"
       >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <div class="flex items-center gap-2 mb-1">
-              <h3 class="text-white font-semibold">{{ program.title }}</h3>
-              <span
-                :class="statusColor(program.status)"
-                class="text-xs px-2 py-0.5 rounded-full"
-              >
+        <div class="program-row">
+          <div class="program-meta">
+            <div class="program-title-row">
+              <h3 class="program-title">{{ program.title }}</h3>
+              <span :class="['pill', statusClass(program.status)]">
                 {{ program.status }}
               </span>
-              <span
-                :class="programTypeColor(program.program_type)"
-                class="text-xs px-2 py-0.5 rounded-full"
-              >
+              <span :class="['pill', programTypeClass(program.program_type)]">
                 {{ program.program_type.replace('_', ' ') }}
               </span>
-              <span
-                v-if="program.is_mandatory"
-                class="bg-purple-900/50 text-purple-400 text-xs px-2 py-0.5 rounded-full"
-              >
-                mandatory
-              </span>
+              <span v-if="program.is_mandatory" class="pill pill-purple">mandatory</span>
             </div>
-            <p class="text-gray-400 text-sm line-clamp-1">
+            <p class="program-desc">
               {{ program.description || 'No description' }}
             </p>
           </div>
-          <div class="text-right text-sm text-gray-400">
-            <p>{{ program.enrolled_count }} enrolled</p>
-            <p v-if="program.start_date" class="text-xs">
-              {{ program.start_date }} - {{ program.end_date || 'ongoing' }}
+          <div class="program-stats">
+            <p class="program-enrolled">{{ program.enrolled_count }} enrolled</p>
+            <p v-if="program.start_date" class="program-dates">
+              {{ program.start_date }} &mdash; {{ program.end_date || 'ongoing' }}
             </p>
           </div>
         </div>
       </RouterLink>
     </div>
 
-    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg px-6 py-12 text-center">
-      <p class="text-gray-400">No training programs found.</p>
-    </div>
+    <div v-else class="empty-card">No training programs found.</div>
   </div>
 </template>
+
+<style scoped>
+.lnd-programs {
+  color: #eef0f4;
+}
+
+.page-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.input {
+  background: #161a23;
+  border: 1px solid #232936;
+  color: #eef0f4;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input:focus {
+  border-color: #6b5bff;
+}
+
+.btn-primary {
+  background: #6b5bff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: #5a4be8;
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.alert-error {
+  background: rgba(243, 130, 136, 0.12);
+  border: 1px solid rgba(243, 130, 136, 0.4);
+  color: #f38288;
+}
+
+.program-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.program-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 16px 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease;
+  display: block;
+}
+
+.program-card:hover {
+  border-color: #6b5bff;
+}
+
+.program-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.program-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.program-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.program-title {
+  font-size: 14px;
+  color: #eef0f4;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.005em;
+}
+
+.program-desc {
+  font-size: 11.5px;
+  color: #7a8299;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.program-stats {
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.program-enrolled {
+  font-size: 12.5px;
+  color: #eef0f4;
+  margin: 0;
+  font-weight: 500;
+}
+
+.program-dates {
+  font-size: 10.5px;
+  color: #7a8299;
+  margin: 2px 0 0;
+}
+
+.pill {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.pill-green {
+  background: rgba(77, 211, 154, 0.14);
+  color: #4dd39a;
+}
+
+.pill-yellow {
+  background: rgba(245, 166, 35, 0.14);
+  color: #f5a623;
+}
+
+.pill-red {
+  background: rgba(243, 130, 136, 0.14);
+  color: #f38288;
+}
+
+.pill-purple {
+  background: rgba(107, 91, 255, 0.16);
+  color: #6b5bff;
+}
+
+.pill-muted {
+  background: rgba(122, 130, 153, 0.16);
+  color: #7a8299;
+}
+
+.empty-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 13px;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: #232936;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.w-1-3 {
+  width: 33%;
+}
+
+.w-2-3 {
+  width: 66%;
+}
+</style>

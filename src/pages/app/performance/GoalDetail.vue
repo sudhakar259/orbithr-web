@@ -66,25 +66,25 @@ const submitProgressLog = async () => {
   }
 }
 
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    draft: 'bg-gray-700 text-gray-300',
-    active: 'bg-blue-900/50 text-blue-400',
-    completed: 'bg-green-900/50 text-green-400',
-    cancelled: 'bg-red-900/50 text-red-400',
-    on_hold: 'bg-yellow-900/50 text-yellow-400',
+const getStatusClass = (status: string) => {
+  const map: Record<string, string> = {
+    draft: 'gd-badge-muted',
+    active: 'gd-badge-blue',
+    completed: 'gd-badge-green',
+    cancelled: 'gd-badge-red',
+    on_hold: 'gd-badge-yellow',
   }
-  return colors[status] || 'bg-gray-700 text-gray-300'
+  return map[status] || 'gd-badge-muted'
 }
 
-const getKRStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    not_started: 'bg-gray-700 text-gray-400',
-    in_progress: 'bg-blue-900/50 text-blue-400',
-    completed: 'bg-green-900/50 text-green-400',
-    at_risk: 'bg-red-900/50 text-red-400',
+const getKRStatusClass = (status: string) => {
+  const map: Record<string, string> = {
+    not_started: 'gd-badge-muted',
+    in_progress: 'gd-badge-blue',
+    completed: 'gd-badge-green',
+    at_risk: 'gd-badge-red',
   }
-  return colors[status] || 'bg-gray-700 text-gray-300'
+  return map[status] || 'gd-badge-muted'
 }
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString()
@@ -94,136 +94,196 @@ onMounted(() => loadGoal())
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+  <div class="gd-page">
+    <div v-if="loading" class="gd-loading">
+      <div v-for="i in 4" :key="i" class="gd-skeleton"></div>
     </div>
 
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="gd-error">{{ error }}</div>
 
     <template v-else-if="goal">
       <!-- Header -->
-      <div class="flex items-start justify-between">
-        <div>
-          <div class="flex items-center gap-3">
-            <button @click="router.push({ name: 'performance.goals' })" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <h2 class="text-xl font-semibold text-white">{{ goal.title }}</h2>
-            <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getStatusColor(goal.status)]">
-              {{ goal.status.replace('_', ' ') }}
-            </span>
+      <div class="gd-header">
+        <div class="gd-header-left">
+          <button class="gd-back-btn" @click="router.push({ name: 'performance.goals' })">&#8592;</button>
+          <div>
+            <div class="gd-title-row">
+              <h2 class="gd-title">{{ goal.title }}</h2>
+              <span :class="['gd-badge', getStatusClass(goal.status)]">{{ goal.status.replace('_', ' ') }}</span>
+            </div>
+            <p v-if="goal.description" class="gd-desc">{{ goal.description }}</p>
           </div>
-          <p v-if="goal.description" class="mt-2 text-sm text-gray-400 ml-8">{{ goal.description }}</p>
         </div>
-        <div v-if="canManage" class="flex gap-2">
-          <button v-if="goal.status === 'draft'" @click="handlePublish" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Publish</button>
-          <button v-if="goal.status === 'active'" @click="handleComplete" class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">Mark Complete</button>
-          <button @click="router.push({ name: 'performance.goals.show', params: { id: goal.id }, query: { edit: '1' } })" class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors">Edit</button>
+        <div v-if="canManage" class="gd-actions">
+          <button v-if="goal.status === 'draft'" class="gd-btn-publish" @click="handlePublish">Publish</button>
+          <button v-if="goal.status === 'active'" class="gd-btn-complete" @click="handleComplete">Mark Complete</button>
+          <button class="gd-btn-ghost" @click="router.push({ name: 'performance.goals.show', params: { id: goal.id }, query: { edit: '1' } })">Edit</button>
         </div>
       </div>
 
-      <!-- Meta Info -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <p class="text-xs text-gray-400">Type</p>
-          <p class="mt-1 text-sm font-medium text-white uppercase">{{ goal.type }}</p>
+      <!-- Meta Cards -->
+      <div class="gd-meta-grid">
+        <div class="gd-meta-card">
+          <p class="gd-meta-label">Type</p>
+          <p class="gd-meta-value">{{ goal.type }}</p>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <p class="text-xs text-gray-400">Framework</p>
-          <p class="mt-1 text-sm font-medium text-white uppercase">{{ goal.framework }}</p>
+        <div class="gd-meta-card">
+          <p class="gd-meta-label">Framework</p>
+          <p class="gd-meta-value">{{ goal.framework }}</p>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <p class="text-xs text-gray-400">Period</p>
-          <p class="mt-1 text-sm font-medium text-white">{{ formatDate(goal.start_date) }} – {{ formatDate(goal.end_date) }}</p>
+        <div class="gd-meta-card">
+          <p class="gd-meta-label">Period</p>
+          <p class="gd-meta-value">{{ formatDate(goal.start_date) }} – {{ formatDate(goal.end_date) }}</p>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <p class="text-xs text-gray-400">Overall Progress</p>
-          <div class="mt-2 flex items-center gap-2">
-            <div class="flex-1 bg-gray-700 rounded-full h-2">
-              <div class="bg-blue-500 h-2 rounded-full" :style="{ width: goal.progress + '%' }"></div>
+        <div class="gd-meta-card">
+          <p class="gd-meta-label">Overall Progress</p>
+          <div class="gd-progress-row">
+            <div class="gd-progress-track">
+              <div class="gd-progress-fill" :style="{ width: goal.progress + '%' }" />
             </div>
-            <span class="text-sm font-medium text-white">{{ goal.progress }}%</span>
+            <span class="gd-progress-pct">{{ goal.progress }}%</span>
           </div>
         </div>
       </div>
 
       <!-- Key Results -->
-      <div v-if="goal.key_results && goal.key_results.length > 0" class="bg-gray-800 border border-gray-700 rounded-lg">
-        <div class="p-5 border-b border-gray-700 flex items-center justify-between">
-          <h3 class="text-base font-medium text-white">Key Results</h3>
-          <button v-if="goal.status === 'active'" @click="showLogForm = !showLogForm" class="text-blue-400 hover:text-blue-300 text-sm font-medium">Log Progress</button>
+      <div v-if="goal.key_results && goal.key_results.length > 0" class="gd-card">
+        <div class="gd-card-head">
+          <span>Key Results</span>
+          <button v-if="goal.status === 'active'" class="gd-log-btn" @click="showLogForm = !showLogForm">Log Progress</button>
         </div>
 
         <!-- Log Progress Form -->
-        <div v-if="showLogForm" class="p-5 border-b border-gray-700 bg-gray-900/50 space-y-3">
-          <div class="grid grid-cols-3 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-300">Key Result (optional)</label>
-              <select v-model="logForm.key_result_id" class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none px-3 py-2">
+        <div v-if="showLogForm" class="gd-log-form">
+          <div class="gd-grid-3">
+            <div class="gd-field">
+              <label class="gd-label">Key Result (optional)</label>
+              <select v-model="logForm.key_result_id" class="gd-input">
                 <option :value="undefined">Overall Goal</option>
                 <option v-for="kr in goal.key_results" :key="kr.id" :value="kr.id">{{ kr.title }}</option>
               </select>
             </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-300">New Value</label>
-              <input v-model.number="logForm.new_value" type="number" class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none px-3 py-2" />
+            <div class="gd-field">
+              <label class="gd-label">New Value</label>
+              <input v-model.number="logForm.new_value" type="number" class="gd-input" />
             </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-300">Notes</label>
-              <input v-model="logForm.notes" type="text" placeholder="Optional notes" class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none px-3 py-2" />
+            <div class="gd-field">
+              <label class="gd-label">Notes</label>
+              <input v-model="logForm.notes" type="text" placeholder="Optional notes" class="gd-input" />
             </div>
           </div>
-          <div class="flex gap-2">
-            <button @click="submitProgressLog" :disabled="savingLog" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50">
-              {{ savingLog ? 'Saving...' : 'Log Progress' }}
+          <div class="gd-log-actions">
+            <button class="gd-btn-primary" :disabled="savingLog" @click="submitProgressLog">
+              {{ savingLog ? 'Saving…' : 'Log Progress' }}
             </button>
-            <button @click="showLogForm = false" class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors">Cancel</button>
+            <button class="gd-btn-ghost" @click="showLogForm = false">Cancel</button>
           </div>
         </div>
 
-        <ul class="divide-y divide-gray-700">
-          <li v-for="kr in goal.key_results" :key="kr.id" class="p-5">
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <p class="text-sm font-medium text-white">{{ kr.title }}</p>
-                  <span :class="['inline-flex px-1.5 py-0.5 text-xs font-medium rounded', getKRStatusColor(kr.status)]">{{ kr.status.replace(/_/g, ' ') }}</span>
-                </div>
-                <p v-if="kr.description" class="text-xs text-gray-400 mt-0.5">{{ kr.description }}</p>
-                <div class="mt-2 flex items-center gap-3">
-                  <div class="flex-1 max-w-xs bg-gray-700 rounded-full h-1.5">
-                    <div class="bg-blue-500 h-1.5 rounded-full" :style="{ width: kr.progress + '%' }"></div>
-                  </div>
-                  <span class="text-xs text-gray-400">{{ kr.current_value }} / {{ kr.target_value }} {{ kr.unit }}</span>
-                  <span class="text-xs font-medium text-gray-300">{{ kr.progress }}%</span>
-                </div>
-              </div>
-              <div v-if="kr.due_date" class="ml-4 text-xs text-gray-400">Due: {{ formatDate(kr.due_date) }}</div>
+        <div v-for="kr in goal.key_results" :key="kr.id" class="gd-kr-row">
+          <div class="gd-kr-body">
+            <div class="gd-kr-title-row">
+              <p class="gd-kr-title">{{ kr.title }}</p>
+              <span :class="['gd-badge', getKRStatusClass(kr.status)]">{{ kr.status.replace(/_/g, ' ') }}</span>
             </div>
-          </li>
-        </ul>
+            <p v-if="kr.description" class="gd-kr-desc">{{ kr.description }}</p>
+            <div class="gd-kr-progress-row">
+              <div class="gd-progress-track gd-track-sm">
+                <div class="gd-progress-fill" :style="{ width: kr.progress + '%' }" />
+              </div>
+              <span class="gd-kr-vals">{{ kr.current_value }} / {{ kr.target_value }} {{ kr.unit }}</span>
+              <span class="gd-kr-pct">{{ kr.progress }}%</span>
+            </div>
+          </div>
+          <div v-if="kr.due_date" class="gd-kr-due">Due: {{ formatDate(kr.due_date) }}</div>
+        </div>
       </div>
 
       <!-- Progress History -->
-      <div v-if="progressLogs.length > 0" class="bg-gray-800 border border-gray-700 rounded-lg">
-        <div class="p-5 border-b border-gray-700">
-          <h3 class="text-base font-medium text-white">Progress History</h3>
+      <div v-if="progressLogs.length > 0" class="gd-card">
+        <div class="gd-card-head"><span>Progress History</span></div>
+        <div v-for="log in progressLogs" :key="log.id" class="gd-log-row">
+          <div>
+            <p class="gd-log-change">{{ log.previous_value }} → {{ log.new_value }} <span v-if="log.key_result" class="gd-log-kr">({{ log.key_result.title }})</span></p>
+            <p v-if="log.notes" class="gd-log-note">{{ log.notes }}</p>
+          </div>
+          <div class="gd-log-right">
+            <p class="gd-log-pct">{{ log.progress_percent }}%</p>
+            <p class="gd-log-ts">{{ formatDateTime(log.created_at) }}</p>
+            <p v-if="log.logged_by_user" class="gd-log-by">by {{ log.logged_by_user.name }}</p>
+          </div>
         </div>
-        <ul class="divide-y divide-gray-700">
-          <li v-for="log in progressLogs" :key="log.id" class="p-4 flex items-center justify-between">
-            <div>
-              <p class="text-sm text-white">{{ log.previous_value }} → {{ log.new_value }} <span v-if="log.key_result" class="text-gray-400">({{ log.key_result.title }})</span></p>
-              <p v-if="log.notes" class="text-xs text-gray-400 mt-0.5">{{ log.notes }}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-sm font-medium text-blue-400">{{ log.progress_percent }}%</p>
-              <p class="text-xs text-gray-400">{{ formatDateTime(log.created_at) }}</p>
-              <p v-if="log.logged_by_user" class="text-xs text-gray-400">by {{ log.logged_by_user.name }}</p>
-            </div>
-          </li>
-        </ul>
       </div>
     </template>
   </div>
 </template>
+
+<style scoped>
+.gd-page { display: flex; flex-direction: column; gap: 16px; }
+.gd-loading { display: flex; flex-direction: column; gap: 10px; }
+.gd-skeleton { height: 38px; background: #232936; border-radius: 7px; animation: gd-pulse 1.2s ease-in-out infinite; }
+@keyframes gd-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.gd-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.gd-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.gd-header-left { display: flex; align-items: flex-start; gap: 12px; }
+.gd-back-btn { background: none; border: none; color: #7A8299; font-size: 18px; cursor: pointer; padding: 0; line-height: 1; margin-top: 2px; }
+.gd-back-btn:hover { color: #EEF0F4; }
+.gd-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.gd-title { font-size: 18px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.gd-desc { font-size: 13px; color: #7A8299; margin: 0; }
+.gd-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.gd-btn-publish { background: rgba(77,211,154,0.15); border: 1px solid rgba(77,211,154,0.3); color: #4DD39A; border-radius: 7px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.gd-btn-publish:hover { background: rgba(77,211,154,0.25); }
+.gd-btn-complete { background: rgba(107,91,255,0.15); border: 1px solid rgba(107,91,255,0.3); color: #8A7BFF; border-radius: 7px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.gd-btn-complete:hover { background: rgba(107,91,255,0.25); }
+.gd-btn-ghost { background: #232936; border: 1px solid #2D3448; color: #B6BED0; border-radius: 7px; padding: 7px 14px; font-size: 13px; cursor: pointer; }
+.gd-btn-ghost:hover { color: #EEF0F4; }
+.gd-btn-primary { background: #6B5BFF; border: none; color: #fff; border-radius: 7px; padding: 7px 16px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.gd-btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.gd-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.gd-meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.gd-meta-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 14px 16px; }
+.gd-meta-label { font-size: 11px; color: #7A8299; margin: 0 0 4px; }
+.gd-meta-value { font-size: 13px; font-weight: 600; color: #EEF0F4; margin: 0; text-transform: capitalize; }
+.gd-progress-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.gd-progress-track { flex: 1; height: 6px; background: #232936; border-radius: 4px; overflow: hidden; }
+.gd-track-sm { max-width: 160px; }
+.gd-progress-fill { height: 100%; background: #6B5BFF; border-radius: 4px; }
+.gd-progress-pct { font-size: 12px; font-weight: 600; color: #EEF0F4; }
+.gd-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.gd-card-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #232936; font-size: 13px; font-weight: 600; color: #EEF0F4; }
+.gd-log-btn { font-size: 12px; color: #6B5BFF; background: none; border: none; cursor: pointer; font-weight: 500; }
+.gd-log-btn:hover { color: #8A7BFF; }
+.gd-log-form { padding: 14px 16px; border-bottom: 1px solid #232936; background: rgba(13,15,23,0.5); display: flex; flex-direction: column; gap: 12px; }
+.gd-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.gd-field { display: flex; flex-direction: column; gap: 4px; }
+.gd-label { font-size: 11px; color: #7A8299; }
+.gd-input { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 7px 10px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+.gd-input:focus { border-color: #6B5BFF; }
+.gd-log-actions { display: flex; gap: 8px; }
+.gd-kr-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #1C2030; }
+.gd-kr-row:last-child { border-bottom: none; }
+.gd-kr-body { flex: 1; min-width: 0; }
+.gd-kr-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.gd-kr-title { font-size: 13px; font-weight: 500; color: #EEF0F4; margin: 0; }
+.gd-kr-desc { font-size: 12px; color: #7A8299; margin: 0 0 6px; }
+.gd-kr-progress-row { display: flex; align-items: center; gap: 10px; }
+.gd-kr-vals { font-size: 12px; color: #7A8299; }
+.gd-kr-pct { font-size: 12px; font-weight: 600; color: #B6BED0; }
+.gd-kr-due { font-size: 12px; color: #7A8299; flex-shrink: 0; }
+.gd-log-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #1C2030; }
+.gd-log-row:last-child { border-bottom: none; }
+.gd-log-change { font-size: 13px; color: #EEF0F4; margin: 0 0 2px; }
+.gd-log-kr { color: #7A8299; }
+.gd-log-note { font-size: 12px; color: #7A8299; margin: 0; }
+.gd-log-right { text-align: right; flex-shrink: 0; }
+.gd-log-pct { font-size: 13px; font-weight: 600; color: #6B5BFF; margin: 0 0 2px; }
+.gd-log-ts { font-size: 11px; color: #7A8299; margin: 0 0 2px; }
+.gd-log-by { font-size: 11px; color: #7A8299; margin: 0; }
+.gd-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; text-transform: capitalize; white-space: nowrap; }
+.gd-badge-green  { background: rgba(77,211,154,0.12); color: #4DD39A; }
+.gd-badge-blue   { background: rgba(126,215,255,0.12); color: #7ED7FF; }
+.gd-badge-red    { background: rgba(243,130,136,0.12); color: #F38288; }
+.gd-badge-yellow { background: rgba(245,166,35,0.12); color: #F5A623; }
+.gd-badge-muted  { background: rgba(122,130,153,0.12); color: #7A8299; }
+</style>

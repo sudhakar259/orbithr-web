@@ -37,26 +37,10 @@ const loadGoals = async () => {
   }
 }
 
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    draft: 'bg-gray-700 text-gray-300',
-    active: 'bg-blue-900/50 text-blue-400',
-    completed: 'bg-green-900/50 text-green-400',
-    cancelled: 'bg-red-900/50 text-red-400',
-    on_hold: 'bg-yellow-900/50 text-yellow-400',
-  }
-  return colors[status] || 'bg-gray-700 text-gray-300'
-}
-
-const getTypeBadge = (type: string) => {
-  const colors: Record<string, string> = {
-    okr: 'bg-purple-900/50 text-purple-400',
-    kpi: 'bg-indigo-900/50 text-indigo-400',
-    individual: 'bg-blue-900/50 text-blue-400',
-    team: 'bg-teal-900/50 text-teal-400',
-    company: 'bg-orange-900/50 text-orange-400',
-  }
-  return colors[type] || 'bg-gray-700 text-gray-300'
+const progressColor = (v: number) => {
+  if (v >= 70) return '#4DD39A'
+  if (v >= 40) return '#F5A623'
+  return '#F38288'
 }
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString()
@@ -65,20 +49,20 @@ onMounted(() => loadGoals())
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <select v-model="filterStatus" @change="loadGoals()" class="bg-gray-800 border border-gray-700 text-gray-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none">
-          <option value="">All Status</option>
+  <div class="goals">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="filters">
+        <select v-model="filterStatus" class="select" @change="loadGoals()">
+          <option value="">All status</option>
           <option value="draft">Draft</option>
           <option value="active">Active</option>
           <option value="completed">Completed</option>
-          <option value="on_hold">On Hold</option>
+          <option value="on_hold">On hold</option>
           <option value="cancelled">Cancelled</option>
         </select>
-        <select v-model="filterType" @change="loadGoals()" class="bg-gray-800 border border-gray-700 text-gray-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none">
-          <option value="">All Types</option>
+        <select v-model="filterType" class="select" @change="loadGoals()">
+          <option value="">All types</option>
           <option value="okr">OKR</option>
           <option value="kpi">KPI</option>
           <option value="individual">Individual</option>
@@ -88,78 +72,497 @@ onMounted(() => loadGoals())
       </div>
       <button
         v-if="canCreate"
+        class="btn btn-primary"
         @click="router.push({ name: 'performance.goals.create' })"
-        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
       >
-        <svg class="-ml-1 mr-2 h-5 w-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-        New Goal
+        + New goal
       </button>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+    <div v-if="loading" class="state-block">
+      <div class="spinner"></div>
     </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="state-error">{{ error }}</div>
 
-    <!-- Empty -->
-    <div v-else-if="goals.length === 0" class="text-center py-12 text-gray-500">No goals found.</div>
+    <div v-else-if="goals.length === 0" class="empty-pad">No goals found.</div>
 
-    <!-- Table -->
-    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-700">
-        <thead class="bg-gray-800/50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Title</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Type</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Progress</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Weightage</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Due Date</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-700">
-          <tr v-for="goal in goals" :key="goal.id" class="hover:bg-gray-700/30">
-            <td class="px-6 py-4">
-              <p class="text-sm font-medium text-white">{{ goal.title }}</p>
-              <p v-if="goal.description" class="text-xs text-gray-400 mt-1 truncate max-w-xs">{{ goal.description }}</p>
-            </td>
-            <td class="px-6 py-4">
-              <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getTypeBadge(goal.type)]">
-                {{ goal.type.toUpperCase() }}
-              </span>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-2">
-                <div class="w-20 bg-gray-700 rounded-full h-2">
-                  <div class="bg-blue-500 h-2 rounded-full" :style="{ width: goal.progress + '%' }"></div>
-                </div>
-                <span class="text-xs text-gray-400">{{ goal.progress }}%</span>
-              </div>
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-400">{{ goal.weightage }}%</td>
-            <td class="px-6 py-4">
-              <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', getStatusColor(goal.status)]">
+    <!-- OKR-style cards with KR rows -->
+    <div v-else class="goal-cards">
+      <div v-for="goal in goals" :key="goal.id" class="goal-card">
+        <div class="goal-card-head">
+          <div class="goal-card-main">
+            <div class="goal-card-row">
+              <span class="badge badge-accent">{{ goal.type.toUpperCase() }}</span>
+              <span class="badge" :class="'badge-' + goal.status.replace('_', '-')">
                 {{ goal.status.replace('_', ' ') }}
               </span>
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-400">{{ formatDate(goal.end_date) }}</td>
-            <td class="px-6 py-4">
-              <button
-                @click="router.push({ name: 'performance.goals.show', params: { id: goal.id } })"
-                class="text-blue-400 hover:text-blue-300 text-sm font-medium"
+              <div class="goal-card-title">{{ goal.title }}</div>
+            </div>
+            <div v-if="goal.description" class="goal-card-desc">{{ goal.description }}</div>
+            <div class="goal-card-meta">
+              <span v-if="goal.owner" class="meta-item">
+                <span class="owner-avatar">{{
+                  (goal.owner.name || '?').slice(0, 1).toUpperCase()
+                }}</span>
+                <span class="meta-value owner-name">{{ goal.owner.name }}</span>
+              </span>
+              <span v-if="goal.owner" class="meta-divider">&middot;</span>
+              <span class="meta-item">
+                <span class="meta-label">W</span>
+                <span class="meta-value">{{ goal.weightage }}%</span>
+              </span>
+              <span class="meta-divider">&middot;</span>
+              <span class="meta-item">
+                <span class="meta-label">Due</span>
+                <span class="meta-value">{{ formatDate(goal.end_date) }}</span>
+              </span>
+              <span v-if="goal.key_results && goal.key_results.length" class="meta-divider"
+                >&middot;</span
               >
-                View
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <span v-if="goal.key_results && goal.key_results.length" class="meta-item">
+                <span class="meta-value">{{ goal.key_results.length }} key results</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="goal-card-progress">
+            <div
+              class="donut"
+              :style="{
+                background: `conic-gradient(${progressColor(goal.progress)} ${goal.progress}%, #232936 0)`,
+              }"
+            >
+              <div class="donut-inner">
+                <span class="donut-value">{{ goal.progress }}</span>
+                <span class="donut-pct">%</span>
+              </div>
+            </div>
+            <button
+              class="btn-link"
+              @click="router.push({ name: 'performance.goals.show', params: { id: goal.id } })"
+            >
+              View &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- KR rows -->
+        <div v-if="goal.key_results && goal.key_results.length" class="kr-list">
+          <div
+            v-for="(kr, j) in goal.key_results"
+            :key="kr.id"
+            class="kr-row"
+          >
+            <div class="kr-tag">KR{{ j + 1 }}</div>
+            <div class="kr-main">
+              <div class="kr-title">{{ kr.title }}</div>
+              <div v-if="kr.description" class="kr-detail">{{ kr.description }}</div>
+            </div>
+            <div class="kr-bar">
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  :style="{ width: kr.progress + '%', background: progressColor(kr.progress) }"
+                ></div>
+              </div>
+            </div>
+            <div class="kr-pct">{{ kr.progress }}%</div>
+          </div>
+        </div>
+
+        <!-- Fallback bar when no KRs -->
+        <div v-else class="goal-card-bar">
+          <div class="bar-track">
+            <div
+              class="bar-fill"
+              :style="{ width: goal.progress + '%', background: progressColor(goal.progress) }"
+            ></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.goals {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.select {
+  background: #161a23;
+  border: 1px solid #232936;
+  color: #eef0f4;
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.select:focus {
+  border-color: #6b5bff;
+}
+
+.btn {
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn-primary {
+  background: #6b5bff;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #5a4ce6;
+}
+
+.btn-link {
+  background: transparent;
+  border: none;
+  color: #6b5bff;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+
+.btn-link:hover {
+  color: #8b7eff;
+}
+
+/* States */
+.state-block {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #232936;
+  border-top-color: #6b5bff;
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.state-error {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #f38288;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.empty-pad {
+  padding: 56px 16px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 13px;
+  background: #161a23;
+  border: 1px dashed #232936;
+  border-radius: 12px;
+}
+
+/* Cards */
+.goal-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.goal-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 18px;
+}
+
+.goal-card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.goal-card-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.goal-card-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  color: #eef0f4;
+  font-weight: 500;
+}
+
+.goal-card-desc {
+  font-size: 12.5px;
+  color: #7a8299;
+  margin-top: 6px;
+  line-height: 1.5;
+  max-width: 70ch;
+}
+
+.goal-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11.5px;
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta-label {
+  color: #7a8299;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.meta-value {
+  color: #eef0f4;
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
+.owner-name {
+  font-family: inherit;
+  font-size: 11.5px;
+}
+
+.owner-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(107, 91, 255, 0.2);
+  color: #6b5bff;
+  font-size: 9.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.meta-divider {
+  color: #232936;
+}
+
+.goal-card-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Donut */
+.donut {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.donut-inner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #161a23;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1px;
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.donut-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #eef0f4;
+}
+
+.donut-pct {
+  font-size: 9px;
+  color: #7a8299;
+}
+
+.goal-card-bar {
+  padding: 0 18px 14px;
+}
+
+/* KR rows (mirror JSX layout) */
+.kr-list {
+  border-top: 1px solid #232936;
+}
+
+.kr-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 140px 48px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 18px;
+  border-top: 1px solid #1c2030;
+}
+
+.kr-row:first-child {
+  border-top: none;
+}
+
+.kr-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: #7a8299;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.kr-main {
+  min-width: 0;
+}
+
+.kr-title {
+  font-size: 12.5px;
+  color: #eef0f4;
+  line-height: 1.4;
+}
+
+.kr-detail {
+  font-size: 11px;
+  color: #7a8299;
+  margin-top: 2px;
+}
+
+.kr-bar {
+  width: 100%;
+}
+
+.kr-pct {
+  font-size: 12px;
+  color: #eef0f4;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.bar-track {
+  width: 100%;
+  height: 4px;
+  background: #0d0f17;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Badges */
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge-accent {
+  background: rgba(107, 91, 255, 0.12);
+  color: #6b5bff;
+  border-color: rgba(107, 91, 255, 0.3);
+}
+
+.badge-active {
+  background: rgba(77, 211, 154, 0.12);
+  color: #4dd39a;
+  border-color: rgba(77, 211, 154, 0.25);
+}
+
+.badge-completed {
+  background: rgba(77, 211, 154, 0.12);
+  color: #4dd39a;
+  border-color: rgba(77, 211, 154, 0.25);
+}
+
+.badge-draft {
+  background: rgba(122, 130, 153, 0.12);
+  color: #7a8299;
+  border-color: rgba(122, 130, 153, 0.25);
+}
+
+.badge-on-hold {
+  background: rgba(245, 166, 35, 0.12);
+  color: #f5a623;
+  border-color: rgba(245, 166, 35, 0.25);
+}
+
+.badge-cancelled {
+  background: rgba(243, 130, 136, 0.12);
+  color: #f38288;
+  border-color: rgba(243, 130, 136, 0.25);
+}
+</style>

@@ -56,16 +56,16 @@ async function createCertification() {
   }
 }
 
-function statusColor(status: string) {
+function statusClass(status: string) {
   switch (status) {
     case 'active':
-      return 'bg-green-900/50 text-green-400'
+      return 'pill-green'
     case 'expired':
-      return 'bg-red-900/50 text-red-400'
+      return 'pill-red'
     case 'pending_renewal':
-      return 'bg-yellow-900/50 text-yellow-400'
+      return 'pill-yellow'
     default:
-      return 'bg-gray-700 text-gray-400'
+      return 'pill-muted'
   }
 }
 
@@ -73,210 +73,429 @@ onMounted(loadData)
 </script>
 
 <template>
-  <div>
-    <div
-      v-if="error"
-      class="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded-lg mb-4"
-    >
-      {{ error }}
-    </div>
+  <div class="lnd-certs">
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
 
     <!-- View toggle -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex gap-2">
+    <div class="page-toolbar">
+      <div class="seg">
         <button
           v-for="tab in (['catalog', 'my-certs', 'expiring'] as const)"
           :key="tab"
-          :class="
-            activeView === tab
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-          "
-          class="px-3 py-1.5 rounded-lg text-sm"
+          :class="['seg-btn', { active: activeView === tab }]"
           @click="activeView = tab"
         >
           {{
             tab === 'catalog'
-              ? 'Certification Catalog'
+              ? 'Catalog'
               : tab === 'my-certs'
                 ? 'My Certifications'
                 : `Expiring Soon (${expiring.length})`
           }}
         </button>
       </div>
-      <button
-        v-if="canManage"
-        class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg"
-        @click="showForm = !showForm"
-      >
+      <button v-if="canManage" class="btn-primary" @click="showForm = !showForm">
         + New Certification
       </button>
     </div>
 
     <!-- New Cert Form -->
-    <div v-if="showForm" class="bg-gray-800 border border-gray-700 rounded-lg p-5 mb-4">
-      <h4 class="text-white text-sm font-semibold mb-3">New Certification</h4>
-      <form class="space-y-3" @submit.prevent="createCertification">
-        <div class="grid grid-cols-2 gap-3">
+    <div v-if="showForm" class="form-card">
+      <h4 class="form-title">New Certification</h4>
+      <form class="form-body" @submit.prevent="createCertification">
+        <div class="form-grid">
           <input
             v-model="form.name"
             type="text"
             placeholder="Certification name"
             required
-            class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            class="input"
           />
           <input
             v-model="form.issuing_authority"
             type="text"
             placeholder="Issuing authority"
             required
-            class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            class="input"
           />
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="form-grid">
           <input
             v-model="form.description"
             type="text"
             placeholder="Description"
-            class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            class="input"
           />
           <input
             v-model.number="form.validity_months"
             type="number"
             min="1"
             placeholder="Validity (months)"
-            class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            class="input"
           />
         </div>
-        <div class="flex justify-end">
-          <button
-            type="submit"
-            :disabled="saving"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg disabled:opacity-50"
-          >
-            Save
-          </button>
+        <div class="form-actions">
+          <button type="submit" :disabled="saving" class="btn-primary">Save</button>
         </div>
       </form>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="space-y-3">
-      <div
-        v-for="n in 4"
-        :key="n"
-        class="bg-gray-800 border border-gray-700 rounded-lg p-4 animate-pulse"
-      >
-        <div class="h-4 bg-gray-700 rounded w-1/3" />
+    <div v-if="loading" class="cert-list">
+      <div v-for="n in 4" :key="n" class="cert-card skeleton">
+        <div class="skeleton-line w-1-3" />
       </div>
     </div>
 
     <!-- Catalog View -->
     <template v-else-if="activeView === 'catalog'">
-      <div v-if="certifications.length" class="bg-gray-800 border border-gray-700 rounded-lg">
-        <table class="w-full">
+      <div v-if="certifications.length" class="table-card">
+        <table class="data-table">
           <thead>
-            <tr class="border-b border-gray-700">
-              <th
-                class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider bg-gray-700/50"
-              >
-                Name
-              </th>
-              <th
-                class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider bg-gray-700/50"
-              >
-                Issuing Authority
-              </th>
-              <th
-                class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider bg-gray-700/50"
-              >
-                Validity
-              </th>
-              <th
-                class="px-5 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider bg-gray-700/50"
-              >
-                Description
-              </th>
+            <tr>
+              <th>Name</th>
+              <th>Issuing Authority</th>
+              <th>Validity</th>
+              <th>Description</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-700">
+          <tbody>
             <tr v-for="cert in certifications" :key="cert.id">
-              <td class="px-5 py-3 text-white text-sm">{{ cert.name }}</td>
-              <td class="px-5 py-3 text-gray-400 text-sm">{{ cert.issuing_authority }}</td>
-              <td class="px-5 py-3 text-gray-400 text-sm">
-                {{ cert.validity_months ? cert.validity_months + ' months' : 'No expiry' }}
+              <td class="td-strong">{{ cert.name }}</td>
+              <td>{{ cert.issuing_authority }}</td>
+              <td>
+                <span class="td-mono">
+                  {{ cert.validity_months ? cert.validity_months + ' months' : 'No expiry' }}
+                </span>
               </td>
-              <td class="px-5 py-3 text-gray-400 text-sm">{{ cert.description || '-' }}</td>
+              <td>{{ cert.description || '-' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div
-        v-else
-        class="bg-gray-800 border border-gray-700 rounded-lg px-6 py-12 text-center"
-      >
-        <p class="text-gray-400">No certifications defined yet.</p>
-      </div>
+      <div v-else class="empty-card">No certifications defined yet.</div>
     </template>
 
     <!-- My Certs View -->
     <template v-else-if="activeView === 'my-certs'">
-      <div v-if="myCerts.length" class="space-y-3">
-        <div
-          v-for="cert in myCerts"
-          :key="cert.id"
-          class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center justify-between"
-        >
-          <div>
-            <p class="text-white text-sm font-medium">
+      <div v-if="myCerts.length" class="cert-list">
+        <div v-for="cert in myCerts" :key="cert.id" class="cert-card">
+          <div class="cert-meta">
+            <p class="cert-name">
               {{ cert.certification?.name || cert.name || 'Certification' }}
             </p>
-            <p class="text-gray-400 text-xs">
+            <p class="cert-sub">
               {{ cert.certification?.issuing_authority || cert.issuing_authority }}
-              &middot; Issued: {{ cert.issue_date }}
-              <span v-if="cert.expiry_date"> &middot; Expires: {{ cert.expiry_date }}</span>
+              &middot; Issued {{ cert.issue_date }}
+              <span v-if="cert.expiry_date"> &middot; Expires {{ cert.expiry_date }}</span>
             </p>
           </div>
-          <span :class="statusColor(cert.status)" class="text-xs px-2 py-0.5 rounded-full">
+          <span :class="['pill', statusClass(cert.status)]">
             {{ cert.status.replace('_', ' ') }}
           </span>
         </div>
       </div>
-      <div
-        v-else
-        class="bg-gray-800 border border-gray-700 rounded-lg px-6 py-12 text-center"
-      >
-        <p class="text-gray-400">No certifications on your record.</p>
-      </div>
+      <div v-else class="empty-card">No certifications on your record.</div>
     </template>
 
     <!-- Expiring View -->
     <template v-else>
-      <div v-if="expiring.length" class="space-y-3">
-        <div
-          v-for="cert in expiring"
-          :key="cert.id"
-          class="bg-gray-800 border border-yellow-700/50 rounded-lg p-4 flex items-center justify-between"
-        >
-          <div>
-            <p class="text-white text-sm font-medium">
+      <div v-if="expiring.length" class="cert-list">
+        <div v-for="cert in expiring" :key="cert.id" class="cert-card cert-card-warn">
+          <div class="cert-meta">
+            <p class="cert-name">
               {{ cert.certification?.name || cert.name || 'Certification' }}
             </p>
-            <p class="text-gray-400 text-xs">
-              {{ cert.employee?.name || 'Employee' }} &middot; Expires: {{ cert.expiry_date }}
+            <p class="cert-sub">
+              {{ cert.employee?.name || 'Employee' }} &middot; Expires {{ cert.expiry_date }}
             </p>
           </div>
-          <span class="bg-yellow-900/50 text-yellow-400 text-xs px-2 py-0.5 rounded-full">
-            expiring soon
-          </span>
+          <span class="pill pill-yellow">expiring soon</span>
         </div>
       </div>
-      <div
-        v-else
-        class="bg-gray-800 border border-gray-700 rounded-lg px-6 py-12 text-center"
-      >
-        <p class="text-gray-400">No certifications expiring in the next 30 days.</p>
-      </div>
+      <div v-else class="empty-card">No certifications expiring in the next 30 days.</div>
     </template>
   </div>
 </template>
+
+<style scoped>
+.lnd-certs {
+  color: #eef0f4;
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.alert-error {
+  background: rgba(243, 130, 136, 0.12);
+  border: 1px solid rgba(243, 130, 136, 0.4);
+  color: #f38288;
+}
+
+.page-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* Segmented tabs */
+.seg {
+  display: inline-flex;
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.seg-btn {
+  background: transparent;
+  border: none;
+  color: #7a8299;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.seg-btn:hover {
+  color: #eef0f4;
+}
+
+.seg-btn.active {
+  background: #6b5bff;
+  color: #fff;
+}
+
+.btn-primary {
+  background: #6b5bff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: #5a4be8;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Form card */
+.form-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.form-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: #eef0f4;
+  margin: 0 0 12px;
+  font-weight: 400;
+}
+
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.input {
+  background: #0d0f17;
+  border: 1px solid #232936;
+  color: #eef0f4;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  width: 100%;
+}
+
+.input:focus {
+  border-color: #6b5bff;
+}
+
+/* Cert list */
+.cert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cert-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cert-card-warn {
+  border-color: rgba(245, 166, 35, 0.4);
+}
+
+.cert-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.cert-name {
+  color: #eef0f4;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0 0 2px;
+}
+
+.cert-sub {
+  color: #7a8299;
+  font-size: 11.5px;
+  margin: 0;
+}
+
+/* Table */
+.table-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead tr {
+  border-bottom: 1px solid #232936;
+}
+
+.data-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7a8299;
+  padding: 12px 18px;
+  background: rgba(35, 41, 54, 0.4);
+}
+
+.data-table td {
+  padding: 12px 18px;
+  font-size: 13px;
+  color: #7a8299;
+  border-bottom: 1px solid #232936;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.td-strong {
+  color: #eef0f4;
+  font-weight: 500;
+}
+
+.td-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+/* Pills */
+.pill {
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.pill-green {
+  background: rgba(77, 211, 154, 0.14);
+  color: #4dd39a;
+}
+
+.pill-yellow {
+  background: rgba(245, 166, 35, 0.14);
+  color: #f5a623;
+}
+
+.pill-red {
+  background: rgba(243, 130, 136, 0.14);
+  color: #f38288;
+}
+
+.pill-muted {
+  background: rgba(122, 130, 153, 0.16);
+  color: #7a8299;
+}
+
+.empty-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 13px;
+}
+
+/* Skeletons */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: #232936;
+  border-radius: 6px;
+}
+
+.w-1-3 {
+  width: 33%;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

@@ -17,22 +17,34 @@ const isActive = (name: string) => route.name === name
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="border-b border-gray-700">
-      <nav class="-mb-px flex gap-1 overflow-x-auto">
-        <button
-          v-for="tab in tabs" :key="tab.name"
-          @click="router.push(tab.to)"
-          :class="['flex items-center gap-2 px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-            isActive(tab.to.name) ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-white']"
-        >
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="tab.icon" />
-          </svg>
-          {{ tab.name }}
-        </button>
-      </nav>
+  <div class="essl-shell">
+    <div class="essl-tabs">
+      <button
+        v-for="tab in tabs" :key="tab.name"
+        :class="['essl-tab', isActive(tab.to.name) && 'essl-tab-active']"
+        @click="router.push(tab.to)"
+      >
+        <svg class="essl-tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="tab.icon" />
+        </svg>
+        {{ tab.name }}
+      </button>
     </div>
     <router-view />
   </div>
 </template>
+
+<style scoped>
+.essl-shell { display: flex; flex-direction: column; gap: 24px; }
+.essl-tabs { display: flex; gap: 2px; border-bottom: 1px solid #232936; overflow-x: auto; }
+.essl-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; font-size: 13px; font-weight: 500; white-space: nowrap;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: #7A8299; cursor: pointer; transition: color 0.12s, border-color 0.12s;
+  margin-bottom: -1px;
+}
+.essl-tab:hover { color: #B6BED0; }
+.essl-tab-active { color: #EEF0F4; border-bottom-color: #6B5BFF; }
+.essl-tab-icon { width: 15px; height: 15px; flex-shrink: 0; }
+</style>

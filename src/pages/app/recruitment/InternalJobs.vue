@@ -2,8 +2,6 @@
 defineOptions({ name: 'InternalJobs' })
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
-import PageHeader from '@/components/ui/PageHeader.vue'
-import EmptyState from '@/components/ui/EmptyState.vue'
 
 interface InternalJob {
   id: number
@@ -32,7 +30,11 @@ const excerpt = (text: string, max = 150) => {
 
 const formatDate = (d: string) => {
   if (!d) return ''
-  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(d).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 const load = async () => {
@@ -53,11 +55,21 @@ onMounted(load)
 
 <template>
   <div class="ij-page">
-    <PageHeader title="Internal Job Board" subtitle="Browse open positions within the organization" />
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="ph-text">
+        <div class="ph-eyebrow">Internal mobility</div>
+        <h1 class="ph-title">Internal job board</h1>
+        <p class="ph-sub">
+          Browse open positions within the organization and apply for new opportunities.
+        </p>
+      </div>
+    </div>
 
-    <div class="ij-toolbar">
-      <div class="ij-search-wrap">
-        <svg class="ij-search-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
           <path
             fill-rule="evenodd"
             d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
@@ -68,15 +80,16 @@ onMounted(load)
           v-model="search"
           type="text"
           placeholder="Search by job title..."
-          class="ij-search"
+          class="input search-input"
         />
       </div>
     </div>
 
-    <div v-if="error" class="ij-error">{{ error }}</div>
+    <div v-if="error" class="alert-error">{{ error }}</div>
 
-    <div v-if="loading" class="ij-grid">
-      <div v-for="n in 6" :key="n" class="ij-card ij-skeleton">
+    <!-- Loading -->
+    <div v-if="loading" class="job-grid">
+      <div v-for="n in 6" :key="n" class="job-card skeleton">
         <div class="sk-line sk-title"></div>
         <div class="sk-line sk-dept"></div>
         <div class="sk-line sk-desc"></div>
@@ -85,22 +98,32 @@ onMounted(load)
       </div>
     </div>
 
+    <!-- Empty -->
     <template v-else-if="filteredJobs.length === 0 && !error">
-      <EmptyState
-        icon="📋"
-        :message="search ? 'No jobs match your search' : 'No internal jobs posted yet'"
-        :sub="search ? 'Try adjusting your search terms' : 'Check back later for new opportunities'"
-      />
+      <div class="card empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">
+          {{ search ? 'No jobs match your search' : 'No internal jobs posted yet' }}
+        </div>
+        <div class="empty-sub">
+          {{
+            search
+              ? 'Try adjusting your search terms'
+              : 'Check back later for new opportunities'
+          }}
+        </div>
+      </div>
     </template>
 
-    <div v-else class="ij-grid">
-      <div v-for="job in filteredJobs" :key="job.id" class="ij-card">
-        <div class="ij-card-header">
-          <h3 class="ij-card-title">{{ job.title }}</h3>
-          <span v-if="job.department" class="ij-badge dept">{{ job.department }}</span>
+    <!-- Jobs Grid -->
+    <div v-else class="job-grid">
+      <div v-for="job in filteredJobs" :key="job.id" class="job-card">
+        <div class="job-head">
+          <h3 class="job-title">{{ job.title }}</h3>
+          <span v-if="job.department" class="badge badge-accent">{{ job.department }}</span>
         </div>
-        <div v-if="job.location" class="ij-meta">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" class="ij-meta-icon">
+        <div v-if="job.location" class="job-meta">
+          <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
             <path
               fill-rule="evenodd"
               d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
@@ -109,11 +132,11 @@ onMounted(load)
           </svg>
           <span>{{ job.location }}</span>
         </div>
-        <p class="ij-desc">{{ excerpt(job.description) }}</p>
-        <div class="ij-card-footer">
-          <span class="ij-date">Posted {{ formatDate(job.created_at) }}</span>
-          <span class="ij-apply-wrap" title="Coming Soon">
-            <button class="ij-apply" disabled>Apply</button>
+        <p class="job-desc">{{ excerpt(job.description) }}</p>
+        <div class="job-foot">
+          <span class="job-date">Posted {{ formatDate(job.created_at) }}</span>
+          <span class="apply-wrap" title="Coming Soon">
+            <button class="apply-btn" disabled>Apply</button>
           </span>
         </div>
       </div>
@@ -126,143 +149,217 @@ onMounted(load)
   display: flex;
   flex-direction: column;
   gap: 20px;
+  color: #eef0f4;
 }
-.ij-toolbar {
+
+/* Page header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+}
+.ph-eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  color: #7a8299;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.ph-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: #eef0f4;
+  margin: 0 0 6px;
+  line-height: 1.1;
+}
+.ph-sub {
+  font-size: 13px;
+  color: #7a8299;
+  margin: 0;
+  max-width: 640px;
+  line-height: 1.55;
+}
+
+/* Toolbar */
+.toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.ij-search-wrap {
+.search-wrap {
   position: relative;
-  flex: 1;
-  max-width: 360px;
+  width: 340px;
+  max-width: 100%;
 }
-.ij-search-icon {
+.search-icon {
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--muted);
+  color: #7a8299;
   pointer-events: none;
 }
-.ij-search {
+.search-input {
+  padding-left: 34px;
+}
+
+.input {
   width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--rs);
-  color: var(--text);
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  color: #eef0f4;
   font-size: 13px;
-  padding: 9px 12px 9px 36px;
+  padding: 8px 12px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s ease;
+  font-family: inherit;
 }
-.ij-search:focus {
-  border-color: var(--accent);
+.input:focus {
+  border-color: #6b5bff;
 }
-.ij-search::placeholder {
-  color: var(--muted);
+.input::placeholder {
+  color: #7a8299;
 }
-.ij-error {
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  border-radius: var(--rs);
-  padding: 12px 16px;
+
+.alert-error {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #f38288;
   font-size: 13px;
-  color: var(--red);
+  padding: 10px 14px;
+  border-radius: 8px;
 }
-.ij-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
+
+/* Cards / grid */
+.card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 10px;
 }
-.ij-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--rs);
-  padding: 20px;
+.empty-state {
+  padding: 56px 20px;
+  text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  transition: border-color 0.15s;
+  align-items: center;
+  gap: 6px;
 }
-.ij-card:hover {
-  border-color: var(--border-hi);
+.empty-icon {
+  font-size: 28px;
+  margin-bottom: 4px;
 }
-.ij-card-header {
+.empty-title {
+  font-size: 14px;
+  color: #eef0f4;
+  font-weight: 500;
+}
+.empty-sub {
+  font-size: 12.5px;
+  color: #7a8299;
+}
+
+.job-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+.job-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s ease;
+}
+.job-card:hover {
+  border-color: #2c3242;
+}
+.job-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
-.ij-card-title {
+.job-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--text);
+  color: #eef0f4;
   margin: 0;
+  line-height: 1.3;
 }
-.ij-badge {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.ij-badge.dept {
-  background: rgba(79, 126, 255, 0.15);
-  color: var(--accent);
-}
-.ij-meta {
+.job-meta {
   display: flex;
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  color: var(--muted);
+  color: #7a8299;
 }
-.ij-meta-icon {
-  color: var(--muted);
-  flex-shrink: 0;
-}
-.ij-desc {
-  font-size: 13px;
-  color: var(--muted);
+.job-desc {
+  font-size: 12.5px;
+  color: #c8ccd6;
   line-height: 1.5;
   margin: 0;
   flex: 1;
 }
-.ij-card-footer {
+.job-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  border-top: 1px solid #232936;
 }
-.ij-date {
+.job-date {
   font-size: 11px;
-  color: var(--muted);
+  color: #7a8299;
 }
-.ij-apply-wrap {
+.apply-wrap {
   cursor: not-allowed;
 }
-.ij-apply {
-  font-size: 12px;
+.apply-btn {
+  font-size: 11.5px;
   font-weight: 500;
   padding: 6px 14px;
   border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--muted);
+  border: 1px solid #232936;
+  background: #1a1f2a;
+  color: #7a8299;
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.7;
+  font-family: inherit;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.badge-accent {
+  background: rgba(107, 91, 255, 0.12);
+  color: #9b8eff;
+  border-color: rgba(107, 91, 255, 0.25);
 }
 
 /* Skeleton */
-.ij-skeleton {
+.skeleton {
   pointer-events: none;
 }
 .sk-line {
   border-radius: 4px;
-  background: var(--surface2);
+  background: #1a1f2a;
   animation: shimmer 1.4s ease-in-out infinite;
 }
 .sk-title {
@@ -285,7 +382,12 @@ onMounted(load)
   width: 40%;
 }
 @keyframes shimmer {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 </style>

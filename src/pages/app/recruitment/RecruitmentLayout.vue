@@ -32,20 +32,15 @@ const showTabs = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="recruitment-layout">
     <!-- Tab nav -->
-    <div v-if="showTabs" class="border-b border-gray-700">
-      <nav class="-mb-px flex space-x-8">
+    <div v-if="showTabs" class="tab-nav-wrap">
+      <nav class="tab-nav">
         <RouterLink
           v-for="tab in tabs"
           :key="tab.label"
           :to="tab.to"
-          :class="[
-            tab.active
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500',
-            'whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors',
-          ]"
+          :class="['tab-link', { 'is-active': tab.active }]"
         >
           {{ tab.label }}
         </RouterLink>
@@ -55,3 +50,50 @@ const showTabs = computed(() => {
     <RouterView />
   </div>
 </template>
+
+<style scoped>
+.recruitment-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: #0d0f17;
+  color: #eef0f4;
+  min-height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.tab-nav-wrap {
+  border-bottom: 1px solid #232936;
+}
+
+.tab-nav {
+  display: flex;
+  gap: 28px;
+  margin-bottom: -1px;
+  overflow-x: auto;
+}
+
+.tab-link {
+  white-space: nowrap;
+  padding: 0 2px 14px;
+  border-bottom: 2px solid transparent;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #7a8299;
+  text-decoration: none;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+  letter-spacing: 0.01em;
+}
+
+.tab-link:hover {
+  color: #eef0f4;
+  border-bottom-color: #2c3242;
+}
+
+.tab-link.is-active {
+  color: #eef0f4;
+  border-bottom-color: #6b5bff;
+}
+</style>

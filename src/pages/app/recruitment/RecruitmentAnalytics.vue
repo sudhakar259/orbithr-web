@@ -23,14 +23,14 @@ const load = async () => {
 }
 
 const funnelColors = [
-  'bg-blue-600',
-  'bg-blue-500',
-  'bg-indigo-500',
-  'bg-purple-500',
-  'bg-violet-500',
-  'bg-orange-500',
-  'bg-green-500',
-  'bg-red-500',
+  '#6B5BFF',
+  '#7D6FFF',
+  '#8A7DFF',
+  '#9B6EFF',
+  '#B89BFF',
+  '#F5A623',
+  '#4DD39A',
+  '#F38288',
 ]
 
 const maxFunnelCount = computed(() =>
@@ -55,228 +55,614 @@ const formatStatus = (s: string) =>
 
 const getJobStatusClass = (status: string) => {
   const map: Record<string, string> = {
-    published: 'bg-green-900/50 text-green-400',
-    draft: 'bg-gray-700 text-gray-300',
-    closed: 'bg-red-900/50 text-red-400',
+    published: 'badge-ok',
+    draft: 'badge-neutral',
+    closed: 'badge-danger',
   }
-  return map[status] ?? 'bg-gray-700 text-gray-300'
+  return map[status] ?? 'badge-neutral'
 }
 
 onMounted(load)
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="ra-page">
     <!-- Header -->
-    <div class="flex items-center gap-3">
-      <button
-        @click="router.push({ name: 'recruitment' })"
-        class="text-sm text-gray-400 hover:text-white transition-colors inline-flex items-center"
-      >
-        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
-        Dashboard
-      </button>
-      <h2 class="text-lg font-semibold text-white">Recruitment Analytics</h2>
+    <div class="page-header">
+      <div class="ph-text">
+        <button class="back-btn" @click="router.push({ name: 'recruitment' })">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Dashboard
+        </button>
+        <div class="ph-eyebrow">Hiring intelligence</div>
+        <h1 class="ph-title">Recruitment analytics</h1>
+        <p class="ph-sub">
+          Funnel conversion, time-to-hire, source mix and monthly volume across all open
+          roles.
+        </p>
+      </div>
     </div>
 
-    <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4">
-      <p class="text-sm text-red-400">{{ error }}</p>
-    </div>
+    <div v-if="error" class="alert-error">{{ error }}</div>
 
     <!-- Loading skeleton -->
-    <div v-if="loading" class="space-y-6">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
-          v-for="i in 4"
-          :key="i"
-          class="bg-gray-800 border border-gray-700 rounded-lg p-5 animate-pulse"
-        >
-          <div class="h-4 bg-gray-700 rounded w-1/2 mb-3"></div>
-          <div class="h-8 bg-gray-700 rounded w-1/3"></div>
+    <div v-if="loading" class="loading-grid">
+      <div class="stat-skeleton-row">
+        <div v-for="i in 4" :key="i" class="stat-card sk">
+          <div class="sk-line sk-sm"></div>
+          <div class="sk-line sk-lg"></div>
         </div>
       </div>
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 animate-pulse">
-        <div class="h-4 bg-gray-700 rounded w-1/4 mb-4"></div>
-        <div class="space-y-3">
-          <div
-            v-for="i in 8"
-            :key="i"
-            class="h-8 bg-gray-700 rounded"
-            :style="{ width: `${100 - i * 8}%` }"
-          ></div>
-        </div>
+      <div class="card sk-block">
+        <div class="sk-line sk-sm"></div>
+        <div v-for="i in 6" :key="i" class="sk-bar" :style="{ width: `${100 - i * 10}%` }"></div>
       </div>
     </div>
 
     <template v-else-if="data">
       <!-- Summary Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-          <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Total Applications</p>
-          <p class="text-2xl font-bold text-white">{{ data.conversion.total_applications }}</p>
+      <section class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total applications</div>
+          <div class="stat-value tone-default">
+            {{ data.conversion.total_applications }}
+          </div>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-          <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Avg Time to Hire</p>
-          <p class="text-2xl font-bold text-blue-400">
-            {{ data.time_to_hire_days }}
-            <span class="text-sm font-normal text-gray-400">days</span>
-          </p>
+        <div class="stat-card">
+          <div class="stat-label">Avg time to hire</div>
+          <div class="stat-value tone-accent">
+            {{ data.time_to_hire_days }}<span class="stat-unit">days</span>
+          </div>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-          <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Hire Rate</p>
-          <p class="text-2xl font-bold text-green-400">{{ data.conversion.hire_rate }}%</p>
+        <div class="stat-card">
+          <div class="stat-label">Hire rate</div>
+          <div class="stat-value tone-green">{{ data.conversion.hire_rate }}%</div>
         </div>
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-          <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Shortlist Rate</p>
-          <p class="text-2xl font-bold text-purple-400">{{ data.conversion.shortlist_rate }}%</p>
+        <div class="stat-card">
+          <div class="stat-label">Shortlist rate</div>
+          <div class="stat-value tone-purple">{{ data.conversion.shortlist_rate }}%</div>
         </div>
-      </div>
+      </section>
 
       <!-- Recruitment Funnel -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-        <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-5">
-          Recruitment Funnel
-        </h3>
-        <div class="space-y-3">
+      <section class="card panel">
+        <div class="panel-head">Recruitment funnel</div>
+        <div class="funnel">
           <div
             v-for="(stage, i) in data.funnel"
             :key="stage.status"
-            class="flex items-center gap-4"
+            class="funnel-row"
           >
-            <div class="w-36 text-right text-xs text-gray-400 shrink-0">
-              {{ formatStatus(stage.status) }}
-            </div>
-            <div class="flex-1 bg-gray-700 rounded h-7 overflow-hidden">
+            <div class="funnel-label">{{ formatStatus(stage.status) }}</div>
+            <div class="funnel-track">
               <div
-                :class="['h-full rounded transition-all duration-500', funnelColors[i] ?? 'bg-blue-600']"
-                :style="{ width: funnelWidth(stage.count) }"
+                class="funnel-fill"
+                :style="{
+                  width: funnelWidth(stage.count),
+                  background: funnelColors[i] ?? '#6B5BFF',
+                }"
               ></div>
             </div>
-            <div class="w-12 text-right text-sm font-semibold text-white shrink-0">
-              {{ stage.count }}
-            </div>
+            <div class="funnel-count">{{ stage.count }}</div>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- Source Analytics & Monthly Trend -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <section class="dual-grid">
         <!-- Source Analytics -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
-            Application Sources
-          </h3>
-          <div v-if="!data.sources.length" class="text-center py-8 text-gray-500 text-sm">
-            No source data
-          </div>
-          <div v-else class="space-y-4">
-            <div v-for="src in data.sources" :key="src.source" class="space-y-1">
-              <div class="flex justify-between text-xs">
-                <span class="text-gray-300 capitalize">{{ src.source }}</span>
-                <span class="text-gray-400">{{ src.count }} ({{ sourcePct(src.count) }})</span>
+        <div class="card panel">
+          <div class="panel-head">Application sources</div>
+          <div v-if="!data.sources.length" class="panel-empty">No source data</div>
+          <div v-else class="source-list">
+            <div v-for="src in data.sources" :key="src.source" class="source-row">
+              <div class="source-line">
+                <span class="source-name">{{ src.source }}</span>
+                <span class="source-meta">
+                  {{ src.count }} <span class="source-pct">{{ sourcePct(src.count) }}</span>
+                </span>
               </div>
-              <div class="w-full bg-gray-700 rounded h-2">
-                <div
-                  class="bg-blue-500 h-2 rounded transition-all duration-500"
-                  :style="{ width: sourceWidth(src.count) }"
-                ></div>
+              <div class="source-track">
+                <div class="source-fill" :style="{ width: sourceWidth(src.count) }"></div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Monthly Trend -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
-            Monthly Applications (Last 6 Months)
-          </h3>
-          <div
-            v-if="!data.monthly_trend.length"
-            class="text-center py-8 text-gray-500 text-sm"
-          >
-            No trend data
-          </div>
-          <div v-else class="flex items-end gap-2" style="height: 130px">
+        <div class="card panel">
+          <div class="panel-head">Monthly applications · last 6 months</div>
+          <div v-if="!data.monthly_trend.length" class="panel-empty">No trend data</div>
+          <div v-else class="trend-chart">
             <div
               v-for="point in data.monthly_trend"
               :key="point.month"
-              class="flex-1 flex flex-col items-center gap-1"
+              class="trend-col"
             >
-              <span class="text-xs text-gray-400 font-semibold">{{ point.count }}</span>
-              <div class="w-full relative bg-gray-700 rounded-t" style="height: 96px">
-                <div
-                  class="absolute bottom-0 left-0 right-0 bg-blue-600 rounded-t transition-all duration-500"
-                  :style="{ height: trendHeight(point.count) }"
-                ></div>
+              <span class="trend-num">{{ point.count }}</span>
+              <div class="trend-track">
+                <div class="trend-fill" :style="{ height: trendHeight(point.count) }"></div>
               </div>
-              <span class="text-xs text-gray-500">{{ point.month.slice(5) }}</span>
+              <span class="trend-month">{{ point.month.slice(5) }}</span>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- Top Jobs -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-700">
-          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-            Top Jobs by Applications
-          </h3>
-        </div>
-        <table class="min-w-full divide-y divide-gray-700">
-          <thead class="bg-gray-700/50">
+      <section class="card table-card">
+        <div class="panel-head panel-head-bordered">Top jobs by applications</div>
+        <table class="data-table">
+          <thead>
             <tr>
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider"
-              >
-                Job Title
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider"
-              >
-                Department
-              </th>
-              <th
-                class="px-6 py-3 text-right text-xs font-semibold text-gray-300 uppercase tracking-wider"
-              >
-                Applications
-              </th>
-              <th
-                class="px-6 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider"
-              >
-                Status
-              </th>
+              <th>Job title</th>
+              <th>Department</th>
+              <th class="t-right">Applications</th>
+              <th>Status</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-700">
-            <tr
-              v-for="job in data.top_jobs"
-              :key="job.id"
-              class="hover:bg-gray-700/30 transition-colors"
-            >
-              <td class="px-6 py-3 text-sm font-medium text-white">{{ job.title }}</td>
-              <td class="px-6 py-3 text-sm text-gray-400">{{ job.department || '—' }}</td>
-              <td class="px-6 py-3 text-sm text-right text-blue-400 font-semibold">
-                {{ job.applications_count }}
-              </td>
-              <td class="px-6 py-3 text-sm">
-                <span
-                  :class="[
-                    'inline-flex px-2 py-0.5 text-xs font-semibold rounded-full',
-                    getJobStatusClass(job.status),
-                  ]"
-                >{{ job.status }}</span>
+          <tbody>
+            <tr v-for="job in data.top_jobs" :key="job.id" class="row">
+              <td class="t-strong">{{ job.title }}</td>
+              <td class="t-muted">{{ job.department || '—' }}</td>
+              <td class="t-right t-mono t-accent">{{ job.applications_count }}</td>
+              <td>
+                <span :class="['badge', getJobStatusClass(job.status)]">
+                  {{ job.status }}
+                </span>
               </td>
             </tr>
             <tr v-if="!data.top_jobs.length">
-              <td colspan="4" class="px-6 py-6 text-center text-sm text-gray-500">
-                No jobs found
-              </td>
+              <td colspan="4" class="t-empty">No jobs found</td>
             </tr>
           </tbody>
         </table>
-      </div>
+      </section>
     </template>
   </div>
 </template>
+
+<style scoped>
+.ra-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #eef0f4;
+}
+
+/* Page header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+}
+.ph-text {
+  display: flex;
+  flex-direction: column;
+}
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: #7a8299;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 12px;
+  font-family: inherit;
+  align-self: flex-start;
+  transition: color 0.15s ease;
+}
+.back-btn:hover {
+  color: #eef0f4;
+}
+.ph-eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  color: #7a8299;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.ph-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: #eef0f4;
+  margin: 0 0 6px;
+  line-height: 1.1;
+}
+.ph-sub {
+  font-size: 13px;
+  color: #7a8299;
+  margin: 0;
+  max-width: 640px;
+  line-height: 1.55;
+}
+
+/* Alerts */
+.alert-error {
+  background: rgba(243, 130, 136, 0.08);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: #f38288;
+  font-size: 13px;
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+/* Card */
+.card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 10px;
+}
+
+/* Loading */
+.loading-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.stat-skeleton-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.stat-card.sk {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sk-line {
+  background: #1a1f2a;
+  border-radius: 4px;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+.sk-sm {
+  height: 12px;
+  width: 50%;
+}
+.sk-lg {
+  height: 28px;
+  width: 35%;
+}
+.sk-block {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sk-bar {
+  height: 24px;
+  background: #1a1f2a;
+  border-radius: 4px;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Stat grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.stat-card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease;
+}
+.stat-card:hover {
+  border-color: #2c3242;
+}
+.stat-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+}
+.stat-value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  line-height: 1.05;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.stat-unit {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: #7a8299;
+  font-weight: 500;
+}
+.tone-default {
+  color: #eef0f4;
+}
+.tone-accent {
+  color: #6b5bff;
+}
+.tone-green {
+  color: #4dd39a;
+}
+.tone-purple {
+  color: #9b6eff;
+}
+
+/* Panel */
+.panel {
+  padding: 22px;
+}
+.panel-head {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+  margin-bottom: 18px;
+}
+.panel-head-bordered {
+  margin-bottom: 0;
+  padding: 14px 18px;
+  border-bottom: 1px solid #232936;
+}
+.panel-empty {
+  text-align: center;
+  padding: 32px 0;
+  color: #7a8299;
+  font-size: 12px;
+}
+
+/* Funnel */
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.funnel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.funnel-label {
+  width: 140px;
+  text-align: right;
+  font-size: 11.5px;
+  color: #c8ccd6;
+  flex-shrink: 0;
+}
+.funnel-track {
+  flex: 1;
+  height: 26px;
+  background: #1a1f2a;
+  border: 1px solid #232936;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.funnel-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.6s ease;
+}
+.funnel-count {
+  width: 40px;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #eef0f4;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dual grid */
+.dual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+/* Source list */
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.source-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.source-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+}
+.source-name {
+  color: #eef0f4;
+  text-transform: capitalize;
+  font-weight: 500;
+}
+.source-meta {
+  color: #7a8299;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.source-pct {
+  color: #6b5bff;
+  margin-left: 4px;
+}
+.source-track {
+  width: 100%;
+  height: 6px;
+  background: #1a1f2a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.source-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6b5bff, #8a7dff);
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+/* Trend chart */
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 150px;
+}
+.trend-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.trend-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #c8ccd6;
+  font-weight: 600;
+}
+.trend-track {
+  width: 100%;
+  height: 96px;
+  background: #1a1f2a;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  overflow: hidden;
+}
+.trend-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, #6b5bff, #4f3fdc);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.6s ease;
+}
+.trend-month {
+  font-size: 10.5px;
+  color: #7a8299;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Table */
+.table-card {
+  overflow: hidden;
+  padding: 0;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table thead th {
+  background: #1a1f2a;
+  border-bottom: 1px solid #232936;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+  padding: 10px 18px;
+}
+.data-table tbody td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #232936;
+  font-size: 13px;
+  color: #c8ccd6;
+  vertical-align: middle;
+}
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.row {
+  transition: background 0.12s ease;
+}
+.row:hover {
+  background: rgba(107, 91, 255, 0.04);
+}
+
+.t-strong {
+  color: #eef0f4;
+  font-weight: 500;
+}
+.t-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.t-accent {
+  color: #6b5bff;
+  font-weight: 600;
+}
+.t-muted {
+  color: #7a8299;
+}
+.t-right {
+  text-align: right;
+}
+.t-empty {
+  text-align: center;
+  color: #7a8299;
+  font-size: 12.5px;
+  padding: 24px !important;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  text-transform: capitalize;
+}
+.badge-ok {
+  background: rgba(77, 211, 154, 0.12);
+  color: #4dd39a;
+  border-color: rgba(77, 211, 154, 0.25);
+}
+.badge-danger {
+  background: rgba(243, 130, 136, 0.12);
+  color: #f38288;
+  border-color: rgba(243, 130, 136, 0.25);
+}
+.badge-neutral {
+  background: #1a1f2a;
+  color: #c8ccd6;
+  border-color: #232936;
+}
+</style>

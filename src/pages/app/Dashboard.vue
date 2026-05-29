@@ -171,11 +171,11 @@ const calGrid = computed<CalDay[]>(() => {
 
 // ── Gradients ───────────────────────────────────────
 const GRADIENTS = [
-  'linear-gradient(135deg,#4F7EFF,#9B6EFF)',
-  'linear-gradient(135deg,#36D399,#4F7EFF)',
-  'linear-gradient(135deg,#F9A825,#FF6B6B)',
-  'linear-gradient(135deg,#9B6EFF,#FF6B6B)',
-  'linear-gradient(135deg,#4F7EFF,#36D399)',
+  'linear-gradient(135deg,#6B5BFF,#9B6EFF)',
+  'linear-gradient(135deg,#4DD39A,#6B5BFF)',
+  'linear-gradient(135deg,#F5A623,#F38288)',
+  'linear-gradient(135deg,#9B6EFF,#F38288)',
+  'linear-gradient(135deg,#6B5BFF,#4DD39A)',
 ]
 
 // ── Attendance donut ─────────────────────────────────
@@ -187,8 +187,8 @@ const presRate     = computed(() => attStats.value.total ? Math.round((attStats.
 const donutArc     = computed(() => (presRate.value / 100) * DONUT_C)
 const ringRows     = computed(() => [
   { l: 'Present',  c: '#4DD39A', v: attStats.value.present },
-  { l: 'WFH',      c: '#4F7EFF', v: attStats.value.wfh },
-  { l: 'On Leave', c: '#F5C16E', v: attStats.value.on_leave },
+  { l: 'WFH',      c: '#6B5BFF', v: attStats.value.wfh },
+  { l: 'On Leave', c: '#F5A623', v: attStats.value.on_leave },
   { l: 'Absent',   c: '#F38288', v: attStats.value.absent },
 ])
 
@@ -333,13 +333,13 @@ const kpiCards = computed(() => {
       value: loadingAtt.value ? '—' : String(attStats.value.present + attStats.value.wfh),
       unit: `/${attStats.value.total || '?'}`,
       delta: presRate.value ? `${presRate.value}%` : '—', trend: 'attendance', up: true,
-      color: '#4F7EFF', spark: presArr,
+      color: '#6B5BFF', spark: presArr,
     },
     {
       id: 'openroles', eyebrow: 'Open roles',
       value: loadingEmp.value ? '—' : String(Math.max(Math.round(employees.value.length * 0.2), 0)),
       unit: '', delta: '+25%', trend: '4 in final stage', up: true,
-      color: '#F5C16E', spark: [4,5,7,8,9,10,11,12],
+      color: '#F5A623', spark: [4,5,7,8,9,10,11,12],
     },
     {
       id: 'attrition', eyebrow: 'Attrition YTD',
@@ -354,10 +354,10 @@ const kpiCards = computed(() => {
 const funnelStages = computed(() => {
   const base = Math.max(totalHired.value * 10, 40)
   const raw = [
-    { k: 'Applied',   n: Math.round(base * 2.5), c: '#4F7EFF' },
-    { k: 'Screened',  n: Math.round(base * 1.1), c: '#4F7EFF' },
-    { k: 'Interview', n: Math.round(base * 0.45), c: '#4F7EFF' },
-    { k: 'Offer',     n: Math.round(base * 0.12), c: '#F5C16E' },
+    { k: 'Applied',   n: Math.round(base * 2.5), c: '#6B5BFF' },
+    { k: 'Screened',  n: Math.round(base * 1.1), c: '#6B5BFF' },
+    { k: 'Interview', n: Math.round(base * 0.45), c: '#6B5BFF' },
+    { k: 'Offer',     n: Math.round(base * 0.12), c: '#F5A623' },
     { k: 'Hired',     n: totalHired.value || Math.round(base * 0.07), c: '#4DD39A' },
   ]
   const maxN = raw[0].n
@@ -458,7 +458,7 @@ const funnelStages = computed(() => {
                   class="funnel-bar"
                   :style="{
                     width: s.w + '%',
-                    background: `linear-gradient(90deg, ${s.c}22, ${s.c}BB)`,
+                    background: `linear-gradient(90deg, ${s.c}33, ${s.c}BB)`,
                     borderRight: `1.5px solid ${s.c}`,
                   }"
                 >
@@ -720,11 +720,33 @@ const funnelStages = computed(() => {
       </div>
     </div>
 
-    <AdminFirstLoginModal v-model="showFirstLogin" @completed="onFirstLoginDone" />
+    <Teleport to="body">
+      <AdminFirstLoginModal v-model="showFirstLogin" @completed="onFirstLoginDone" />
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
+/* ── Design tokens (scoped to this page) ─────────── */
+.dash {
+  --bg: #0D0F17;
+  --surface: #161A23;
+  --surface2: #1C2030;
+  --surface3: #222840;
+  --border: #232936;
+  --border-hi: #2C3344;
+  --text: #EEF0F4;
+  --dim: #C2C7D2;
+  --muted: #7A8299;
+  --accent: #6B5BFF;
+  --accent-glow: rgba(107, 91, 255, 0.08);
+  --green: #4DD39A;
+  --red: #F38288;
+  --yellow: #F5A623;
+  --serif: 'Instrument Serif', Georgia, serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
 /* ── Layout ──────────────────────────────────────── */
 .dash { display: flex; flex-direction: column; gap: 20px; }
 
@@ -740,12 +762,12 @@ const funnelStages = computed(() => {
 }
 .hero-h {
   margin: 0;
-  font-family: 'Instrument Serif', Georgia, serif;
+  font-family: var(--serif);
   font-size: 42px; font-weight: 400; line-height: 1.05;
   color: var(--text); letter-spacing: -0.02em;
 }
 .hero-accent { color: var(--muted); font-style: italic; }
-.hero-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dim); flex-wrap: wrap; }
+.hero-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dim); flex-wrap: wrap; margin-top: 4px; }
 .hero-dot { color: var(--border-hi); }
 .hero-r { display: flex; gap: 8px; flex-shrink: 0; }
 .btn-ghost {
@@ -771,11 +793,11 @@ const funnelStages = computed(() => {
 
 .kpi-num-row { display: flex; align-items: baseline; gap: 4px; }
 .kpi-num {
-  font-family: 'Instrument Serif', Georgia, serif;
+  font-family: var(--serif);
   font-size: 44px; font-weight: 400; line-height: 1;
   color: var(--text); letter-spacing: -0.02em;
 }
-.kpi-unit { font-size: 14px; color: var(--muted); font-weight: 400; }
+.kpi-unit { font-size: 14px; color: var(--dim); font-weight: 400; }
 
 .kpi-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
 
@@ -783,8 +805,8 @@ const funnelStages = computed(() => {
   display: flex; align-items: center; gap: 3px;
   font-size: 11.5px; font-weight: 500;
 }
-.kpi-delta.up { color: #4DD39A; }
-.kpi-delta.dn { color: #F38288; }
+.kpi-delta.up { color: var(--green); }
+.kpi-delta.dn { color: var(--red); }
 .kpi-trend { color: var(--muted); font-weight: 400; margin-left: 2px; }
 
 /* ── Main grid ───────────────────────────────────── */
@@ -793,20 +815,19 @@ const funnelStages = computed(() => {
 
 /* ── Card ────────────────────────────────────────── */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.card-flush { overflow: hidden; }
 .card-head {
   padding: 14px 16px; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
 .flush-head { border-bottom: 1px solid var(--border); }
 .ct { font-size: 13.5px; font-weight: 600; color: var(--text); }
-.cs { font-size: 11.5px; color: var(--muted); }
+.cs { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 .btn-link { font-size: 12px; color: var(--accent); font-weight: 500; text-decoration: none; transition: opacity .15s; white-space: nowrap; }
 .btn-link:hover { opacity: .7; }
 
 /* ── Period tabs ─────────────────────────────────── */
 .period-tabs {
-  display: flex; gap: 2px; background: var(--surface2);
+  display: flex; gap: 4px; background: var(--bg);
   border: 1px solid var(--border); border-radius: 6px; padding: 2px;
 }
 .ptab {
@@ -814,26 +835,26 @@ const funnelStages = computed(() => {
   color: var(--muted); border-radius: 4px; cursor: pointer;
   transition: all .14s;
 }
-.ptab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.ptab.active { background: var(--surface3); color: var(--text); }
 
 /* ── Hiring funnel ───────────────────────────────── */
-.funnel-body { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
-.funnel-row { display: flex; align-items: center; gap: 10px; }
-.funnel-label { width: 68px; font-size: 11.5px; color: var(--muted); flex-shrink: 0; }
+.funnel-body { padding: 12px 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.funnel-row { display: flex; align-items: center; gap: 12px; }
+.funnel-label { width: 70px; font-size: 11.5px; color: var(--dim); flex-shrink: 0; }
 .funnel-track {
-  flex: 1; height: 26px; background: var(--surface2);
+  flex: 1; height: 26px; background: var(--bg);
   border-radius: 4px; overflow: hidden; position: relative;
 }
 .funnel-bar {
-  height: 100%; min-width: 2px; border-radius: 0 3px 3px 0;
-  display: flex; align-items: center; padding: 0 8px;
+  height: 100%; min-width: 2px;
+  display: flex; align-items: center; padding: 0 10px;
   transition: width .4s ease;
 }
-.funnel-n { font-size: 11px; color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.funnel-conv { width: 36px; font-size: 11px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.funnel-n { font-size: 11px; color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; font-family: var(--mono); }
+.funnel-conv { width: 46px; font-size: 11px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; font-family: var(--mono); }
 
 /* ── Activity feed ───────────────────────────────── */
-.act-tabs { display: flex; gap: 12px; }
+.act-tabs { display: flex; gap: 14px; }
 .act-tab { font-size: 11.5px; color: var(--muted); cursor: pointer; transition: color .14s; }
 .act-tab.active { color: var(--text); font-weight: 500; }
 
@@ -844,9 +865,9 @@ const funnelStages = computed(() => {
 .act-row:hover { background: var(--surface2); }
 .act-row--top { border-top: 1px solid var(--border); }
 .act-av {
-  width: 26px; height: 26px; border-radius: 50%;
+  width: 24px; height: 24px; border-radius: 50%;
   display: grid; place-items: center;
-  font-size: 9.5px; font-weight: 700; color: #fff; flex-shrink: 0;
+  font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0;
 }
 .act-body { flex: 1; font-size: 12px; color: var(--dim); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .act-who { font-weight: 500; color: var(--text); }
@@ -859,7 +880,7 @@ const funnelStages = computed(() => {
   border-radius: 20px; background: var(--surface2);
   border: 1px solid var(--border-hi); color: var(--muted); flex-shrink: 0;
 }
-.act-time { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.act-time { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; font-family: var(--mono); width: 64px; text-align: right; }
 
 /* ── Leave calendar ──────────────────────────────── */
 .cal-body { padding: 12px 14px 14px; }
@@ -870,13 +891,13 @@ const funnelStages = computed(() => {
   display: grid; place-items: center; font-size: 12px; transition: all .15s;
 }
 .cal-btn:hover { border-color: var(--accent); color: var(--accent); }
-.cal-label-txt { font-size: 12px; font-weight: 600; color: var(--text); min-width: 100px; text-align: center; }
+.cal-label-txt { font-size: 12px; font-weight: 600; color: var(--text); min-width: 100px; text-align: center; font-family: var(--mono); }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .cal-hdr { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); text-align: center; padding: 3px 0 5px; }
 .cal-cell { min-height: 40px; padding: 3px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .cal-cell.out { opacity: 0; pointer-events: none; }
-.cal-cell.today { background: rgba(79,126,255,.1); border: 1px solid var(--accent); }
-.cal-day { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1; }
+.cal-cell.today { background: var(--accent-glow); border: 1px solid var(--accent); }
+.cal-day { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1; font-family: var(--mono); }
 .cal-dots { display: flex; flex-wrap: wrap; gap: 1px; justify-content: center; }
 .cal-dot { width: 18px; height: 13px; border-radius: 3px; background: var(--accent); color: #fff; font-size: 7px; font-weight: 700; display: grid; place-items: center; }
 .cal-more { background: var(--surface3); color: var(--muted); }
@@ -885,7 +906,7 @@ const funnelStages = computed(() => {
 .att-card { padding: 0; }
 .att-head {
   padding: 14px 16px 12px; display: flex; align-items: center;
-  justify-content: space-between; margin-bottom: 0;
+  justify-content: space-between;
 }
 .donut-wrap { display: flex; align-items: center; gap: 18px; padding: 4px 16px 16px; }
 .donut-svg-wrap { flex-shrink: 0; position: relative; width: 88px; height: 88px; }
@@ -893,13 +914,13 @@ const funnelStages = computed(() => {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
 }
-.donut-pct { font-size: 21px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+.donut-pct { font-family: var(--serif); font-size: 24px; font-weight: 400; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
 .donut-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
 .ring-legend { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .rl-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
 .rl-dot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
 .rl-label { flex: 1; color: var(--dim); }
-.rl-val { font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
+.rl-val { font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; font-family: var(--mono); }
 
 /* ── Approvals ───────────────────────────────────── */
 .badge-pill {
@@ -913,16 +934,16 @@ const funnelStages = computed(() => {
 .apr-av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0; }
 .apr-info { flex: 1; min-width: 0; }
 .apr-name { font-size: 12px; font-weight: 500; color: var(--text); }
-.apr-type { color: var(--muted); font-weight: 400; }
+.apr-type { color: var(--dim); font-weight: 400; }
 .apr-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
 .apr-btns { display: flex; gap: 4px; }
 .ab {
-  width: 26px; height: 26px; border-radius: 5px; border: none;
+  width: 24px; height: 24px; border-radius: 5px; border: none;
   cursor: pointer; display: grid; place-items: center; font-size: 12px;
   font-weight: 700; transition: transform .1s;
 }
 .ab:hover { transform: scale(1.1); }
-.ab-ok { background: rgba(77,211,154,.15); color: #4DD39A; border: 1px solid rgba(77,211,154,.3); }
+.ab-ok { background: rgba(77,211,154,.15); color: var(--green); border: 1px solid rgba(77,211,154,.3); }
 .ab-no { background: transparent; color: var(--muted); border: 1px solid var(--border-hi); }
 
 /* ── Mini lists (on leave / team att) ────────────── */
@@ -935,12 +956,12 @@ const funnelStages = computed(() => {
 .mini-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
 
 /* ── Upcoming events ─────────────────────────────── */
-.up-list { display: flex; flex-direction: column; gap: 0; padding: 8px 0 4px; }
+.up-list { display: flex; flex-direction: column; padding: 10px 0 8px; }
 .up-row { display: flex; gap: 12px; padding: 8px 16px; font-size: 12px; }
-.up-date { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--muted); width: 46px; flex-shrink: 0; padding-top: 2px; }
+.up-date { font-family: var(--mono); font-size: 10.5px; color: var(--muted); width: 46px; flex-shrink: 0; padding-top: 3px; }
 .up-body { flex: 1; }
-.ev-pill { font-size: 9.5px; font-weight: 600; padding: 2px 7px; border-radius: 20px; background: rgba(249,168,37,.1); color: #F5C16E; display: inline-block; margin-bottom: 2px; }
-.up-title { color: var(--text); font-size: 12px; }
+.ev-pill { font-size: 9.5px; font-weight: 600; padding: 2px 7px; border-radius: 20px; background: rgba(245,166,35,.12); color: var(--yellow); display: inline-block; margin-bottom: 3px; }
+.up-title { color: var(--dim); font-size: 12px; }
 
 /* ── Quick actions ───────────────────────────────── */
 .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px 14px; }
@@ -958,11 +979,11 @@ tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: rgba(255,255,255,.02); }
 td { padding: 11px 14px; vertical-align: middle; }
 .tdim { color: var(--dim); }
-.tsm { font-size: 11px; }
+.tsm { font-size: 11px; font-family: var(--mono); }
 .ec { display: flex; align-items: center; gap: 9px; }
 .tav { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0; }
 .en { font-weight: 500; color: var(--text); font-size: 13px; }
-.eid { font-size: 10px; color: var(--muted); }
+.eid { font-size: 10px; color: var(--muted); font-family: var(--mono); }
 
 /* ── Transitions ─────────────────────────────────── */
 .lr-enter-active, .lr-leave-active { transition: all .25s ease; }

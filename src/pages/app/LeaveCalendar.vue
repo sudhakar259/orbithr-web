@@ -1,200 +1,3 @@
-<template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Leave Calendar</h1>
-        <p class="text-slate-600">View team leaves, holidays, and monthly summary.</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <button @click="activeView = 'calendar'" :class="[activeView === 'calendar' ? 'bg-blue-600 text-white' : 'bg-white text-slate-700', 'px-3 py-2 rounded-md text-sm font-medium border']">Calendar</button>
-        <button @click="activeView = 'summary'" :class="[activeView === 'summary' ? 'bg-blue-600 text-white' : 'bg-white text-slate-700', 'px-3 py-2 rounded-md text-sm font-medium border']">Summary</button>
-      </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-      <div class="flex flex-wrap items-end gap-4">
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Month</label>
-          <select v-model.number="selectedMonth" class="rounded-md border-slate-300 shadow-sm text-sm" @change="loadData">
-            <option v-for="m in 12" :key="m" :value="m">{{ monthName(m) }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Year</label>
-          <select v-model.number="selectedYear" class="rounded-md border-slate-300 shadow-sm text-sm" @change="loadData">
-            <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
-          </select>
-        </div>
-        <div v-if="filters.departments.length > 0">
-          <label class="block text-xs font-medium text-slate-600 mb-1">Department</label>
-          <select v-model="filterDepartment" class="rounded-md border-slate-300 shadow-sm text-sm" @change="loadEvents">
-            <option value="">All Departments</option>
-            <option v-for="d in filters.departments" :key="d" :value="d">{{ d }}</option>
-          </select>
-        </div>
-        <div v-if="filters.leave_types.length > 0">
-          <label class="block text-xs font-medium text-slate-600 mb-1">Leave Type</label>
-          <select v-model="filterLeaveType" class="rounded-md border-slate-300 shadow-sm text-sm" @change="loadEvents">
-            <option :value="0">All Types</option>
-            <option v-for="lt in filters.leave_types" :key="lt.id" :value="lt.id">{{ lt.name }}</option>
-          </select>
-        </div>
-        <div v-if="filters.employees.length > 0">
-          <label class="block text-xs font-medium text-slate-600 mb-1">Employee</label>
-          <select v-model="filterEmployee" class="rounded-md border-slate-300 shadow-sm text-sm" @change="loadEvents">
-            <option :value="0">All Employees</option>
-            <option v-for="e in filters.employees" :key="e.id" :value="e.id">{{ e.name }}</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Calendar View -->
-    <div v-if="activeView === 'calendar'" class="bg-white rounded-lg border border-slate-200 shadow-sm">
-      <div v-if="loading" class="flex items-center justify-center py-16">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-      <div v-else class="p-4">
-        <!-- Calendar Grid -->
-        <div class="grid grid-cols-7 gap-px bg-slate-200 rounded-lg overflow-hidden">
-          <!-- Day Headers -->
-          <div v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="day" class="bg-slate-50 px-2 py-2 text-center text-xs font-semibold text-slate-600">
-            {{ day }}
-          </div>
-          <!-- Calendar Days -->
-          <div
-            v-for="(cell, idx) in calendarCells"
-            :key="idx"
-            :class="[
-              'bg-white min-h-[100px] p-1',
-              !cell.currentMonth ? 'opacity-40' : '',
-              cell.isToday ? 'ring-2 ring-blue-500 ring-inset' : '',
-              cell.isWeekend ? 'bg-slate-50' : '',
-            ]"
-          >
-            <div class="text-xs font-medium text-slate-600 mb-1">{{ cell.day }}</div>
-            <div class="space-y-0.5">
-              <div
-                v-for="event in cell.events"
-                :key="event.id"
-                :style="{ backgroundColor: event.backgroundColor }"
-                class="rounded px-1 py-0.5 text-[10px] text-white truncate cursor-pointer"
-                :title="eventTooltip(event)"
-              >
-                {{ event.title }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Legend -->
-        <div class="mt-4 flex flex-wrap gap-4 text-xs text-slate-600">
-          <div class="flex items-center gap-1">
-            <div class="w-3 h-3 rounded bg-red-500"></div>
-            <span>Holiday</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <div class="w-3 h-3 rounded bg-blue-500"></div>
-            <span>Annual Leave</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <div class="w-3 h-3 rounded bg-orange-400"></div>
-            <span>Casual Leave</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <div class="w-3 h-3 rounded bg-emerald-500"></div>
-            <span>Other</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <div class="w-3 h-3 rounded ring-2 ring-blue-500"></div>
-            <span>Today</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Summary View -->
-    <div v-if="activeView === 'summary'" class="space-y-6">
-      <div v-if="loading" class="flex items-center justify-center py-16">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-      <template v-else-if="summary">
-        <!-- Overview Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
-            <p class="text-sm text-slate-500">Working Days</p>
-            <p class="text-2xl font-bold text-slate-900">{{ summary.working_days }}</p>
-            <p class="text-xs text-slate-400">{{ monthName(summary.month) }} {{ summary.year }}</p>
-          </div>
-          <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
-            <p class="text-sm text-slate-500">Total Leave Requests</p>
-            <p class="text-2xl font-bold text-slate-900">{{ totalLeaveRequests }}</p>
-          </div>
-          <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
-            <p class="text-sm text-slate-500">Total Leave Days</p>
-            <p class="text-2xl font-bold text-slate-900">{{ totalLeaveDays }}</p>
-          </div>
-        </div>
-
-        <!-- Leave Statistics by Type -->
-        <div class="bg-white rounded-lg border border-slate-200 shadow-sm">
-          <div class="px-4 py-3 border-b border-slate-200">
-            <h3 class="text-sm font-semibold text-slate-800">Leave by Type</h3>
-          </div>
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Leave Type</th>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Code</th>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Requests</th>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Total Days</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-              <tr v-for="stat in summary.leave_statistics" :key="stat.leave_code" class="hover:bg-slate-50">
-                <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ stat.leave_type }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ stat.leave_code }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ stat.total_requests }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ stat.total_days }}</td>
-              </tr>
-              <tr v-if="summary.leave_statistics.length === 0">
-                <td colspan="4" class="px-4 py-6 text-center text-sm text-slate-500">No leave data for this month.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Department Statistics -->
-        <div class="bg-white rounded-lg border border-slate-200 shadow-sm">
-          <div class="px-4 py-3 border-b border-slate-200">
-            <h3 class="text-sm font-semibold text-slate-800">Leave by Department</h3>
-          </div>
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Department</th>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Requests</th>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">Total Days</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-              <tr v-for="stat in summary.department_statistics" :key="stat.department" class="hover:bg-slate-50">
-                <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ stat.department }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ stat.total_requests }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ stat.total_days }}</td>
-              </tr>
-              <tr v-if="summary.department_statistics.length === 0">
-                <td colspan="3" class="px-4 py-6 text-center text-sm text-slate-500">No department data for this month.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </template>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { leaveService, type CalendarEvent, type CalendarFilters, type MonthlySummary } from '@/services/leave'
@@ -228,10 +31,9 @@ const totalLeaveDays = computed(() =>
   summary.value?.leave_statistics.reduce((sum, s) => sum + Number(s.total_days), 0) ?? 0
 )
 
-// Calendar grid computation
 const calendarCells = computed(() => {
   const year = selectedYear.value
-  const month = selectedMonth.value - 1 // JS months are 0-indexed
+  const month = selectedMonth.value - 1
   const firstDay = new Date(year, month, 1)
   const lastDay = new Date(year, month + 1, 0)
   const startDayOfWeek = firstDay.getDay()
@@ -248,7 +50,6 @@ const calendarCells = computed(() => {
     events: CalendarEvent[];
   }> = []
 
-  // Previous month padding
   const prevMonthLastDay = new Date(year, month, 0).getDate()
   for (let i = startDayOfWeek - 1; i >= 0; i--) {
     const d = prevMonthLastDay - i
@@ -258,7 +59,6 @@ const calendarCells = computed(() => {
     cells.push({ day: d, currentMonth: false, isToday: false, isWeekend: false, dateStr, events: [] })
   }
 
-  // Current month days
   for (let d = 1; d <= totalDays; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     const dayOfWeek = new Date(year, month, d).getDay()
@@ -277,7 +77,6 @@ const calendarCells = computed(() => {
     })
   }
 
-  // Next month padding (fill to complete last row)
   const remaining = 7 - (cells.length % 7)
   if (remaining < 7) {
     for (let d = 1; d <= remaining; d++) {
@@ -304,6 +103,7 @@ async function loadFilters() {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function loadEvents() {
   const year = selectedYear.value
   const month = selectedMonth.value
@@ -311,6 +111,7 @@ async function loadEvents() {
   const lastDay = new Date(year, month, 0).getDate()
   const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any = { start_date: startDate, end_date: endDate }
   if (filterDepartment.value) params.department = filterDepartment.value
   if (filterLeaveType.value) params.leave_type_id = filterLeaveType.value
@@ -350,3 +151,220 @@ onMounted(async () => {
   }
 })
 </script>
+
+<template>
+  <div class="lc-page">
+    <!-- Header -->
+    <div class="lc-header">
+      <div>
+        <h1 class="lc-title">Leave Calendar</h1>
+        <p class="lc-subtitle">View team leaves, holidays, and monthly summary.</p>
+      </div>
+      <div class="lc-view-toggle">
+        <button :class="['lc-toggle-btn', activeView === 'calendar' ? 'lc-toggle-active' : '']" @click="activeView = 'calendar'">Calendar</button>
+        <button :class="['lc-toggle-btn', activeView === 'summary' ? 'lc-toggle-active' : '']" @click="activeView = 'summary'">Summary</button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="lc-filter-bar">
+      <div class="lc-filter-field">
+        <label class="lc-filter-label">Month</label>
+        <select v-model.number="selectedMonth" class="lc-select" @change="loadData">
+          <option v-for="m in 12" :key="m" :value="m">{{ monthName(m) }}</option>
+        </select>
+      </div>
+      <div class="lc-filter-field">
+        <label class="lc-filter-label">Year</label>
+        <select v-model.number="selectedYear" class="lc-select" @change="loadData">
+          <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+        </select>
+      </div>
+      <div v-if="filters.departments.length > 0" class="lc-filter-field">
+        <label class="lc-filter-label">Department</label>
+        <select v-model="filterDepartment" class="lc-select" @change="loadEvents">
+          <option value="">All Departments</option>
+          <option v-for="d in filters.departments" :key="d" :value="d">{{ d }}</option>
+        </select>
+      </div>
+      <div v-if="filters.leave_types.length > 0" class="lc-filter-field">
+        <label class="lc-filter-label">Leave Type</label>
+        <select v-model="filterLeaveType" class="lc-select" @change="loadEvents">
+          <option :value="0">All Types</option>
+          <option v-for="lt in filters.leave_types" :key="lt.id" :value="lt.id">{{ lt.name }}</option>
+        </select>
+      </div>
+      <div v-if="filters.employees.length > 0" class="lc-filter-field">
+        <label class="lc-filter-label">Employee</label>
+        <select v-model="filterEmployee" class="lc-select" @change="loadEvents">
+          <option :value="0">All Employees</option>
+          <option v-for="e in filters.employees" :key="e.id" :value="e.id">{{ e.name }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div v-if="activeView === 'calendar'" class="lc-card">
+      <div v-if="loading" class="lc-loading">
+        <div v-for="i in 5" :key="i" class="lc-skeleton"></div>
+      </div>
+      <div v-else class="lc-cal-wrap">
+        <div class="lc-cal-grid">
+          <div v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="day" class="lc-cal-dayname">{{ day }}</div>
+          <div
+            v-for="(cell, idx) in calendarCells"
+            :key="idx"
+            :class="['lc-cal-cell', !cell.currentMonth ? 'lc-dim' : '', cell.isToday ? 'lc-today' : '', cell.isWeekend ? 'lc-weekend' : '']"
+          >
+            <div class="lc-cell-day">{{ cell.day }}</div>
+            <div class="lc-cell-events">
+              <div
+                v-for="event in cell.events"
+                :key="event.id"
+                class="lc-event-pill"
+                :style="{ backgroundColor: event.backgroundColor }"
+                :title="eventTooltip(event)"
+              >
+                {{ event.title }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Legend -->
+        <div class="lc-legend">
+          <div class="lc-legend-item"><span class="lc-legend-dot" style="background:#F38288"></span>Holiday</div>
+          <div class="lc-legend-item"><span class="lc-legend-dot" style="background:#7ED7FF"></span>Annual Leave</div>
+          <div class="lc-legend-item"><span class="lc-legend-dot" style="background:#F5A623"></span>Casual Leave</div>
+          <div class="lc-legend-item"><span class="lc-legend-dot" style="background:#4DD39A"></span>Other</div>
+          <div class="lc-legend-item"><span class="lc-legend-dot lc-legend-today"></span>Today</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary View -->
+    <div v-if="activeView === 'summary'" class="lc-summary">
+      <div v-if="loading" class="lc-card lc-loading">
+        <div v-for="i in 4" :key="i" class="lc-skeleton"></div>
+      </div>
+      <template v-else-if="summary">
+        <div class="lc-stat-grid">
+          <div class="lc-stat-card">
+            <div class="lc-stat-label">Working Days</div>
+            <div class="lc-stat-value">{{ summary.working_days }}</div>
+            <div class="lc-stat-sub">{{ monthName(summary.month) }} {{ summary.year }}</div>
+          </div>
+          <div class="lc-stat-card">
+            <div class="lc-stat-label">Total Leave Requests</div>
+            <div class="lc-stat-value lc-blue">{{ totalLeaveRequests }}</div>
+          </div>
+          <div class="lc-stat-card">
+            <div class="lc-stat-label">Total Leave Days</div>
+            <div class="lc-stat-value lc-orange">{{ totalLeaveDays }}</div>
+          </div>
+        </div>
+
+        <div class="lc-section-card">
+          <div class="lc-section-head">Leave by Type</div>
+          <table class="lc-table">
+            <thead>
+              <tr>
+                <th class="lc-th">Leave Type</th>
+                <th class="lc-th">Code</th>
+                <th class="lc-th lc-th-right">Requests</th>
+                <th class="lc-th lc-th-right">Total Days</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="stat in summary.leave_statistics" :key="stat.leave_code" class="lc-row">
+                <td class="lc-td lc-td-name">{{ stat.leave_type }}</td>
+                <td class="lc-td lc-mono">{{ stat.leave_code }}</td>
+                <td class="lc-td lc-td-right">{{ stat.total_requests }}</td>
+                <td class="lc-td lc-td-right">{{ stat.total_days }}</td>
+              </tr>
+              <tr v-if="summary.leave_statistics.length === 0">
+                <td colspan="4" class="lc-td-empty">No leave data for this month.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="lc-section-card">
+          <div class="lc-section-head">Leave by Department</div>
+          <table class="lc-table">
+            <thead>
+              <tr>
+                <th class="lc-th">Department</th>
+                <th class="lc-th lc-th-right">Requests</th>
+                <th class="lc-th lc-th-right">Total Days</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="stat in summary.department_statistics" :key="stat.department" class="lc-row">
+                <td class="lc-td lc-td-name">{{ stat.department }}</td>
+                <td class="lc-td lc-td-right">{{ stat.total_requests }}</td>
+                <td class="lc-td lc-td-right">{{ stat.total_days }}</td>
+              </tr>
+              <tr v-if="summary.department_statistics.length === 0">
+                <td colspan="3" class="lc-td-empty">No department data for this month.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.lc-page { display: flex; flex-direction: column; gap: 16px; }
+.lc-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.lc-title { font-size: 20px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.lc-subtitle { font-size: 13px; color: #7A8299; margin: 4px 0 0; }
+.lc-view-toggle { display: flex; gap: 4px; background: #161A23; border: 1px solid #232936; border-radius: 8px; padding: 4px; }
+.lc-toggle-btn { background: none; border: none; color: #7A8299; border-radius: 6px; padding: 6px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.lc-toggle-active { background: #6B5BFF; color: #fff; }
+.lc-filter-bar { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.lc-filter-field { display: flex; flex-direction: column; gap: 4px; }
+.lc-filter-label { font-size: 11px; font-weight: 500; color: #7A8299; text-transform: uppercase; letter-spacing: 0.06em; }
+.lc-select { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 7px 12px; font-size: 13px; outline: none; cursor: pointer; }
+.lc-select:focus { border-color: #6B5BFF; }
+.lc-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.lc-loading { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.lc-skeleton { height: 36px; background: #232936; border-radius: 6px; animation: lc-pulse 1.2s ease-in-out infinite; }
+@keyframes lc-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.lc-cal-wrap { padding: 16px; }
+.lc-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #232936; border-radius: 8px; overflow: hidden; }
+.lc-cal-dayname { background: #11141C; padding: 8px 4px; text-align: center; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; }
+.lc-cal-cell { background: #161A23; min-height: 90px; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.lc-dim { opacity: 0.35; }
+.lc-today { outline: 2px solid #6B5BFF; outline-offset: -2px; }
+.lc-weekend { background: #13161F; }
+.lc-cell-day { font-size: 11px; font-weight: 500; color: #7A8299; margin-bottom: 2px; }
+.lc-cell-events { display: flex; flex-direction: column; gap: 2px; }
+.lc-event-pill { border-radius: 3px; padding: 1px 5px; font-size: 10px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.lc-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+.lc-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #7A8299; }
+.lc-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.lc-legend-today { background: transparent; outline: 2px solid #6B5BFF; }
+.lc-summary { display: flex; flex-direction: column; gap: 14px; }
+.lc-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.lc-stat-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 16px; }
+.lc-stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; }
+.lc-stat-value { font-family: 'Instrument Serif', serif; font-size: 28px; color: #EEF0F4; letter-spacing: -0.02em; margin-top: 4px; }
+.lc-stat-sub { font-size: 11px; color: #7A8299; margin-top: 2px; }
+.lc-blue { color: #7ED7FF; }
+.lc-orange { color: #F5A623; }
+.lc-section-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.lc-section-head { padding: 12px 16px; border-bottom: 1px solid #232936; font-size: 12px; font-weight: 600; color: #EEF0F4; text-transform: uppercase; letter-spacing: 0.06em; }
+.lc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lc-th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; background: #11141C; border-bottom: 1px solid #232936; }
+.lc-th-right { text-align: right; }
+.lc-row { border-bottom: 1px solid #1C2030; transition: background 0.12s; }
+.lc-row:last-child { border-bottom: none; }
+.lc-row:hover { background: rgba(255,255,255,0.02); }
+.lc-td { padding: 10px 14px; color: #B6BED0; vertical-align: middle; }
+.lc-td-name { color: #EEF0F4; font-weight: 500; }
+.lc-td-right { text-align: right; }
+.lc-td-empty { padding: 24px 14px; text-align: center; color: #7A8299; font-size: 13px; }
+.lc-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8A7BFF; }
+</style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'AdminModules' })
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 import PaginationBar from '@/components/table/PaginationBar.vue'
@@ -16,7 +17,6 @@ interface ModuleItem {
 const loading = ref(false)
 const items = ref<ModuleItem[]>([])
 
-// pagination + search
 const page = ref(1)
 const perPage = ref(10)
 const total = ref(0)
@@ -24,9 +24,7 @@ const searchQuery = ref('')
 let searchTimer: number | undefined
 function onSearchChange() {
   if (searchTimer) window.clearTimeout(searchTimer)
-  searchTimer = window.setTimeout(() => {
-    page.value = 1
-  }, 250)
+  searchTimer = window.setTimeout(() => { page.value = 1 }, 250)
 }
 
 const filteredItems = computed(() => {
@@ -35,7 +33,7 @@ const filteredItems = computed(() => {
   return items.value.filter(it => [it.name, it.code, it.status].some(v => String(v || '').toLowerCase().includes(q)))
 })
 
-function menuFor(row: ModuleItem) {
+function menuFor() {
   return [
     { title: 'View', value: 'view' },
     { title: 'Edit', value: 'edit' },
@@ -47,6 +45,7 @@ async function load() {
   loading.value = true
   try {
     const { data } = await api.get('modules', { params: { page: page.value, per_page: perPage.value, search: searchQuery.value || undefined } })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const normalize = (r: any): ModuleItem => ({
       id: r.id,
       name: r.name ?? r.title ?? r.module_name ?? '',
@@ -70,42 +69,43 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="space-y-6 p-6">
-    <div class="flex flex-wrap items-start justify-between gap-4">
+  <section class="mod-page">
+    <div class="mod-header">
       <div>
-        <p class="mt-1 text-slate-600">Manage enabled modules.</p>
+        <h1 class="mod-title">Modules</h1>
+        <p class="mod-sub">Manage platform modules and their activation status.</p>
       </div>
-      <div class="flex items-center gap-3">
-        <SearchInput v-model="searchQuery" placeholder="Search Modules" class="w-64" @update:modelValue="onSearchChange" />
-      </div>
+      <SearchInput v-model="searchQuery" placeholder="Search modules…" class="mod-search" @update:modelValue="onSearchChange" />
     </div>
 
-    <div class="rounded-lg border border-slate-200 bg-white overflow-hidden">
-      <div v-if="loading" class="p-6 text-slate-500">Loading...</div>
-      <table v-else class="min-w-full divide-y divide-slate-200 text-sm">
-        <thead class="bg-slate-50">
+    <div class="mod-card">
+      <div v-if="loading" class="mod-loading">Loading…</div>
+      <table v-else class="mod-table">
+        <thead>
           <tr>
-            <th class="px-4 py-3 text-left font-semibold text-slate-900">Name</th>
-            <th class="px-4 py-3 text-left font-semibold text-slate-900">Code</th>
-            <th class="px-4 py-3 text-left font-semibold text-slate-900">Status</th>
-            <th class="px-4 py-3 text-left font-semibold text-slate-900">Created At</th>
-            <th class="px-4 py-3"></th>
+            <th class="mod-th">Name</th>
+            <th class="mod-th">Code / Slug</th>
+            <th class="mod-th">Status</th>
+            <th class="mod-th">Created</th>
+            <th class="mod-th mod-th-right"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr v-for="row in filteredItems" :key="row.id" class="hover:bg-slate-50">
-            <td class="px-4 py-3 font-medium text-slate-900">{{ row.name }}</td>
-            <td class="px-4 py-3 text-slate-600">{{ row.code }}</td>
-            <td class="px-4 py-3">
-              <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-medium', row.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800']">{{ row.status || '-' }}</span>
+        <tbody>
+          <tr v-for="row in filteredItems" :key="row.id" class="mod-row">
+            <td class="mod-td mod-td-name">{{ row.name }}</td>
+            <td class="mod-td mod-td-code">{{ row.code }}</td>
+            <td class="mod-td">
+              <span :class="['mod-badge', row.status === 'active' ? 'mod-badge-green' : 'mod-badge-muted']">
+                {{ row.status || '—' }}
+              </span>
             </td>
-            <td class="px-4 py-3 text-slate-600">{{ new Date(row.created_at).toLocaleString() }}</td>
-            <td class="px-4 py-3 text-right">
-              <MoreBtn :menu-list="menuFor(row)" />
+            <td class="mod-td mod-td-date">{{ new Date(row.created_at).toLocaleDateString() }}</td>
+            <td class="mod-td mod-td-right">
+              <MoreBtn :menu-list="menuFor()" />
             </td>
           </tr>
           <tr v-if="filteredItems.length === 0">
-            <td colspan="5" class="px-4 py-8 text-center text-slate-500">No modules found</td>
+            <td colspan="5" class="mod-empty">No modules found.</td>
           </tr>
         </tbody>
       </table>
@@ -115,8 +115,35 @@ onMounted(load)
       :page="page"
       :per-page="perPage"
       :total="total"
-      @update:page="(p:number)=>{ page = p; load() }"
-      @update:perPage="(pp:number)=>{ perPage = pp; page = 1; load() }"
+      @update:page="(p: number) => { page = p; load() }"
+      @update:perPage="(pp: number) => { perPage = pp; page = 1; load() }"
     />
   </section>
 </template>
+
+<style scoped>
+.mod-page { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+.mod-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.mod-title { margin: 0; font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: #EEF0F4; letter-spacing: -0.02em; }
+.mod-sub { margin: 4px 0 0; font-size: 13px; color: #7A8299; }
+.mod-search { width: 260px; }
+
+.mod-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.mod-loading { padding: 32px; text-align: center; font-size: 13px; color: #7A8299; }
+.mod-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mod-th { padding: 11px 16px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; background: #11141C; border-bottom: 1px solid #232936; }
+.mod-th-right { text-align: right; width: 48px; }
+.mod-row { border-bottom: 1px solid #1C2030; transition: background 0.12s; }
+.mod-row:last-child { border-bottom: none; }
+.mod-row:hover { background: rgba(255,255,255,0.02); }
+.mod-td { padding: 13px 16px; color: #B6BED0; vertical-align: middle; }
+.mod-td-name { color: #EEF0F4; font-weight: 500; }
+.mod-td-code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8A7BFF; }
+.mod-td-date { font-size: 12px; color: #7A8299; }
+.mod-td-right { text-align: right; }
+.mod-empty { padding: 32px; text-align: center; color: #7A8299; }
+
+.mod-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.mod-badge-green { background: rgba(77,211,154,0.12); color: #4DD39A; }
+.mod-badge-muted { background: rgba(122,130,153,0.12); color: #7A8299; }
+</style>

@@ -25,40 +25,39 @@ const load = async () => {
   }
 }
 
-const getStatusClasses = (status: string) => {
+const statusPill = (status: string) => {
   const map: Record<string, string> = {
-    active: 'bg-green-900/50 text-green-400',
-    passive: 'bg-gray-700 text-gray-300',
-    hired: 'bg-blue-900/50 text-blue-400',
-    blacklisted: 'bg-red-900/50 text-red-400',
+    active: 'pill pill-green',
+    passive: 'pill pill-muted',
+    hired: 'pill pill-accent',
+    blacklisted: 'pill pill-red',
   }
-  return map[status] ?? 'bg-gray-700 text-gray-300'
+  return map[status] ?? 'pill pill-muted'
 }
 
-const proficiencyColor = (level: string) => {
+const proficiencyPill = (level: string) => {
   const map: Record<string, string> = {
-    beginner: 'bg-gray-700 text-gray-300',
-    intermediate: 'bg-blue-900/50 text-blue-400',
-    advanced: 'bg-purple-900/50 text-purple-400',
-    expert: 'bg-yellow-900/50 text-yellow-400',
+    beginner: 'pill pill-muted',
+    intermediate: 'pill pill-accent',
+    advanced: 'pill pill-purple',
+    expert: 'pill pill-yellow',
   }
-  return map[level] ?? 'bg-gray-700 text-gray-300'
+  return map[level] ?? 'pill pill-muted'
 }
 
-const appStatusClasses = (status: string) => {
+const appStatusPill = (status: string) => {
   const map: Record<string, string> = {
-    submitted: 'bg-blue-900/50 text-blue-400',
-    shortlisted: 'bg-purple-900/50 text-purple-400',
-    hired: 'bg-green-900/50 text-green-400',
-    rejected: 'bg-red-900/50 text-red-400',
-    offered: 'bg-yellow-900/50 text-yellow-400',
+    submitted: 'pill pill-accent',
+    shortlisted: 'pill pill-purple',
+    hired: 'pill pill-green',
+    rejected: 'pill pill-red',
+    offered: 'pill pill-yellow',
   }
-  return map[status] ?? 'bg-gray-700 text-gray-300'
+  return map[status] ?? 'pill pill-muted'
 }
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 
-// ── Assessments tab ────────────────────────────────────
 interface Assessment {
   id: number
   platform: string
@@ -96,15 +95,15 @@ const passFail = (a: Assessment) => {
   return pct >= 70 ? 'pass' : 'fail'
 }
 
-const assessmentStatusClass = (status: string) => {
+const assessmentStatusPill = (status: string) => {
   const map: Record<string, string> = {
-    pending: 'bg-gray-700 text-gray-300',
-    sent: 'bg-blue-900/50 text-blue-400',
-    in_progress: 'bg-yellow-900/50 text-yellow-400',
-    completed: 'bg-green-900/50 text-green-400',
-    expired: 'bg-red-900/50 text-red-400',
+    pending: 'pill pill-muted',
+    sent: 'pill pill-accent',
+    in_progress: 'pill pill-yellow',
+    completed: 'pill pill-green',
+    expired: 'pill pill-red',
   }
-  return map[status] ?? 'bg-gray-700 text-gray-300'
+  return map[status] ?? 'pill pill-muted'
 }
 
 const platformLabel: Record<string, string> = {
@@ -117,7 +116,6 @@ const onTabAssessments = () => {
   if (!assessments.value.length) loadAssessments()
 }
 
-// ── Emails tab ─────────────────────────────────────────
 interface EmailThread {
   id: number
   candidate_id: number
@@ -158,228 +156,176 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="space-y-6">
-    <button
-      @click="router.push({ name: 'recruitment.candidates' })"
-      class="text-sm text-gray-400 hover:text-white transition-colors inline-flex items-center"
-    >
-      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-      </svg>
-      Back to Candidates
+  <div class="candidate-detail">
+    <button class="back-btn" @click="router.push({ name: 'recruitment.candidates' })">
+      <span class="arrow">&larr;</span> Back to Candidates
     </button>
 
-    <div v-if="loading" class="space-y-4">
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-8 animate-pulse">
-        <div class="h-6 bg-gray-700 rounded w-1/3 mb-4"></div>
-        <div class="h-4 bg-gray-700 rounded w-2/3"></div>
-      </div>
+    <div v-if="loading" class="card skeleton-card">
+      <div class="skeleton-line w-1-3" />
+      <div class="skeleton-line w-2-3" />
     </div>
 
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4">
-      <p class="text-sm text-red-400">{{ error }}</p>
-    </div>
+    <div v-else-if="error" class="alert alert-error">{{ error }}</div>
 
     <template v-else-if="candidate">
       <!-- Profile Header -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-        <div class="flex items-start justify-between">
-          <div class="flex items-center gap-4">
-            <div class="w-16 h-16 rounded-full bg-gray-600 flex items-center justify-center text-xl font-bold text-white">
+      <div class="card profile-card">
+        <div class="profile-row">
+          <div class="profile-left">
+            <div class="avatar">
               {{ (candidate.first_name[0] + candidate.last_name[0]).toUpperCase() }}
             </div>
             <div>
-              <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-bold text-white">{{ candidate.first_name }} {{ candidate.last_name }}</h1>
-                <span :class="['inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full', getStatusClasses(candidate.status)]">
-                  {{ candidate.status }}
-                </span>
+              <div class="name-row">
+                <h1 class="profile-name">{{ candidate.first_name }} {{ candidate.last_name }}</h1>
+                <span :class="statusPill(candidate.status)">{{ candidate.status }}</span>
               </div>
-              <p v-if="candidate.current_title" class="text-gray-400 mt-1">
+              <p v-if="candidate.current_title" class="profile-title">
                 {{ candidate.current_title }}<span v-if="candidate.current_company"> at {{ candidate.current_company }}</span>
               </p>
-              <div class="flex items-center gap-4 mt-2 text-sm text-gray-400">
+              <div class="profile-contact">
                 <span>{{ candidate.email }}</span>
-                <span v-if="candidate.phone">· {{ candidate.phone }}</span>
-                <span v-if="candidate.location">· {{ candidate.location }}</span>
+                <span v-if="candidate.phone">&middot; {{ candidate.phone }}</span>
+                <span v-if="candidate.location">&middot; {{ candidate.location }}</span>
               </div>
             </div>
           </div>
-          <button
-            @click="router.push({ name: 'recruitment.candidates.edit', params: { id: candidate.id } })"
-            class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors"
-          >Edit</button>
+          <button class="btn-secondary" @click="router.push({ name: 'recruitment.candidates.edit', params: { id: candidate.id } })">
+            Edit
+          </button>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left: Stats + Skills + Links -->
-        <div class="space-y-6">
-          <!-- Quick Info -->
-          <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-3">
-            <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Details</h3>
-            <div class="space-y-2 text-sm">
-              <div v-if="candidate.total_experience_years != null" class="flex justify-between">
-                <span class="text-gray-400">Experience</span>
-                <span class="text-white">{{ candidate.total_experience_years }} yrs</span>
+      <div class="grid-3">
+        <!-- Left column -->
+        <div class="left-col">
+          <!-- Quick info -->
+          <div class="card section">
+            <h3 class="eyebrow">Details</h3>
+            <div class="info-list">
+              <div v-if="candidate.total_experience_years != null" class="info-row">
+                <span class="info-label">Experience</span>
+                <span class="info-value">{{ candidate.total_experience_years }} yrs</span>
               </div>
-              <div v-if="candidate.expected_salary" class="flex justify-between">
-                <span class="text-gray-400">Expected Salary</span>
-                <span class="text-white">{{ candidate.expected_salary.toLocaleString() }}</span>
+              <div v-if="candidate.expected_salary" class="info-row">
+                <span class="info-label">Expected Salary</span>
+                <span class="info-value">{{ candidate.expected_salary.toLocaleString() }}</span>
               </div>
-              <div v-if="candidate.notice_period_days != null" class="flex justify-between">
-                <span class="text-gray-400">Notice Period</span>
-                <span class="text-white">{{ candidate.notice_period_days }} days</span>
+              <div v-if="candidate.notice_period_days != null" class="info-row">
+                <span class="info-label">Notice Period</span>
+                <span class="info-value">{{ candidate.notice_period_days }} days</span>
               </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400">Source</span>
-                <span class="text-white capitalize">{{ candidate.source ?? '—' }}</span>
+              <div class="info-row">
+                <span class="info-label">Source</span>
+                <span class="info-value cap">{{ candidate.source ?? '—' }}</span>
               </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400">Added</span>
-                <span class="text-white">{{ formatDate(candidate.created_at) }}</span>
+              <div class="info-row">
+                <span class="info-label">Added</span>
+                <span class="info-value">{{ formatDate(candidate.created_at) }}</span>
               </div>
             </div>
           </div>
 
           <!-- Links -->
-          <div v-if="candidate.linkedin_url || candidate.portfolio_url" class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-3">
-            <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Links</h3>
-            <div class="space-y-2">
-              <a v-if="candidate.linkedin_url" :href="candidate.linkedin_url" target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+          <div v-if="candidate.linkedin_url || candidate.portfolio_url" class="card section">
+            <h3 class="eyebrow">Links</h3>
+            <div class="link-list">
+              <a v-if="candidate.linkedin_url" :href="candidate.linkedin_url" target="_blank" rel="noopener" class="link-item">
                 LinkedIn
               </a>
-              <a v-if="candidate.portfolio_url" :href="candidate.portfolio_url" target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              <a v-if="candidate.portfolio_url" :href="candidate.portfolio_url" target="_blank" rel="noopener" class="link-item">
                 Portfolio
               </a>
             </div>
           </div>
 
           <!-- Skills -->
-          <div v-if="candidate.skills?.length" class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-3">
-            <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Skills</h3>
-            <div class="flex flex-wrap gap-2">
-              <span
-                v-for="s in candidate.skills"
-                :key="s.id"
-                :class="['inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium', proficiencyColor(s.proficiency_level)]"
-              >
+          <div v-if="candidate.skills?.length" class="card section">
+            <h3 class="eyebrow">Skills</h3>
+            <div class="skill-list">
+              <span v-for="s in candidate.skills" :key="s.id" :class="proficiencyPill(s.proficiency_level)">
                 {{ s.skill }}
               </span>
             </div>
           </div>
         </div>
 
-        <!-- Right: Applications + Notes + Emails -->
-        <div class="lg:col-span-2 space-y-6">
-          <!-- Tab switcher -->
-          <div class="border-b border-gray-700">
-            <nav class="-mb-px flex space-x-6">
-              <button
-                :class="['whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors', activeTab === 'details' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']"
-                @click="activeTab = 'details'"
-              >Details</button>
-              <button
-                :class="['whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors', activeTab === 'assessments' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']"
-                @click="onTabAssessments"
-              >Assessments</button>
-              <button
-                :class="['whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors', activeTab === 'emails' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500']"
-                @click="onTabEmails"
-              >Emails</button>
-            </nav>
+        <!-- Right column -->
+        <div class="right-col">
+          <!-- Tabs -->
+          <div class="tab-nav">
+            <button :class="['tab-btn', { active: activeTab === 'details' }]" @click="activeTab = 'details'">Details</button>
+            <button :class="['tab-btn', { active: activeTab === 'assessments' }]" @click="onTabAssessments">Assessments</button>
+            <button :class="['tab-btn', { active: activeTab === 'emails' }]" @click="onTabEmails">Emails</button>
           </div>
 
           <template v-if="activeTab === 'details'">
-            <!-- Notes -->
-            <div v-if="candidate.notes" class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-              <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Notes</h3>
-              <p class="text-sm text-gray-400 whitespace-pre-wrap">{{ candidate.notes }}</p>
+            <div v-if="candidate.notes" class="card section">
+              <h3 class="eyebrow">Notes</h3>
+              <p class="notes-text">{{ candidate.notes }}</p>
             </div>
 
-            <!-- Application History -->
-            <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-700">
-                <h3 class="text-base font-semibold text-white">Application History</h3>
+            <div class="card list-card">
+              <div class="list-header">
+                <h3 class="list-title">Application History</h3>
               </div>
-              <div v-if="!candidate.applications?.length" class="p-6 text-center text-gray-500 text-sm">
-                No applications linked yet.
-              </div>
-              <div v-else class="divide-y divide-gray-700">
-                <div
-                  v-for="app in candidate.applications"
-                  :key="app.id"
-                  class="px-6 py-4 flex items-center justify-between hover:bg-gray-700/30 transition-colors"
-                >
+              <div v-if="!candidate.applications?.length" class="empty">No applications linked yet.</div>
+              <div v-else class="divide">
+                <div v-for="app in candidate.applications" :key="app.id" class="list-row">
                   <div>
-                    <p class="text-sm font-medium text-white">{{ app.job_posting?.title ?? 'Unknown Position' }}</p>
-                    <p class="text-xs text-gray-400 mt-0.5">Applied {{ formatDate(app.submitted_at) }}</p>
+                    <p class="row-title">{{ app.job_posting?.title ?? 'Unknown Position' }}</p>
+                    <p class="row-sub">Applied {{ formatDate(app.submitted_at) }}</p>
                   </div>
-                  <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', appStatusClasses(app.status)]">
-                    {{ app.status.replace(/_/g, ' ') }}
-                  </span>
+                  <span :class="appStatusPill(app.status)">{{ app.status.replace(/_/g, ' ') }}</span>
                 </div>
               </div>
             </div>
           </template>
 
-          <!-- Assessments tab -->
           <template v-if="activeTab === 'assessments'">
-            <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
-                <h3 class="text-base font-semibold text-white">Assessments</h3>
-                <span class="text-xs text-gray-400">{{ assessments.length }} assigned</span>
+            <div class="card list-card">
+              <div class="list-header">
+                <h3 class="list-title">Assessments</h3>
+                <span class="meta">{{ assessments.length }} assigned</span>
               </div>
-              <div v-if="loadingAssessments" class="p-6 space-y-3">
-                <div class="h-14 bg-gray-700 rounded animate-pulse" />
-                <div class="h-14 bg-gray-700 rounded animate-pulse" />
+              <div v-if="loadingAssessments" class="skeleton-block">
+                <div class="skeleton-line" />
+                <div class="skeleton-line" />
               </div>
-              <div v-else-if="!assessments.length" class="p-8 text-center text-gray-500 text-sm">
-                No assessments assigned to this candidate yet.
-              </div>
-              <div v-else class="divide-y divide-gray-700">
-                <div v-for="a in assessments" :key="a.id" class="px-6 py-4 flex items-center justify-between">
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <p class="text-sm font-medium text-white truncate">{{ a.assessment_title }}</p>
-                      <span class="text-xs text-gray-500 bg-gray-700 px-2 py-0.5 rounded">
-                        {{ platformLabel[a.platform] ?? a.platform }}
-                      </span>
+              <div v-else-if="!assessments.length" class="empty">No assessments assigned to this candidate yet.</div>
+              <div v-else class="divide">
+                <div v-for="a in assessments" :key="a.id" class="list-row">
+                  <div class="row-main">
+                    <div class="row-title-wrap">
+                      <p class="row-title">{{ a.assessment_title }}</p>
+                      <span class="platform-tag">{{ platformLabel[a.platform] ?? a.platform }}</span>
                     </div>
-                    <div class="flex items-center gap-3 mt-1">
-                      <span :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', assessmentStatusClass(a.status)]">
-                        {{ a.status.replace(/_/g, ' ') }}
-                      </span>
-                      <span v-if="a.completed_at" class="text-xs text-gray-400">
-                        Completed {{ formatDate(a.completed_at) }}
-                      </span>
-                      <span v-else-if="a.expires_at" class="text-xs text-gray-400">
-                        Expires {{ formatDate(a.expires_at) }}
-                      </span>
+                    <div class="row-meta">
+                      <span :class="assessmentStatusPill(a.status)">{{ a.status.replace(/_/g, ' ') }}</span>
+                      <span v-if="a.completed_at" class="meta-text">Completed {{ formatDate(a.completed_at) }}</span>
+                      <span v-else-if="a.expires_at" class="meta-text">Expires {{ formatDate(a.expires_at) }}</span>
                     </div>
                   </div>
-                  <div class="ml-4 text-right shrink-0">
+                  <div class="score-cell">
                     <template v-if="scorePercent(a) !== null">
-                      <p class="text-lg font-bold" :class="passFail(a) === 'pass' ? 'text-green-400' : 'text-red-400'">
+                      <p class="score" :class="passFail(a) === 'pass' ? 'score-pass' : 'score-fail'">
                         {{ scorePercent(a) }}%
                       </p>
-                      <span :class="['text-xs font-semibold', passFail(a) === 'pass' ? 'text-green-400' : 'text-red-400']">
-                        {{ passFail(a) === 'pass' ? '✓ Pass' : '✗ Fail' }}
+                      <span class="pf" :class="passFail(a) === 'pass' ? 'score-pass' : 'score-fail'">
+                        {{ passFail(a) === 'pass' ? 'Pass' : 'Fail' }}
                       </span>
                     </template>
-                    <span v-else class="text-xs text-gray-500">—</span>
+                    <span v-else class="meta-text">—</span>
                   </div>
                 </div>
               </div>
-              <!-- Summary row -->
-              <div v-if="assessments.length" class="px-6 py-3 bg-gray-700/40 border-t border-gray-700 flex gap-6 text-xs text-gray-400">
-                <span>Completed: <strong class="text-white">{{ assessments.filter(a => a.status === 'completed').length }}</strong></span>
-                <span>Passed: <strong class="text-green-400">{{ assessments.filter(a => passFail(a) === 'pass').length }}</strong></span>
-                <span>Failed: <strong class="text-red-400">{{ assessments.filter(a => passFail(a) === 'fail').length }}</strong></span>
+              <div v-if="assessments.length" class="summary-row">
+                <span>Completed: <strong>{{ assessments.filter(a => a.status === 'completed').length }}</strong></span>
+                <span>Passed: <strong class="text-green">{{ assessments.filter(a => passFail(a) === 'pass').length }}</strong></span>
+                <span>Failed: <strong class="text-red">{{ assessments.filter(a => passFail(a) === 'fail').length }}</strong></span>
                 <span v-if="assessments.filter(a => scorePercent(a) !== null).length">
-                  Avg Score: <strong class="text-white">
+                  Avg Score: <strong>
                     {{ Math.round(assessments.filter(a => scorePercent(a) !== null).reduce((s, a) => s + scorePercent(a)!, 0) / assessments.filter(a => scorePercent(a) !== null).length) }}%
                   </strong>
                 </span>
@@ -387,34 +333,26 @@ onMounted(load)
             </div>
           </template>
 
-          <!-- Emails tab -->
           <template v-if="activeTab === 'emails'">
-            <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-              <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
-                <h3 class="text-base font-semibold text-white">Email Conversations</h3>
-                <button
-                  class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
-                  @click="showCompose = true"
-                >+ Compose Email</button>
+            <div class="card list-card">
+              <div class="list-header">
+                <h3 class="list-title">Email Conversations</h3>
+                <button class="btn-primary-sm" @click="showCompose = true">+ Compose Email</button>
               </div>
-              <div v-if="loadingEmails" class="p-6 space-y-3">
-                <div class="h-12 bg-gray-700 rounded animate-pulse" />
-                <div class="h-12 bg-gray-700 rounded animate-pulse" />
+              <div v-if="loadingEmails" class="skeleton-block">
+                <div class="skeleton-line" />
+                <div class="skeleton-line" />
               </div>
               <div v-else-if="!emailThreads.length">
                 <EmptyState icon="&#x2709;&#xFE0F;" message="No emails yet" sub="Compose the first email to this candidate." />
               </div>
-              <div v-else class="divide-y divide-gray-700">
-                <div
-                  v-for="thread in emailThreads"
-                  :key="thread.id"
-                  class="px-6 py-4 flex items-center justify-between hover:bg-gray-700/30 transition-colors"
-                >
+              <div v-else class="divide">
+                <div v-for="thread in emailThreads" :key="thread.id" class="list-row">
                   <div>
-                    <p class="text-sm font-medium text-white">{{ thread.subject }}</p>
-                    <p class="text-xs text-gray-400 mt-0.5">{{ formatDate(thread.last_message_at) }}</p>
+                    <p class="row-title">{{ thread.subject }}</p>
+                    <p class="row-sub">{{ formatDate(thread.last_message_at) }}</p>
                   </div>
-                  <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-700 text-gray-300">
+                  <span class="pill pill-muted">
                     {{ thread.messages_count }} {{ thread.messages_count === 1 ? 'message' : 'messages' }}
                   </span>
                 </div>
@@ -434,3 +372,241 @@ onMounted(load)
     />
   </div>
 </template>
+
+<style scoped>
+.candidate-detail {
+  color: #eef0f4;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.back-btn {
+  background: transparent;
+  border: none;
+  color: #7a8299;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  align-self: flex-start;
+  transition: color 0.15s ease;
+}
+.back-btn:hover { color: #eef0f4; }
+.arrow { font-size: 14px; }
+
+.card {
+  background: #161a23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+}
+
+.alert-error {
+  background: rgba(243, 130, 136, 0.12);
+  border: 1px solid rgba(243, 130, 136, 0.4);
+  color: #f38288;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+/* Profile header */
+.profile-card { padding: 22px; }
+.profile-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.profile-left { display: flex; align-items: center; gap: 16px; }
+.avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, #4d2eaa 0%, #6b5bff 100%);
+  color: #fff; font-weight: 700; font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+}
+.name-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.profile-name {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  color: #eef0f4;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+.profile-title { color: #7a8299; margin: 4px 0 0; font-size: 13px; }
+.profile-contact {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-top: 8px; font-size: 12.5px; color: #7a8299;
+}
+
+.btn-secondary {
+  background: #1c2030;
+  border: 1px solid #232936;
+  color: #eef0f4;
+  font-size: 12.5px; font-weight: 500;
+  padding: 8px 14px; border-radius: 8px;
+  cursor: pointer; transition: border-color 0.15s ease;
+}
+.btn-secondary:hover { border-color: #6b5bff; }
+
+.btn-primary-sm {
+  background: #6b5bff;
+  border: none; color: #fff;
+  font-size: 12px; font-weight: 500;
+  padding: 6px 12px; border-radius: 7px;
+  cursor: pointer; transition: background 0.15s ease;
+}
+.btn-primary-sm:hover { background: #5a4be8; }
+
+/* Grid */
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+}
+@media (max-width: 1024px) {
+  .grid-3 { grid-template-columns: 1fr; }
+}
+.left-col, .right-col { display: flex; flex-direction: column; gap: 16px; }
+
+/* Section card */
+.section { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8299;
+  margin: 0;
+  font-weight: 500;
+}
+
+.info-list { display: flex; flex-direction: column; gap: 8px; }
+.info-row { display: flex; justify-content: space-between; font-size: 12.5px; }
+.info-label { color: #7a8299; }
+.info-value { color: #eef0f4; font-weight: 500; }
+.cap { text-transform: capitalize; }
+
+.link-list { display: flex; flex-direction: column; gap: 6px; }
+.link-item {
+  font-size: 12.5px; color: #6b5bff;
+  text-decoration: none; transition: color 0.15s ease;
+}
+.link-item:hover { color: #8a7cff; }
+
+.skill-list { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Pills */
+.pill {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.pill-green { background: rgba(77, 211, 154, 0.14); color: #4dd39a; }
+.pill-yellow { background: rgba(245, 166, 35, 0.14); color: #f5a623; }
+.pill-red { background: rgba(243, 130, 136, 0.14); color: #f38288; }
+.pill-purple { background: rgba(155, 110, 255, 0.16); color: #9b6eff; }
+.pill-accent { background: rgba(107, 91, 255, 0.16); color: #6b5bff; }
+.pill-muted { background: rgba(122, 130, 153, 0.16); color: #7a8299; }
+
+/* Tabs */
+.tab-nav {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #232936;
+  padding-bottom: 1px;
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #7a8299;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 0 2px 12px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: #eef0f4; }
+.tab-btn.active { color: #eef0f4; border-bottom-color: #6b5bff; }
+
+.notes-text {
+  font-size: 12.5px; color: #7a8299;
+  white-space: pre-wrap; margin: 0;
+}
+
+/* List cards */
+.list-card { overflow: hidden; }
+.list-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid #232936;
+}
+.list-title { font-size: 14px; color: #eef0f4; font-weight: 600; margin: 0; }
+.meta { font-size: 11px; color: #7a8299; }
+
+.divide > .list-row + .list-row { border-top: 1px solid #232936; }
+.list-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; gap: 12px;
+  transition: background 0.15s ease;
+}
+.list-row:hover { background: rgba(35, 41, 54, 0.4); }
+
+.row-main { flex: 1; min-width: 0; }
+.row-title-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.row-title { font-size: 13px; color: #eef0f4; font-weight: 500; margin: 0; }
+.row-sub { font-size: 11.5px; color: #7a8299; margin: 2px 0 0; }
+.row-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.meta-text { font-size: 11px; color: #7a8299; }
+
+.platform-tag {
+  font-size: 10.5px; color: #7a8299;
+  background: rgba(122, 130, 153, 0.16);
+  padding: 2px 6px; border-radius: 4px;
+}
+
+.score-cell { text-align: right; flex-shrink: 0; }
+.score {
+  font-size: 18px; font-weight: 700; margin: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+.pf { font-size: 11px; font-weight: 600; }
+.score-pass { color: #4dd39a; }
+.score-fail { color: #f38288; }
+
+.empty {
+  padding: 28px 18px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 12.5px;
+}
+
+.summary-row {
+  padding: 12px 18px;
+  background: rgba(35, 41, 54, 0.4);
+  border-top: 1px solid #232936;
+  display: flex; flex-wrap: wrap; gap: 18px;
+  font-size: 11.5px; color: #7a8299;
+}
+.summary-row strong { color: #eef0f4; }
+.text-green { color: #4dd39a !important; }
+.text-red { color: #f38288 !important; }
+
+/* Skeletons */
+.skeleton-card { padding: 22px; }
+.skeleton-block { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.skeleton-line {
+  height: 12px;
+  background: #232936;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.w-1-3 { width: 33%; }
+.w-2-3 { width: 66%; }
+</style>

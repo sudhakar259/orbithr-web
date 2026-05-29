@@ -7,7 +7,6 @@ import expenseService, { type ExpenseClaim, type ExpenseCategory } from '@/servi
 const loading = ref(true)
 const error = ref('')
 
-// Stats data
 const totalClaims = ref(0)
 const pendingCount = ref(0)
 const approvedCount = ref(0)
@@ -15,14 +14,12 @@ const rejectedCount = ref(0)
 const paidCount = ref(0)
 const draftCount = ref(0)
 
-// Monthly data (last 6 months)
 interface MonthData {
   label: string
   amount: number
 }
 const monthlyData = ref<MonthData[]>([])
 
-// Category data
 interface CatBreakdown {
   name: string
   color: string
@@ -53,14 +50,12 @@ async function fetchData() {
     const allClaims: ExpenseClaim[] = claimsRes.data?.data ?? claimsRes.data ?? []
     const cats: ExpenseCategory[] = catsRes.data?.data ?? catsRes.data ?? []
 
-    // Status counts
     draftCount.value = allClaims.filter(c => c.status === 'draft').length
     pendingCount.value = allClaims.filter(c => c.status === 'submitted' || c.status === 'under_review').length
     approvedCount.value = allClaims.filter(c => c.status === 'approved').length
     rejectedCount.value = allClaims.filter(c => c.status === 'rejected').length
     paidCount.value = allClaims.filter(c => c.status === 'paid').length
 
-    // Monthly spend (last 6 months)
     const months: MonthData[] = []
     const now = new Date()
     for (let i = 5; i >= 0; i--) {
@@ -79,7 +74,6 @@ async function fetchData() {
     }
     monthlyData.value = months
 
-    // Category breakdown
     const catMap: Record<number, CatBreakdown> = {}
     for (const cat of cats) {
       catMap[cat.id] = { name: cat.name, color: cat.color ?? '#4F7EFF', total: 0, count: 0 }
@@ -106,90 +100,82 @@ onMounted(fetchData)
 </script>
 
 <template>
-  <div class="space-y-8">
-    <h1 class="text-2xl font-bold text-white">Expense Reports</h1>
+  <div class="er-page">
+    <h1 class="er-title">Expense Reports</h1>
 
-    <!-- Loading -->
-    <div v-if="loading" class="bg-gray-800 border border-gray-700 rounded-lg p-8 animate-pulse">
-      <div v-for="i in 4" :key="i" class="h-4 bg-gray-700 rounded mb-4" />
+    <div v-if="loading" class="er-card er-loading">
+      <div v-for="i in 4" :key="i" class="er-skeleton"></div>
     </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="er-error">{{ error }}</div>
 
     <template v-else>
       <!-- Status distribution -->
       <div>
-        <h2 class="text-lg font-semibold text-white mb-4">Status Distribution</h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
-            <p class="text-3xl font-bold text-gray-300">{{ draftCount }}</p>
-            <p class="text-sm text-gray-400 mt-1">Draft</p>
+        <div class="er-section-label">Status Distribution</div>
+        <div class="er-stats-grid">
+          <div class="er-stat-card">
+            <div class="er-stat-value">{{ draftCount }}</div>
+            <div class="er-stat-label">Draft</div>
           </div>
-          <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
-            <p class="text-3xl font-bold text-yellow-400">{{ pendingCount }}</p>
-            <p class="text-sm text-gray-400 mt-1">Pending</p>
+          <div class="er-stat-card">
+            <div class="er-stat-value er-yellow">{{ pendingCount }}</div>
+            <div class="er-stat-label">Pending</div>
           </div>
-          <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
-            <p class="text-3xl font-bold text-green-400">{{ approvedCount }}</p>
-            <p class="text-sm text-gray-400 mt-1">Approved</p>
+          <div class="er-stat-card">
+            <div class="er-stat-value er-green">{{ approvedCount }}</div>
+            <div class="er-stat-label">Approved</div>
           </div>
-          <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
-            <p class="text-3xl font-bold text-red-400">{{ rejectedCount }}</p>
-            <p class="text-sm text-gray-400 mt-1">Rejected</p>
+          <div class="er-stat-card">
+            <div class="er-stat-value er-red">{{ rejectedCount }}</div>
+            <div class="er-stat-label">Rejected</div>
           </div>
-          <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
-            <p class="text-3xl font-bold text-teal-400">{{ paidCount }}</p>
-            <p class="text-sm text-gray-400 mt-1">Paid</p>
+          <div class="er-stat-card">
+            <div class="er-stat-value er-teal">{{ paidCount }}</div>
+            <div class="er-stat-label">Paid</div>
           </div>
         </div>
       </div>
 
-      <!-- Monthly spend chart (CSS bars) -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-        <h2 class="text-lg font-semibold text-white mb-4">Monthly Spend (Last 6 Months)</h2>
-        <div class="flex items-end gap-4 h-48">
-          <div
-            v-for="m in monthlyData"
-            :key="m.label"
-            class="flex-1 flex flex-col items-center justify-end"
-          >
-            <span class="text-xs text-gray-400 mb-1">{{ fmtCurrency(m.amount) }}</span>
+      <!-- Monthly spend bar chart -->
+      <div class="er-card er-chart-card">
+        <div class="er-chart-title">Monthly Spend (Last 6 Months)</div>
+        <div class="er-chart-bars">
+          <div v-for="m in monthlyData" :key="m.label" class="er-bar-col">
+            <span class="er-bar-amount">{{ fmtCurrency(m.amount) }}</span>
             <div
-              class="w-full bg-blue-600 rounded-t-md transition-all duration-300"
+              class="er-bar"
               :style="{ height: m.amount > 0 ? Math.max((m.amount / maxMonthly) * 160, 4) + 'px' : '4px' }"
             />
-            <span class="text-xs text-gray-400 mt-2">{{ m.label }}</span>
+            <span class="er-bar-label">{{ m.label }}</span>
           </div>
         </div>
       </div>
 
       <!-- Category breakdown -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-700">
-          <h2 class="text-lg font-semibold text-white">Category Breakdown</h2>
-        </div>
-        <table class="w-full">
+      <div class="er-section-card">
+        <div class="er-section-head">Category Breakdown</div>
+        <table class="er-table">
           <thead>
-            <tr class="bg-gray-700/50">
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Category</th>
-              <th class="text-left px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Items</th>
-              <th class="text-right px-5 py-3 text-gray-300 uppercase tracking-wider text-xs font-semibold">Total</th>
+            <tr>
+              <th class="er-th">Category</th>
+              <th class="er-th">Items</th>
+              <th class="er-th er-th-right">Total</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-700">
-            <tr v-for="cat in categoryData" :key="cat.name" class="hover:bg-gray-700/30">
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-2">
-                  <span class="w-3 h-3 rounded-full inline-block" :style="{ backgroundColor: cat.color }" />
-                  <span class="text-white text-sm">{{ cat.name }}</span>
+          <tbody>
+            <tr v-for="cat in categoryData" :key="cat.name" class="er-row">
+              <td class="er-td">
+                <div class="er-cat-cell">
+                  <span class="er-cat-dot" :style="{ backgroundColor: cat.color }" />
+                  <span class="er-td-name">{{ cat.name }}</span>
                 </div>
               </td>
-              <td class="px-5 py-3 text-gray-300 text-sm">{{ cat.count }}</td>
-              <td class="px-5 py-3 text-white text-sm text-right">{{ fmtCurrency(cat.total) }}</td>
+              <td class="er-td">{{ cat.count }}</td>
+              <td class="er-td er-td-right er-mono er-bold">{{ fmtCurrency(cat.total) }}</td>
             </tr>
             <tr v-if="!categoryData.length">
-              <td colspan="3" class="px-5 py-8 text-center text-gray-500">No data available</td>
+              <td colspan="3" class="er-td-empty">No data available</td>
             </tr>
           </tbody>
         </table>
@@ -197,3 +183,45 @@ onMounted(fetchData)
     </template>
   </div>
 </template>
+
+<style scoped>
+.er-page { display: flex; flex-direction: column; gap: 20px; }
+.er-title { font-size: 20px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.er-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.er-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; }
+.er-loading { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.er-skeleton { height: 36px; background: #232936; border-radius: 6px; animation: er-pulse 1.2s ease-in-out infinite; }
+@keyframes er-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.er-section-label { font-size: 13px; font-weight: 600; color: #EEF0F4; margin-bottom: 12px; }
+.er-stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.er-stat-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 16px; text-align: center; }
+.er-stat-value { font-family: 'Instrument Serif', serif; font-size: 28px; color: #EEF0F4; letter-spacing: -0.02em; }
+.er-stat-label { font-size: 11px; color: #7A8299; margin-top: 4px; }
+.er-green { color: #4DD39A; }
+.er-red { color: #F38288; }
+.er-yellow { color: #F5A623; }
+.er-teal { color: #4DD39A; }
+.er-chart-card { padding: 20px; }
+.er-chart-title { font-size: 13px; font-weight: 600; color: #EEF0F4; margin-bottom: 16px; }
+.er-chart-bars { display: flex; align-items: flex-end; gap: 12px; height: 200px; }
+.er-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; }
+.er-bar-amount { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7A8299; text-align: center; }
+.er-bar { width: 100%; background: #6B5BFF; border-radius: 4px 4px 0 0; transition: height 0.3s; min-height: 4px; }
+.er-bar-label { font-size: 11px; color: #7A8299; }
+.er-section-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.er-section-head { padding: 14px 16px; border-bottom: 1px solid #232936; font-size: 13px; font-weight: 600; color: #EEF0F4; }
+.er-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.er-th { padding: 11px 16px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; background: #11141C; border-bottom: 1px solid #232936; }
+.er-th-right { text-align: right; }
+.er-row { border-bottom: 1px solid #1C2030; transition: background 0.12s; }
+.er-row:last-child { border-bottom: none; }
+.er-row:hover { background: rgba(255,255,255,0.02); }
+.er-td { padding: 11px 16px; color: #B6BED0; vertical-align: middle; }
+.er-td-name { color: #EEF0F4; font-weight: 500; }
+.er-td-right { text-align: right; }
+.er-td-empty { padding: 32px 16px; text-align: center; color: #7A8299; font-size: 13px; }
+.er-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.er-bold { font-weight: 600; }
+.er-cat-cell { display: flex; align-items: center; gap: 8px; }
+.er-cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+</style>

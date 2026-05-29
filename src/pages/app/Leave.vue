@@ -186,24 +186,39 @@ const handleApproval = async (approved: boolean) => {
 };
 
 const getStatusColor = (status: string) => {
-  const colors = {
-    pending: 'bg-yellow-900/40 text-yellow-400',
-    approved: 'bg-green-900/40 text-green-400',
-    rejected: 'bg-red-900/40 text-red-400',
-    cancelled: 'bg-gray-900/40 text-gray-400',
-    taken: 'bg-blue-900/40 text-blue-400',
-    partially_taken: 'bg-purple-900/40 text-purple-400',
+  const map: Record<string, string> = {
+    pending: 'status-pending',
+    approved: 'status-approved',
+    rejected: 'status-rejected',
+    cancelled: 'status-cancelled',
+    taken: 'status-taken',
+    partially_taken: 'status-partial',
   };
-  return colors[status as keyof typeof colors] || 'bg-gray-900/40 text-gray-400';
+  return map[status] || 'status-cancelled';
 };
 
 const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString();
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 const getLeaveTypeName = (typeId: number) => {
   const type = leaveTypes.value.find(t => t.id === typeId);
   return type?.name || 'Unknown';
+};
+
+// Color palette for balance cards (cycled by index)
+const balanceColors = ['#6B5BFF', '#F5A623', '#4DD39A', '#7ED7FF', '#B28DFF', '#F38288'];
+const colorForIndex = (i: number) => balanceColors[i % balanceColors.length];
+
+const progressPercent = (used: number | string, total: number | string) => {
+  const u = Number(used) || 0;
+  const t = Number(total) || 0;
+  if (t <= 0) return 0;
+  return Math.min(100, Math.max(0, (u / t) * 100));
+};
+
+const initials = (first?: string, last?: string) => {
+  return `${(first?.[0] ?? '').toUpperCase()}${(last?.[0] ?? '').toUpperCase()}`;
 };
 
 onMounted(() => {
@@ -212,356 +227,272 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <p class="text-gray-400">Manage leave requests, balances, and approvals.</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <button v-if="isAdminOrHR" @click="openPolicies" class="inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700/50">Manage Policies</button>
+  <div class="leave-page">
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-eyebrow">FY 2026</div>
+      <h1 class="page-title">Leave</h1>
+      <p class="page-subtitle">Manage leave requests, balances, and approvals across your organisation.</p>
+    </div>
 
+    <!-- Action bar -->
+    <div class="action-bar">
+      <div class="tab-strip" role="tablist">
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'overview' }"
+          @click="activeTab = 'overview'"
+        >Overview</button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'requests' }"
+          @click="activeTab = 'requests'"
+        >Leave requests</button>
         <button
           v-if="isEmployee"
+          class="tab-btn"
+          :class="{ active: activeTab === 'balances' }"
+          @click="activeTab = 'balances'"
+        >My balances</button>
+      </div>
+      <div class="action-buttons">
+        <button v-if="isAdminOrHR" class="btn btn-secondary" @click="openPolicies">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Manage policies
+        </button>
+        <button
+          v-if="isEmployee"
+          class="btn btn-primary"
           @click="submitError = ''; showRequestModal = true"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
         >
-          <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Request Leave
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Apply leave
         </button>
       </div>
     </div>
 
-    <!-- Error Alert -->
-    <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-md p-4">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-          </svg>
-        </div>
-        <div class="ml-3">
-          <p class="text-sm text-red-800">{{ error }}</p>
-        </div>
+    <!-- Error alert -->
+    <div v-if="error" class="alert alert-error">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="kpi-strip">
+      <div class="kpi-card">
+        <div class="kpi-label">Total balance</div>
+        <div class="kpi-value">{{ Number(totalLeaveBalance).toFixed(1) }}<span class="kpi-suffix">days</span></div>
+        <div class="kpi-meta">across all leave types</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pending requests</div>
+        <div class="kpi-value">{{ pendingRequests.length }}<span class="kpi-suffix">awaiting</span></div>
+        <div class="kpi-meta accent-yellow">action needed</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Upcoming leaves</div>
+        <div class="kpi-value">{{ upcomingLeaves.length }}<span class="kpi-suffix">scheduled</span></div>
+        <div class="kpi-meta">in the next 30 days</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Approved this month</div>
+        <div class="kpi-value">{{ dashboard?.approved_this_month || 0 }}<span class="kpi-suffix">approved</span></div>
+        <div class="kpi-meta accent-green">on track</div>
       </div>
     </div>
 
-    <!-- Dashboard Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div class="bg-gray-800 overflow-hidden rounded-lg">
-        <div class="p-5">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div class="ml-5 w-0 flex-1">
-              <dl>
-                <dt class="text-sm font-medium text-gray-400 truncate">Total Balance</dt>
-                <dd class="text-lg font-medium text-white">{{ Number(totalLeaveBalance).toFixed(1) }} days</dd>
-              </dl>
-            </div>
+    <!-- Overview Tab -->
+    <div v-if="activeTab === 'overview'" class="tab-content">
+      <!-- Balance cards (only for employees) -->
+      <div v-if="isEmployee && myBalanceSummary.length" class="balance-grid">
+        <div
+          v-for="(bal, i) in myBalanceSummary"
+          :key="bal.leave_type_id"
+          class="balance-card"
+        >
+          <div class="balance-head">
+            <span class="balance-eyebrow">{{ bal.leave_type }}</span>
+            <span class="balance-frac">{{ bal.used }}/{{ bal.balance }}</span>
+          </div>
+          <div class="balance-value">
+            {{ bal.available }}<span class="balance-suffix"> days</span>
+          </div>
+          <div class="progress-track">
+            <div
+              class="progress-fill"
+              :style="{ width: progressPercent(bal.used, bal.balance) + '%', background: colorForIndex(i) }"
+            ></div>
           </div>
         </div>
       </div>
 
-      <div class="bg-gray-800 overflow-hidden rounded-lg">
-        <div class="p-5">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div class="ml-5 w-0 flex-1">
-              <dl>
-                <dt class="text-sm font-medium text-gray-400 truncate">Pending Requests</dt>
-                <dd class="text-lg font-medium text-white">{{ pendingRequests.length }}</dd>
-              </dl>
-            </div>
-          </div>
+      <!-- Recent requests panel -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Recent leave requests</div>
+          <div class="panel-meta">{{ leaveRequests.length }} total</div>
         </div>
-      </div>
-
-      <div class="bg-gray-800 overflow-hidden rounded-lg">
-        <div class="p-5">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div class="ml-5 w-0 flex-1">
-              <dl>
-                <dt class="text-sm font-medium text-gray-400 truncate">Upcoming Leaves</dt>
-                <dd class="text-lg font-medium text-white">{{ upcomingLeaves.length }}</dd>
-              </dl>
-            </div>
-          </div>
+        <div v-if="loading" class="panel-empty">
+          <div class="spinner"></div>
         </div>
-      </div>
-
-      <div class="bg-gray-800 overflow-hidden rounded-lg">
-        <div class="p-5">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div class="ml-5 w-0 flex-1">
-              <dl>
-                <dt class="text-sm font-medium text-gray-400 truncate">Approved This Month</dt>
-                <dd class="text-lg font-medium text-white">{{ dashboard?.approved_this_month || 0 }}</dd>
-              </dl>
-            </div>
-          </div>
+        <div v-else-if="leaveRequests.length === 0" class="panel-empty">
+          No leave requests found.
         </div>
+        <ul v-else class="request-list">
+          <li
+            v-for="request in leaveRequests.slice(0, 6)"
+            :key="request.id"
+            class="request-row"
+          >
+            <div class="request-left">
+              <div class="avatar" :data-name="initials(request.employee?.first_name, request.employee?.last_name)">
+                {{ initials(request.employee?.first_name, request.employee?.last_name) }}
+              </div>
+              <div class="request-meta">
+                <div class="request-name">
+                  {{ request.employee?.first_name }} {{ request.employee?.last_name }}
+                </div>
+                <div class="request-sub">
+                  {{ getLeaveTypeName(request.leave_type_id) }}
+                  <span class="dot">•</span>
+                  {{ formatDate(request.start_date) }} &mdash; {{ formatDate(request.end_date) }}
+                </div>
+              </div>
+            </div>
+            <div class="request-right">
+              <span :class="['status-pill', getStatusColor(request.status)]">{{ request.status }}</span>
+              <button
+                v-if="isAdminOrHR && request.status === 'pending'"
+                class="btn-link"
+                @click="openApprovalModal(request)"
+              >Review</button>
+            </div>
+          </li>
+        </ul>
       </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="bg-gray-800 rounded-lg">
-      <div class="border-b border-gray-700">
-        <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-          <button
-            @click="activeTab = 'overview'"
-            :class="[
-              activeTab === 'overview'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600',
-              'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
-            ]"
-          >
-            Overview
-          </button>
-          <button
-            @click="activeTab = 'requests'"
-            :class="[
-              activeTab === 'requests'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600',
-              'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
-            ]"
-          >
-            Leave Requests
-          </button>
-          <button
-            v-if="isEmployee"
-            @click="activeTab = 'balances'"
-            :class="[
-              activeTab === 'balances'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600',
-              'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
-            ]"
-          >
-            My Balances
-          </button>
-        </nav>
-      </div>
-
-      <div class="p-6">
-        <!-- Overview Tab -->
-        <div v-if="activeTab === 'overview'" class="space-y-6">
-          <!-- Recent Requests -->
-          <div>
-            <h3 class="text-lg font-medium text-white mb-4">Recent Leave Requests</h3>
-            <div v-if="loading" class="text-center py-4">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            </div>
-            <div v-else-if="leaveRequests.length === 0" class="text-center py-8 text-gray-400">
-              No leave requests found.
-            </div>
-            <div v-else class="space-y-4">
-              <div
-                v-for="request in leaveRequests.slice(0, 5)"
-                :key="request.id"
-                class="border rounded-lg p-4 hover:bg-gray-700/50"
-              >
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-3">
-                    <div v-if="request.employee" class="flex-shrink-0">
-                      <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                        <span class="text-sm font-medium text-gray-300">
-                          {{ request.employee.first_name?.[0] }}{{ request.employee.last_name?.[0] }}
-                        </span>
-                      </div>
+    <!-- Requests Tab -->
+    <div v-if="activeTab === 'requests'" class="tab-content">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">All leave requests</div>
+          <div class="panel-meta">{{ leaveRequests.length }} entries</div>
+        </div>
+        <div v-if="loading" class="panel-empty">
+          <div class="spinner"></div>
+        </div>
+        <div v-else-if="leaveRequests.length === 0" class="panel-empty">
+          No leave requests found.
+        </div>
+        <div v-else class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Type</th>
+                <th>Dates</th>
+                <th class="num">Days</th>
+                <th>Status</th>
+                <th class="actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="request in leaveRequests" :key="request.id">
+                <td>
+                  <div class="cell-employee">
+                    <div class="avatar avatar-sm">
+                      {{ initials(request.employee?.first_name, request.employee?.last_name) }}
                     </div>
                     <div>
-                      <p class="text-sm font-medium text-white">
-                        {{ request.employee?.first_name }} {{ request.employee?.last_name }}
-                      </p>
-                      <p class="text-sm text-gray-400">
-                        {{ getLeaveTypeName(request.leave_type_id) }} • {{ formatDate(request.start_date) }} - {{ formatDate(request.end_date) }}
-                      </p>
+                      <div class="cell-name">{{ request.employee?.first_name }} {{ request.employee?.last_name }}</div>
+                      <div class="cell-sub">{{ request.employee?.email }}</div>
                     </div>
                   </div>
-                  <div class="flex items-center space-x-3">
-                    <span
-                      :class="['inline-flex px-2 py-1 text-xs font-semibold rounded-full', getStatusColor(request.status)]"
-                    >
-                      {{ request.status }}
-                    </span>
-                    <button
-                      v-if="isAdminOrHR && request.status === 'pending'"
-                      @click="openApprovalModal(request)"
-                      class="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                    >
-                      Review
-                    </button>
-                  </div>
-                </div>
+                </td>
+                <td>
+                  <div class="cell-name">{{ getLeaveTypeName(request.leave_type_id) }}</div>
+                  <div class="cell-sub">{{ request.leave_period.replace('_', ' ') }}</div>
+                </td>
+                <td class="cell-mono">
+                  {{ formatDate(request.start_date) }} &mdash; {{ formatDate(request.end_date) }}
+                </td>
+                <td class="num cell-mono">{{ request.days_requested }}</td>
+                <td>
+                  <span :class="['status-pill', getStatusColor(request.status)]">{{ request.status }}</span>
+                  <p v-if="request.status === 'approved' && request.approval_notes" class="cell-note">
+                    Note: {{ request.approval_notes }}
+                  </p>
+                  <p v-if="request.status === 'rejected' && request.rejection_reason" class="cell-note cell-note-red">
+                    Reason: {{ request.rejection_reason }}
+                  </p>
+                  <p v-if="request.status === 'cancelled' && request.cancellation_reason" class="cell-note">
+                    Reason: {{ request.cancellation_reason }}
+                  </p>
+                </td>
+                <td class="actions-col">
+                  <button
+                    v-if="isAdminOrHR && request.status === 'pending'"
+                    class="btn-link"
+                    @click="openApprovalModal(request)"
+                  >Review</button>
+                  <button
+                    v-if="request.status === 'pending' && request.employee_id === authStore.user?.employee_id"
+                    class="btn-link btn-link-red"
+                    @click="cancelLeaveRequest(request.id, 'Cancelled by employee')"
+                  >Cancel</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Balances Tab -->
+    <div v-if="activeTab === 'balances'" class="tab-content">
+      <div v-if="loading" class="panel">
+        <div class="panel-empty"><div class="spinner"></div></div>
+      </div>
+      <div v-else-if="myBalanceSummary.length === 0" class="panel">
+        <div class="panel-empty">No leave balances found.</div>
+      </div>
+      <div v-else class="balance-grid balance-grid-detail">
+        <div
+          v-for="(balance, i) in myBalanceSummary"
+          :key="balance.leave_type_id"
+          class="balance-card balance-card-detail"
+        >
+          <div class="balance-head">
+            <div>
+              <div class="balance-name">{{ balance.leave_type }}</div>
+              <div class="balance-code">{{ balance.code }}</div>
+            </div>
+            <div class="balance-available">
+              <div class="balance-value-lg" :class="{ 'low-balance': Number(balance.available) <= 2 }">
+                {{ balance.available }}
               </div>
+              <div class="balance-eyebrow">Available</div>
             </div>
           </div>
-        </div>
-
-        <!-- Requests Tab -->
-        <div v-if="activeTab === 'requests'" class="space-y-6">
-          <div v-if="loading" class="text-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-          <div v-else-if="leaveRequests.length === 0" class="text-center py-8 text-gray-400">
-            No leave requests found.
-          </div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-700">
-              <thead class="bg-gray-700/50">
-                <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Employee
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Dates
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Days
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="bg-gray-800 divide-y divide-gray-700">
-                <tr v-for="request in leaveRequests" :key="request.id">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                      <div class="flex-shrink-0 h-10 w-10">
-                        <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <span class="text-sm font-medium text-gray-300">
-                            {{ request.employee?.first_name?.[0] }}{{ request.employee?.last_name?.[0] }}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="ml-4">
-                        <div class="text-sm font-medium text-white">
-                          {{ request.employee?.first_name }} {{ request.employee?.last_name }}
-                        </div>
-                        <div class="text-sm text-gray-400">
-                          {{ request.employee?.email }}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-white">{{ getLeaveTypeName(request.leave_type_id) }}</div>
-                    <div class="text-sm text-gray-400">{{ request.leave_period.replace('_', ' ') }}</div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                    {{ formatDate(request.start_date) }} - {{ formatDate(request.end_date) }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                    {{ request.days_requested }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span
-                      :class="['inline-flex px-2 py-1 text-xs font-semibold rounded-full', getStatusColor(request.status)]"
-                    >
-                      {{ request.status }}
-                    </span>
-                    <p v-if="request.status === 'approved' && request.approval_notes" class="mt-1 text-xs text-gray-400">
-                      Note: {{ request.approval_notes }}
-                    </p>
-                    <p v-if="request.status === 'rejected' && request.rejection_reason" class="mt-1 text-xs text-red-500">
-                      Reason: {{ request.rejection_reason }}
-                    </p>
-                    <p v-if="request.status === 'cancelled' && request.cancellation_reason" class="mt-1 text-xs text-gray-400">
-                      Reason: {{ request.cancellation_reason }}
-                    </p>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      v-if="isAdminOrHR && request.status === 'pending'"
-                      @click="openApprovalModal(request)"
-                      class="text-blue-600 hover:text-blue-900 mr-4"
-                    >
-                      Review
-                    </button>
-                    <button
-                      v-if="request.status === 'pending' && request.employee_id === authStore.user?.employee_id"
-                      @click="cancelLeaveRequest(request.id, 'Cancelled by employee')"
-                      class="text-red-600 hover:text-red-900"
-                    >
-                      Cancel
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Balances Tab -->
-        <div v-if="activeTab === 'balances'" class="space-y-6">
-          <div v-if="loading" class="text-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-          <div v-else-if="myBalanceSummary.length === 0" class="text-center py-8 text-gray-400">
-            No leave balances found.
-          </div>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="progress-track">
             <div
-              v-for="balance in myBalanceSummary"
-              :key="balance.leave_type_id"
-              class="bg-gray-800 border border-gray-700 rounded-lg p-6"
-            >
-              <div class="flex items-center justify-between">
-                <div>
-                  <h3 class="text-lg font-medium text-white">{{ balance.leave_type }}</h3>
-                  <p class="text-xs text-gray-500 uppercase tracking-wider">{{ balance.code }}</p>
-                </div>
-                <div class="text-right">
-                  <p
-                    class="text-2xl font-bold"
-                    :class="Number(balance.available) <= 2 ? 'text-yellow-400' : 'text-blue-500'"
-                  >{{ balance.available }}</p>
-                  <p class="text-xs text-gray-400">Available</p>
-                </div>
-              </div>
-              <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p class="text-xs text-gray-400 uppercase tracking-wider">Total</p>
-                  <p class="font-medium text-white">{{ balance.balance }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400 uppercase tracking-wider">Used</p>
-                  <p class="font-medium text-white">{{ balance.used }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400 uppercase tracking-wider">Pending</p>
-                  <p class="font-medium text-white">{{ balance.pending }}</p>
-                </div>
-              </div>
+              class="progress-fill"
+              :style="{ width: progressPercent(balance.used, balance.balance) + '%', background: colorForIndex(i) }"
+            ></div>
+          </div>
+          <div class="balance-stats">
+            <div>
+              <div class="stat-label">Total</div>
+              <div class="stat-value">{{ balance.balance }}</div>
+            </div>
+            <div>
+              <div class="stat-label">Used</div>
+              <div class="stat-value">{{ balance.used }}</div>
+            </div>
+            <div>
+              <div class="stat-label">Pending</div>
+              <div class="stat-value">{{ balance.pending }}</div>
             </div>
           </div>
         </div>
@@ -569,204 +500,995 @@ onMounted(() => {
     </div>
 
     <!-- Leave Request Modal -->
-    <div
-      v-if="showRequestModal"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="showRequestModal = false"
-    >
-      <div class="relative top-20 mx-auto p-5 border w-96 rounded-md bg-gray-800">
-        <div class="mt-3">
-          <h3 class="text-lg font-medium text-white mb-4">Request Leave</h3>
-          <div v-if="submitError" class="mb-4 rounded-md bg-red-900/30 p-3 text-sm text-red-400">{{ submitError }}</div>
-          <form @submit.prevent="submitLeaveRequest" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-300">Leave Type</label>
-              <select
-                v-model="requestForm.leave_type_id"
-                required
-                class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 rounded-md focus:border-blue-500 focus:outline-none"
-              >
+    <Teleport to="body">
+      <div
+        v-if="showRequestModal"
+        class="modal-backdrop"
+        @click.self="showRequestModal = false"
+      >
+        <div class="modal-card">
+          <div class="modal-head">
+            <h3 class="modal-title">Apply for leave</h3>
+            <button class="modal-close" @click="showRequestModal = false">×</button>
+          </div>
+          <div v-if="submitError" class="alert alert-error mb-12">{{ submitError }}</div>
+          <form class="modal-body" @submit.prevent="submitLeaveRequest">
+            <div class="form-row">
+              <label class="form-label">Leave type</label>
+              <select v-model="requestForm.leave_type_id" required class="form-input">
                 <option :value="null">Select leave type</option>
                 <option
                   v-for="bal in myBalanceSummary"
                   :key="bal.leave_type_id"
                   :value="bal.leave_type_id"
                   :disabled="Number(bal.available) === 0"
-                  :class="Number(bal.available) <= 2 ? 'text-yellow-400' : ''"
                 >
                   {{ bal.leave_type }} ({{ bal.code }}) — {{ bal.available }} available
                 </option>
               </select>
               <p
                 v-if="selectedBalance"
-                class="mt-1 text-xs"
-                :class="Number(selectedBalance.available) <= 2 ? 'text-yellow-400' : 'text-gray-400'"
+                class="form-hint"
+                :class="{ warn: Number(selectedBalance.available) <= 2 }"
               >
                 {{ selectedBalance.available }} available · {{ selectedBalance.used }} used / {{ selectedBalance.balance }} total
               </p>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-300">Start Date</label>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label class="form-label">Start date</label>
                 <input
                   v-model="requestForm.start_date"
                   type="date"
                   required
                   :min="new Date().toISOString().split('T')[0]"
-                  class="mt-1 block w-full border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  class="form-input"
                 />
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-300">End Date</label>
+              <div class="form-row">
+                <label class="form-label">End date</label>
                 <input
                   v-model="requestForm.end_date"
                   type="date"
                   required
                   :min="requestForm.start_date"
-                  class="mt-1 block w-full border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  class="form-input"
                 />
               </div>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-300">Leave Period</label>
-              <select
-                v-model="requestForm.leave_period"
-                class="mt-1 block w-full border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              >
+            <div class="form-row">
+              <label class="form-label">Leave period</label>
+              <select v-model="requestForm.leave_period" class="form-input">
                 <option value="full_day">Full Day</option>
                 <option value="half_day_morning">Half Day (Morning)</option>
                 <option value="half_day_afternoon">Half Day (Afternoon)</option>
               </select>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-300">Reason</label>
+            <div class="form-row">
+              <label class="form-label">Reason</label>
               <textarea
                 v-model="requestForm.reason"
                 required
                 rows="3"
-                class="mt-1 block w-full border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                class="form-input"
                 placeholder="Please provide a reason for your leave request"
               ></textarea>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-300">Contact Details</label>
+            <div class="form-row">
+              <label class="form-label">Contact details</label>
               <input
                 v-model="requestForm.contact_details"
                 type="text"
-                class="mt-1 block w-full border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                class="form-input"
                 placeholder="Phone number or address during leave"
               />
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-300">Document (optional)</label>
+            <div class="form-row">
+              <label class="form-label">Document (optional)</label>
               <input
                 type="file"
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                class="mt-1 block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                class="form-input form-file"
                 @change="(e: Event) => requestForm.document = (e.target as HTMLInputElement).files?.[0] ?? null"
               />
             </div>
 
-            <div class="flex items-center">
+            <label class="form-check">
               <input
                 v-model="requestForm.emergency_leave"
                 type="checkbox"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-600 rounded"
               />
-              <label class="ml-2 block text-sm text-white">
-                Emergency Leave
-              </label>
-            </div>
+              <span>Emergency leave</span>
+            </label>
 
-            <div v-if="balanceWarning" class="text-xs text-yellow-400">
+            <div v-if="balanceWarning" class="form-warning">
               ⚠ {{ balanceWarning }} (requesting {{ requestedDays }} days)
             </div>
 
-            <div class="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                @click="showRequestModal = false"
-                class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-md hover:bg-gray-600"
-              >
-                Cancel
-              </button>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-ghost" @click="showRequestModal = false">Cancel</button>
               <button
                 type="submit"
+                class="btn btn-primary"
                 :disabled="submitting || !!balanceWarning"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {{ submitting ? 'Submitting...' : 'Submit Request' }}
-              </button>
+              >{{ submitting ? 'Submitting...' : 'Submit request' }}</button>
             </div>
           </form>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Approval Modal -->
-    <div
-      v-if="showApprovalModal"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="showApprovalModal = false"
-    >
-      <div class="relative top-20 mx-auto p-5 border w-96 rounded-md bg-gray-800">
-        <div class="mt-3">
-          <h3 class="text-lg font-medium text-white mb-4">Review Leave Request</h3>
-          <div v-if="selectedRequest" class="mb-4 p-4 bg-gray-700/50 rounded-md">
-            <p class="text-sm text-gray-400">
+    <Teleport to="body">
+      <div
+        v-if="showApprovalModal"
+        class="modal-backdrop"
+        @click.self="showApprovalModal = false"
+      >
+        <div class="modal-card">
+          <div class="modal-head">
+            <h3 class="modal-title">Review leave request</h3>
+            <button class="modal-close" @click="showApprovalModal = false">×</button>
+          </div>
+          <div v-if="selectedRequest" class="review-summary">
+            <p>
               <strong>{{ selectedRequest.employee?.first_name }} {{ selectedRequest.employee?.last_name }}</strong>
               is requesting {{ getLeaveTypeName(selectedRequest.leave_type_id) }}
               from {{ formatDate(selectedRequest.start_date) }} to {{ formatDate(selectedRequest.end_date) }}
               ({{ selectedRequest.days_requested }} days)
             </p>
-            <p class="text-sm text-gray-400 mt-2">
-              <strong>Reason:</strong> {{ selectedRequest.reason }}
-            </p>
+            <p class="review-reason"><strong>Reason:</strong> {{ selectedRequest.reason }}</p>
           </div>
 
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-300">Approval Notes (Optional)</label>
+          <div class="modal-body">
+            <div class="form-row">
+              <label class="form-label">Approval notes (optional)</label>
               <textarea
                 v-model="approvalNotes"
                 rows="3"
-                class="mt-1 block w-full border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                class="form-input"
                 placeholder="Add any notes for approval"
               ></textarea>
             </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-300">Rejection Reason (if rejecting)</label>
+            <div class="form-row">
+              <label class="form-label">Rejection reason (if rejecting)</label>
               <textarea
                 v-model="rejectionReason"
                 rows="3"
-                class="mt-1 block w-full border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                class="form-input"
                 placeholder="Reason for rejection"
               ></textarea>
             </div>
 
-            <div class="flex justify-end space-x-3 pt-4">
-              <button
-                @click="handleApproval(false)"
-                class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700"
-              >
-                Reject
-              </button>
-              <button
-                @click="handleApproval(true)"
-                class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
-              >
-                Approve
-              </button>
+            <div class="modal-actions">
+              <button class="btn btn-danger" @click="handleApproval(false)">Reject</button>
+              <button class="btn btn-success" @click="handleApproval(true)">Approve</button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.leave-page {
+  --bg: #0D0F17;
+  --surface: #161A23;
+  --surface-2: #1C2030;
+  --border: #232936;
+  --text: #EEF0F4;
+  --text-muted: #7A8299;
+  --accent: #6B5BFF;
+  --green: #4DD39A;
+  --red: #F38288;
+  --yellow: #F5A623;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.page-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.page-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 40px;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--text);
+  margin: 2px 0 0;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}
+
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tab-strip {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.tab-btn {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn.active {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  font-family: inherit;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #5B4DEB;
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #242a3b;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.btn-danger {
+  background: rgba(243, 130, 136, 0.15);
+  border-color: rgba(243, 130, 136, 0.4);
+  color: var(--red);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(243, 130, 136, 0.25);
+}
+
+.btn-success {
+  background: rgba(77, 211, 154, 0.15);
+  border-color: rgba(77, 211, 154, 0.4);
+  color: var(--green);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: rgba(77, 211, 154, 0.25);
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.alert-error {
+  background: rgba(243, 130, 136, 0.1);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+  color: var(--red);
+}
+
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kpi-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kpi-value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.kpi-suffix {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+.kpi-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.accent-yellow { color: var(--yellow); }
+.accent-green { color: var(--green); }
+
+.tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.balance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.balance-grid-detail {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.balance-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.balance-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.balance-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.balance-frac {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.balance-value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.balance-suffix {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.balance-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.balance-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.balance-available {
+  text-align: right;
+}
+
+.balance-value-lg {
+  font-family: 'Instrument Serif', serif;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.balance-value-lg.low-balance {
+  color: var(--yellow);
+}
+
+.balance-card-detail .balance-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.progress-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.panel-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.panel-empty {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.request-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+
+.request-row:last-child {
+  border-bottom: none;
+}
+
+.request-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(107, 91, 255, 0.3), rgba(77, 211, 154, 0.3));
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatar-sm {
+  width: 28px;
+  height: 28px;
+  font-size: 10.5px;
+}
+
+.request-meta {
+  min-width: 0;
+}
+
+.request-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.request-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.dot {
+  margin: 0 4px;
+  color: var(--border);
+}
+
+.request-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+
+.status-pending {
+  background: rgba(245, 166, 35, 0.15);
+  color: var(--yellow);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+}
+
+.status-approved {
+  background: rgba(77, 211, 154, 0.15);
+  color: var(--green);
+  border: 1px solid rgba(77, 211, 154, 0.3);
+}
+
+.status-rejected {
+  background: rgba(243, 130, 136, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(243, 130, 136, 0.3);
+}
+
+.status-cancelled {
+  background: rgba(122, 130, 153, 0.15);
+  color: var(--text-muted);
+  border: 1px solid rgba(122, 130, 153, 0.3);
+}
+
+.status-taken {
+  background: rgba(107, 91, 255, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(107, 91, 255, 0.3);
+}
+
+.status-partial {
+  background: rgba(178, 141, 255, 0.15);
+  color: #B28DFF;
+  border: 1px solid rgba(178, 141, 255, 0.3);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-family: inherit;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+.btn-link-red {
+  color: var(--red);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead th {
+  background: rgba(255, 255, 255, 0.02);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: left;
+  padding: 10px 16px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table thead th.num { text-align: right; }
+.data-table thead th.actions-col { text-align: right; }
+
+.data-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+  color: var(--text);
+  vertical-align: top;
+}
+
+.data-table tbody td.num,
+.data-table tbody td.actions-col {
+  text-align: right;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.cell-employee {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cell-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.cell-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  text-transform: capitalize;
+}
+
+.cell-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.cell-note {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}
+
+.cell-note-red {
+  color: var(--red);
+}
+
+/* Modals */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 16, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.modal-close {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.mb-12 { margin: 12px 20px 0; }
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.form-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.form-input:focus {
+  border-color: var(--accent);
+}
+
+.form-input::placeholder {
+  color: #545b6e;
+}
+
+.form-file {
+  padding: 7px 12px;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}
+
+.form-hint.warn {
+  color: var(--yellow);
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.form-check input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+}
+
+.form-warning {
+  font-size: 11.5px;
+  color: var(--yellow);
+  background: rgba(245, 166, 35, 0.08);
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.review-summary {
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.review-summary p {
+  margin: 0;
+}
+
+.review-summary strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.review-reason {
+  margin-top: 8px !important;
+}
+
+@media (max-width: 1024px) {
+  .kpi-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-strip {
+    grid-template-columns: 1fr;
+  }
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+</style>

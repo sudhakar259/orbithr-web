@@ -14,12 +14,19 @@ function handleCancel() {
 </script>
 
 <template>
-  <div class="space-y-6 p-6">
-    <div>
-      <h1 class="text-3xl font-bold text-slate-900">Add New Employee</h1>
-      <p class="mt-1 text-slate-600">Fill in all required information to create a new employee profile</p>
+  <div class="en-page">
+    <div class="en-header">
+      <h1 class="en-title">Add New Employee</h1>
+      <p class="en-subtitle">Fill in all required information to create a new employee profile</p>
     </div>
 
     <EmployeeForm @submit="handleSubmit" @cancel="handleCancel" />
   </div>
 </template>
+
+<style scoped>
+.en-page { display: flex; flex-direction: column; gap: 20px; padding: 24px; }
+.en-header { display: flex; flex-direction: column; gap: 4px; }
+.en-title { font-size: 22px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.en-subtitle { font-size: 13px; color: #7A8299; margin: 0; }
+</style>

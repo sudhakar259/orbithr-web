@@ -35,26 +35,62 @@ const showTabs = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Tab nav -->
-    <div v-if="showTabs" class="border-b border-gray-700">
-      <nav class="-mb-px flex space-x-8">
-        <RouterLink
-          v-for="tab in tabs"
-          :key="tab.label"
-          :to="tab.to"
-          :class="[
-            tab.active
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500',
-            'whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors',
-          ]"
-        >
-          {{ tab.label }}
-        </RouterLink>
-      </nav>
-    </div>
+  <div class="exp-layout">
+    <nav v-if="showTabs" class="exp-subnav">
+      <RouterLink
+        v-for="tab in tabs"
+        :key="tab.label"
+        :to="tab.to"
+        class="exp-subnav__tab"
+        :class="{ 'is-active': tab.active }"
+      >
+        {{ tab.label }}
+      </RouterLink>
+    </nav>
 
     <RouterView />
   </div>
 </template>
+
+<style scoped>
+.exp-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.exp-subnav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.exp-subnav__tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #7A8299;
+  text-decoration: none;
+  border-radius: 8px;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.exp-subnav__tab:hover {
+  color: #EEF0F4;
+  background: rgba(107, 91, 255, 0.06);
+}
+
+.exp-subnav__tab.is-active {
+  color: #EEF0F4;
+  background: rgba(107, 91, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(107, 91, 255, 0.35);
+}
+</style>

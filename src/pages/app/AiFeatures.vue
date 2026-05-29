@@ -2,7 +2,6 @@
 defineOptions({ name: 'AiFeatures' })
 
 import { ref, onMounted } from 'vue'
-import PageHeader from '@/components/ui/PageHeader.vue'
 
 /* ── Types ─────────────────────────────────────────── */
 interface AiInsight {
@@ -125,15 +124,15 @@ function getStatusClass(status: string) {
 }
 
 function getScoreColor(score: number) {
-  if (score >= 80) return '#36D399'
-  if (score >= 60) return '#F9A825'
-  return '#FF6B6B'
+  if (score >= 80) return '#4DD39A'
+  if (score >= 60) return '#F5A623'
+  return '#F38288'
 }
 
 function getSentimentColor(score: number) {
-  if (score >= 75) return '#36D399'
-  if (score >= 60) return '#F9A825'
-  return '#FF6B6B'
+  if (score >= 75) return '#4DD39A'
+  if (score >= 60) return '#F5A623'
+  return '#F38288'
 }
 
 function getFeatureStatusLabel(status: string) {
@@ -175,32 +174,215 @@ onMounted(() => {
 
 <template>
   <div class="ai-page">
-    <PageHeader title="AI-Powered HR" subtitle="Intelligent insights powered by machine learning">
-      <template #actions>
-        <div class="ai-badge">
-          <span class="ai-pulse"></span>
-          AI Engine Active
-        </div>
-      </template>
-    </PageHeader>
+    <!-- Page header -->
+    <div class="ph">
+      <div>
+        <div class="ph-eyebrow">AI Engine · trained on your policies + data</div>
+        <h1 class="ph-title">Ask Orbit</h1>
+        <p class="ph-sub">Intelligent insights powered by machine learning. Scoped to your role and policies.</p>
+      </div>
+      <div class="ai-badge">
+        <span class="ai-pulse" />
+        AI Engine Active
+      </div>
+    </div>
 
     <!-- Loading skeleton -->
     <div v-if="loading" class="skeleton-grid">
       <div v-for="i in 6" :key="i" class="skeleton-card">
-        <div class="sk-icon"></div>
-        <div class="sk-line w60"></div>
-        <div class="sk-line w80"></div>
-        <div class="sk-line w40"></div>
+        <div class="sk-icon" />
+        <div class="sk-line w60" />
+        <div class="sk-line w80" />
+        <div class="sk-line w40" />
       </div>
     </div>
 
     <template v-else>
+      <!-- Chat assistant -->
+      <div class="chat-shell">
+        <!-- History rail -->
+        <div class="chat-rail">
+          <div class="rail-head">
+            <div class="rail-logo">
+              <span>✦</span>
+            </div>
+            <div>
+              <div class="rail-title">Ask Orbit</div>
+              <div class="rail-sub">Trained on your policies + data</div>
+            </div>
+          </div>
+          <button class="new-chat">+ New chat</button>
+          <div class="rail-body">
+            <div class="rail-section">
+              <div class="rail-eyebrow">Today</div>
+              <div class="rail-item active">
+                <span class="rail-icon">●</span>
+                <span>Attrition · what changed in March?</span>
+              </div>
+              <div class="rail-item">
+                <span class="rail-icon">●</span>
+                <span>Headcount plan vs actual</span>
+              </div>
+            </div>
+            <div class="rail-section">
+              <div class="rail-eyebrow">Yesterday</div>
+              <div class="rail-item">
+                <span class="rail-icon">●</span>
+                <span>Draft offer · Senior PM band</span>
+              </div>
+              <div class="rail-item">
+                <span class="rail-icon">●</span>
+                <span>POSH refresh · pending list</span>
+              </div>
+            </div>
+            <div class="rail-section">
+              <div class="rail-eyebrow">This week</div>
+              <div class="rail-item">
+                <span class="rail-icon">●</span>
+                <span>Comp benchmark · L4 backend</span>
+              </div>
+              <div class="rail-item">
+                <span class="rail-icon">●</span>
+                <span>Q2 review readiness</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat thread -->
+        <div class="chat-main">
+          <div class="chat-header">
+            <div>
+              <div class="chat-title">Attrition · what changed in March?</div>
+              <div class="chat-meta">Scoped to Engineering · last 6 months</div>
+            </div>
+            <div class="chat-header-actions">
+              <button class="hbtn">Scope · Engineering</button>
+              <button class="hbtn">Share</button>
+            </div>
+          </div>
+
+          <div class="chat-body">
+            <!-- User msg -->
+            <div class="msg-user">
+              <div class="bubble-user">
+                Why did engineering attrition spike in March? Show me by team and reason.
+              </div>
+            </div>
+
+            <!-- Assistant msg -->
+            <div class="msg-asst">
+              <div class="asst-avatar">✦</div>
+              <div class="asst-body">
+                <div class="asst-text">
+                  Engineering saw <b>9 voluntary exits</b> in March vs a 6-month average of <b>4.2</b> — a <span class="hot">+114%</span> jump. Three signals stand out:
+                </div>
+                <ol class="asst-list">
+                  <li><b>Platform team</b> drove 5 of 9 exits. All cited "compensation" or "scope" in exit interviews.</li>
+                  <li><b>Median tenure of leavers</b> was 19 months — earlier than the company-wide 31.</li>
+                  <li>The <b>March pulse score</b> for "growth" dropped to 3.2 (Engineering) vs 4.0 (org-wide).</li>
+                </ol>
+
+                <!-- Inline chart card -->
+                <div class="inline-card">
+                  <div class="inline-head">
+                    <div class="inline-eyebrow">Engineering exits · last 6 months</div>
+                    <span class="badge impact-high">+114% in Mar</span>
+                  </div>
+                  <div class="bars">
+                    <div v-for="(v, i) in [3, 4, 5, 4, 4, 9]" :key="i" class="bar-wrap">
+                      <div class="bar" :class="{ hot: i === 5 }" :style="{ height: (v / 9 * 100) + '%' }" />
+                      <div class="bar-lbl" :class="{ hot: i === 5 }">
+                        {{ ['Oct','Nov','Dec','Jan','Feb','Mar'][i] }} · {{ v }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="rec-card">
+                  <div class="rec-head">
+                    <span class="rec-icon">⚡</span>
+                    <span>Suggested actions</span>
+                  </div>
+                  <div v-for="(t, i) in ['Run a Platform-only skip-level pulse this week','Pull Platform L3–L5 comp band vs market refresh','Schedule retention conversations for top 5 at-risk']" :key="i" class="rec-row">
+                    <span class="rec-tick">✓</span>
+                    <span class="rec-text">{{ t }}</span>
+                    <button class="rec-btn">Do it</button>
+                  </div>
+                </div>
+
+                <!-- Sources -->
+                <div class="sources">
+                  <span v-for="s in ['Exit interviews · 9', 'Pulse · Mar wave', 'HRIS · attrition cube', 'Comp benchmarks · Mercer 2026']" :key="s" class="source-tag">
+                    {{ s }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Composer -->
+          <div class="composer-wrap">
+            <div class="composer">
+              <div class="composer-text">Ask anything · "Show top 5 at-risk Platform engineers"</div>
+              <div class="composer-foot">
+                <button class="hbtn sm">Attach</button>
+                <button class="hbtn sm">Scope: Engineering</button>
+                <div class="composer-spacer" />
+                <span class="kbd">⌘ Enter</span>
+                <button class="ask-btn">✦ Ask Orbit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right rail · prompts + skills -->
+        <div class="prompt-rail">
+          <div>
+            <div class="rail-eyebrow">Quick asks</div>
+            <div class="prompt-list">
+              <div v-for="p in [
+                { ic: '💼', t: 'Hiring · who is hiring slowest?' },
+                { ic: '💰', t: 'Comp · who is below band mid?' },
+                { ic: '📅', t: 'Leave · forecast Q3 demand' },
+                { ic: '🛡', t: 'Compliance · audit gaps' },
+              ]" :key="p.t" class="prompt-row">
+                <span class="prompt-ic">{{ p.ic }}</span>
+                <span>{{ p.t }}</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="rail-eyebrow">Skills</div>
+            <div class="skills-grid">
+              <div v-for="s in [
+                { ic: '✏️', t: 'Draft offer' },
+                { ic: '📦', t: 'JD generator' },
+                { ic: '📊', t: 'Build report' },
+                { ic: '✉️', t: 'Bulk message' },
+              ]" :key="s.t" class="skill-tile">
+                <div class="skill-ic">{{ s.ic }}</div>
+                <div class="skill-t">{{ s.t }}</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="rail-eyebrow">Privacy</div>
+            <div class="privacy-card">
+              <span class="privacy-ic">🛡</span>
+              Answers are scoped to your role. Compensation data is masked unless you have <b>Comp.read</b>.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- AI Feature Cards -->
       <div class="features-grid">
         <div
           v-for="(f, i) in aiFeatures" :key="f.id"
-          class="feature-card" :class="[f.color, { expanded: activeSection === f.id }]"
-          :style="{ '--fi': i }"
+          class="feature-card" :class="{ expanded: activeSection === f.id }"
+          :style="{ '--fi': i } as Record<string, string | number>"
           @click="f.status !== 'coming_soon' && toggleSection(f.id)"
         >
           <div class="fc-header">
@@ -224,14 +406,14 @@ onMounted(() => {
       <div class="section-card">
         <div class="sc-head">
           <div>
+            <div class="sc-eyebrow">{{ aiInsights.length }} actionable signals</div>
             <h2 class="sc-title">AI Insights</h2>
-            <p class="sc-sub">{{ aiInsights.length }} actionable insights detected</p>
           </div>
         </div>
         <div class="insights-list">
           <div v-for="insight in aiInsights" :key="insight.id" class="insight-card">
             <div class="insight-left">
-              <span class="insight-impact" :class="getImpactClass(insight.impact)">
+              <span class="badge" :class="getImpactClass(insight.impact)">
                 {{ insight.impact }}
               </span>
               <div class="insight-body">
@@ -240,13 +422,13 @@ onMounted(() => {
               </div>
             </div>
             <div class="insight-right">
-              <div class="confidence-bar-wrap">
+              <div class="confidence-wrap">
                 <div class="confidence-label">{{ insight.confidence }}% confidence</div>
                 <div class="confidence-track">
                   <div
                     class="confidence-fill"
                     :style="{ width: insight.confidence + '%', background: getScoreColor(insight.confidence) }"
-                  ></div>
+                  />
                 </div>
               </div>
               <button class="action-btn">{{ insight.action }}</button>
@@ -256,32 +438,30 @@ onMounted(() => {
       </div>
 
       <!-- Resume Screening Panel -->
-      <div class="section-card" v-if="activeSection === 'resume' || !activeSection">
+      <div v-if="activeSection === 'resume' || !activeSection" class="section-card">
         <div class="sc-head">
           <div>
-            <h2 class="sc-title">Resume Screening</h2>
-            <p class="sc-sub">AI-scored candidates for open positions</p>
+            <div class="sc-eyebrow">Resume screening</div>
+            <h2 class="sc-title">AI-scored candidates</h2>
           </div>
         </div>
         <div class="resume-section">
-          <!-- Drop zone -->
           <div
             class="drop-zone" :class="{ 'drag-active': dragOver }"
             @drop="handleDrop" @dragover="handleDragOver" @dragleave="dragOver = false"
           >
             <div class="dz-icon">📎</div>
-            <div class="dz-text">Drag & drop resumes here</div>
+            <div class="dz-text">Drag &amp; drop resumes here</div>
             <div class="dz-sub">PDF, DOC, DOCX up to 10MB each</div>
-            <button class="dz-btn">Browse Files</button>
+            <button class="dz-btn">Browse files</button>
           </div>
 
-          <!-- Candidate scoring table -->
           <div class="tbl-wrap">
             <table>
               <thead>
                 <tr>
                   <th>Candidate</th>
-                  <th>Match Score</th>
+                  <th>Match score</th>
                   <th>Skills</th>
                   <th>Experience</th>
                   <th>Status</th>
@@ -298,7 +478,7 @@ onMounted(() => {
                   <td>
                     <div class="score-cell">
                       <div class="score-bar-wrap">
-                        <div class="score-bar" :style="{ width: c.match_score + '%', background: getScoreColor(c.match_score) }"></div>
+                        <div class="score-bar" :style="{ width: c.match_score + '%', background: getScoreColor(c.match_score) }" />
                       </div>
                       <span class="score-val" :style="{ color: getScoreColor(c.match_score) }">{{ c.match_score }}%</span>
                     </div>
@@ -306,7 +486,7 @@ onMounted(() => {
                   <td>
                     <div class="score-cell">
                       <div class="score-bar-wrap sm">
-                        <div class="score-bar" :style="{ width: c.skills_match + '%', background: getScoreColor(c.skills_match) }"></div>
+                        <div class="score-bar" :style="{ width: c.skills_match + '%', background: getScoreColor(c.skills_match) }" />
                       </div>
                       <span class="score-num">{{ c.skills_match }}%</span>
                     </div>
@@ -314,13 +494,13 @@ onMounted(() => {
                   <td>
                     <div class="score-cell">
                       <div class="score-bar-wrap sm">
-                        <div class="score-bar" :style="{ width: c.experience_match + '%', background: getScoreColor(c.experience_match) }"></div>
+                        <div class="score-bar" :style="{ width: c.experience_match + '%', background: getScoreColor(c.experience_match) }" />
                       </div>
                       <span class="score-num">{{ c.experience_match }}%</span>
                     </div>
                   </td>
                   <td>
-                    <span class="status-pill" :class="getStatusClass(c.status)">
+                    <span class="badge" :class="getStatusClass(c.status)">
                       {{ c.status.replace('_', ' ') }}
                     </span>
                   </td>
@@ -333,12 +513,11 @@ onMounted(() => {
 
       <!-- Attrition Risk & Sentiment Row -->
       <div class="two-col">
-        <!-- Attrition Risk -->
         <div class="section-card">
           <div class="sc-head">
             <div>
-              <h2 class="sc-title">Attrition Risk</h2>
-              <p class="sc-sub">Employees with elevated risk scores</p>
+              <div class="sc-eyebrow">Attrition predictor</div>
+              <h2 class="sc-title">Risk register</h2>
             </div>
           </div>
           <div class="risk-list">
@@ -348,12 +527,12 @@ onMounted(() => {
                   <span class="risk-name">{{ emp.name }}</span>
                   <span class="risk-dept">{{ emp.department }}</span>
                 </div>
-                <div class="risk-score-badge" :style="{ background: getScoreColor(100 - emp.risk_score) + '1a', color: getScoreColor(100 - emp.risk_score) }">
+                <div class="risk-score-badge" :style="{ background: getScoreColor(100 - emp.risk_score) + '22', color: getScoreColor(100 - emp.risk_score) }">
                   {{ emp.risk_score }}%
                 </div>
               </div>
               <div class="risk-bar-track">
-                <div class="risk-bar-fill" :style="{ width: emp.risk_score + '%', background: getScoreColor(100 - emp.risk_score) }"></div>
+                <div class="risk-bar-fill" :style="{ width: emp.risk_score + '%', background: getScoreColor(100 - emp.risk_score) }" />
               </div>
               <div class="risk-factors">
                 <span v-for="(factor, fi) in emp.factors" :key="fi" class="risk-tag">{{ factor }}</span>
@@ -365,19 +544,17 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Sentiment -->
         <div class="section-card">
           <div class="sc-head">
             <div>
-              <h2 class="sc-title">Sentiment Analysis</h2>
-              <p class="sc-sub">Company-wide employee sentiment</p>
+              <div class="sc-eyebrow">Sentiment analysis</div>
+              <h2 class="sc-title">Pulse signals</h2>
             </div>
           </div>
           <div class="sentiment-content">
-            <!-- Gauge -->
             <div class="gauge-wrap">
               <svg viewBox="0 0 120 70" class="gauge-svg">
-                <path d="M10 65 A50 50 0 0 1 110 65" fill="none" stroke="var(--surface3)" stroke-width="10" stroke-linecap="round" />
+                <path d="M10 65 A50 50 0 0 1 110 65" fill="none" stroke="#222840" stroke-width="10" stroke-linecap="round" />
                 <path
                   d="M10 65 A50 50 0 0 1 110 65" fill="none"
                   :stroke="getSentimentColor(sentimentScore)" stroke-width="10" stroke-linecap="round"
@@ -386,15 +563,14 @@ onMounted(() => {
                 />
               </svg>
               <div class="gauge-val" :style="{ color: getSentimentColor(sentimentScore) }">{{ sentimentScore }}</div>
-              <div class="gauge-label">Overall Score</div>
+              <div class="gauge-label">Overall score</div>
             </div>
 
-            <!-- Department breakdown -->
             <div class="dept-bars">
               <div v-for="dept in departmentSentiment" :key="dept.name" class="dept-row">
                 <span class="dept-name">{{ dept.name }}</span>
                 <div class="dept-bar-track">
-                  <div class="dept-bar-fill" :style="{ width: dept.score + '%', background: getSentimentColor(dept.score) }"></div>
+                  <div class="dept-bar-fill" :style="{ width: dept.score + '%', background: getSentimentColor(dept.score) }" />
                 </div>
                 <span class="dept-score" :style="{ color: getSentimentColor(dept.score) }">{{ dept.score }}</span>
               </div>
@@ -407,13 +583,13 @@ onMounted(() => {
       <div class="section-card">
         <div class="sc-head">
           <div>
-            <h2 class="sc-title">Recent AI Activity</h2>
-            <p class="sc-sub">Latest actions performed by AI modules</p>
+            <div class="sc-eyebrow">Activity log</div>
+            <h2 class="sc-title">Recent AI activity</h2>
           </div>
         </div>
         <div class="activity-timeline">
           <div v-for="act in aiActivities" :key="act.id" class="activity-item">
-            <div class="act-dot"></div>
+            <div class="act-dot" />
             <div class="act-content">
               <div class="act-header">
                 <span class="act-action">{{ act.action }}</span>
@@ -432,251 +608,882 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.ai-page { display: flex; flex-direction: column; gap: 20px; }
+.ai-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: #EEF0F4;
+}
 
-/* AI badge */
+/* ── Page header ── */
+.ph {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.ph-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+  margin-bottom: 8px;
+}
+.ph-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  color: #EEF0F4;
+  margin: 0 0 6px;
+  line-height: 1.05;
+}
+.ph-sub {
+  font-size: 13px;
+  color: #7A8299;
+  max-width: 560px;
+  margin: 0;
+}
 .ai-badge {
-  display: flex; align-items: center; gap: 8px; padding: 7px 14px;
-  background: linear-gradient(135deg, rgba(79,126,255,.12), rgba(155,110,255,.12));
-  border: 1px solid rgba(79,126,255,.2); border-radius: 20px;
-  font-size: 12px; font-weight: 600; color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: rgba(107, 91, 255, 0.12);
+  border: 1px solid rgba(107, 91, 255, 0.3);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #B6ABFF;
+  flex-shrink: 0;
 }
 .ai-pulse {
-  width: 8px; height: 8px; border-radius: 50%; background: #36D399;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4DD39A;
   animation: pulse-ai 2s ease-in-out infinite;
 }
 @keyframes pulse-ai {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(54,211,153,.4); }
-  50% { box-shadow: 0 0 0 6px rgba(54,211,153,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(77, 211, 154, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(77, 211, 154, 0); }
 }
 
-/* Skeleton */
+/* ── Skeleton ── */
 .skeleton-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .skeleton-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
-  padding: 24px; display: flex; flex-direction: column; gap: 10px;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.sk-icon { width: 42px; height: 42px; border-radius: 10px; background: var(--surface2); animation: shimmer 1.5s infinite; }
-.sk-line { height: 12px; border-radius: 4px; background: var(--surface2); animation: shimmer 1.5s infinite; }
+.sk-icon { width: 42px; height: 42px; border-radius: 10px; background: #1C2030; animation: shimmer 1.5s infinite; }
+.sk-line { height: 12px; border-radius: 4px; background: #1C2030; animation: shimmer 1.5s infinite; }
 .sk-line.w60 { width: 60%; }
 .sk-line.w80 { width: 80%; }
 .sk-line.w40 { width: 40%; }
 @keyframes shimmer {
-  0%, 100% { opacity: .4; }
-  50% { opacity: .8; }
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }
 
-/* Feature cards grid */
-.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+/* ── Chat shell ── */
+.chat-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
+  height: 640px;
+}
+
+/* ── Left rail (history) ── */
+.chat-rail {
+  border-right: 1px solid #232936;
+  display: flex;
+  flex-direction: column;
+  background: #13161E;
+}
+.rail-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid #232936;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rail-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6B5BFF, #3E2FB8);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 13px;
+}
+.rail-title { font-size: 13px; color: #EEF0F4; font-weight: 600; }
+.rail-sub { font-size: 10.5px; color: #7A8299; }
+.new-chat {
+  margin: 10px;
+  padding: 9px 14px;
+  background: #6B5BFF;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.new-chat:hover { background: #5a4be8; }
+.rail-body {
+  padding: 4px 10px 14px;
+  overflow: auto;
+  flex: 1;
+}
+.rail-section { margin-bottom: 14px; }
+.rail-eyebrow {
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+}
+.rail-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #B6BCC9;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.rail-item:hover { background: #1C2030; }
+.rail-item.active {
+  background: rgba(107, 91, 255, 0.16);
+  color: #EEF0F4;
+}
+.rail-icon {
+  font-size: 6px;
+  color: #7A8299;
+}
+.rail-item.active .rail-icon { color: #6B5BFF; }
+
+/* ── Chat main ── */
+.chat-main {
+  display: flex;
+  flex-direction: column;
+  background: #161A23;
+}
+.chat-header {
+  padding: 14px 24px;
+  border-bottom: 1px solid #232936;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.chat-title { font-size: 14px; color: #EEF0F4; font-weight: 600; }
+.chat-meta { font-size: 11px; color: #7A8299; margin-top: 2px; }
+.chat-header-actions { display: flex; gap: 6px; margin-left: auto; }
+.hbtn {
+  padding: 6px 11px;
+  background: transparent;
+  border: 1px solid #232936;
+  border-radius: 7px;
+  color: #B6BCC9;
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.hbtn:hover { border-color: #2E3547; color: #EEF0F4; }
+.hbtn.sm { padding: 5px 9px; font-size: 11px; }
+
+.chat-body {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+}
+
+.msg-user {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+.bubble-user {
+  max-width: 70%;
+  padding: 10px 14px;
+  background: rgba(107, 91, 255, 0.18);
+  border: 1px solid rgba(107, 91, 255, 0.4);
+  border-radius: 14px 14px 4px 14px;
+  font-size: 13px;
+  color: #EEF0F4;
+}
+
+.msg-asst { display: flex; gap: 14px; }
+.asst-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #6B5BFF, #3E2FB8);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.asst-body { flex: 1; min-width: 0; }
+.asst-text {
+  font-size: 13px;
+  color: #B6BCC9;
+  line-height: 1.65;
+}
+.asst-text b { color: #EEF0F4; font-weight: 600; }
+.hot { color: #F38288; font-weight: 600; }
+.asst-list {
+  font-size: 13px;
+  color: #B6BCC9;
+  line-height: 1.7;
+  padding-left: 22px;
+  margin-top: 10px;
+}
+.asst-list b { color: #EEF0F4; }
+
+.inline-card {
+  margin-top: 14px;
+  padding: 14px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 10px;
+}
+.inline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.inline-eyebrow {
+  font-size: 10.5px;
+  color: #7A8299;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 80px;
+}
+.bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.bar {
+  width: 100%;
+  background: #6B5BFF;
+  border-radius: 3px 3px 0 0;
+  min-height: 8%;
+}
+.bar.hot { background: #F38288; }
+.bar-lbl {
+  font-size: 10px;
+  color: #7A8299;
+  font-family: 'JetBrains Mono', monospace;
+}
+.bar-lbl.hot { color: #F38288; font-weight: 600; }
+
+.rec-card {
+  margin-top: 14px;
+  padding: 14px;
+  background: rgba(107, 91, 255, 0.08);
+  border: 1px solid rgba(107, 91, 255, 0.32);
+  border-radius: 10px;
+}
+.rec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #B6ABFF;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rec-icon { color: #B6ABFF; }
+.rec-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 12.5px;
+  color: #B6BCC9;
+}
+.rec-tick { color: #B6ABFF; flex-shrink: 0; }
+.rec-text { flex: 1; }
+.rec-btn {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid #232936;
+  border-radius: 6px;
+  color: #B6BCC9;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rec-btn:hover { border-color: #6B5BFF; color: #B6ABFF; }
+
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+.source-tag {
+  padding: 4px 10px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  font-size: 10.5px;
+  color: #B6BCC9;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Composer ── */
+.composer-wrap {
+  padding: 14px 24px 18px;
+  border-top: 1px solid #232936;
+}
+.composer {
+  padding: 14px;
+  background: #1C2030;
+  border: 1px solid rgba(107, 91, 255, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 0 0 4px rgba(107, 91, 255, 0.08);
+}
+.composer-text {
+  font-size: 13px;
+  color: #7A8299;
+}
+.composer-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #232936;
+}
+.composer-spacer { flex: 1; }
+.kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  padding: 3px 7px;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 4px;
+  color: #7A8299;
+}
+.ask-btn {
+  padding: 7px 14px;
+  background: #6B5BFF;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.ask-btn:hover { background: #5a4be8; }
+
+/* ── Right rail ── */
+.prompt-rail {
+  border-left: 1px solid #232936;
+  padding: 18px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: #13161E;
+}
+.prompt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.prompt-row {
+  padding: 10px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #B6BCC9;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.prompt-row:hover { border-color: #6B5BFF; }
+.prompt-ic { font-size: 13px; }
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+.skill-tile {
+  padding: 10px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: #B6BCC9;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.skill-tile:hover { border-color: #6B5BFF; }
+.skill-ic { font-size: 14px; }
+.skill-t { margin-top: 4px; }
+
+.privacy-card {
+  margin-top: 8px;
+  padding: 10px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  font-size: 11px;
+  color: #B6BCC9;
+  line-height: 1.5;
+}
+.privacy-card b { color: #EEF0F4; }
+.privacy-ic { color: #4DD39A; margin-right: 4px; }
+
+/* ── Feature cards ── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
 .feature-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
-  padding: 22px; cursor: pointer; transition: all .2s;
-  animation: fadeUp .4s ease calc(var(--fi) * .06s) both;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  padding: 22px;
+  cursor: pointer;
+  transition: all 0.2s;
+  animation: fadeUp 0.4s ease calc(var(--fi) * 0.06s) both;
 }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-.feature-card:hover { border-color: var(--border-hi); transform: translateY(-2px); }
-.feature-card.expanded { border-color: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
-
-.fc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.feature-card:hover {
+  border-color: #2E3547;
+  transform: translateY(-2px);
+}
+.feature-card.expanded {
+  border-color: #6B5BFF;
+  box-shadow: 0 0 24px rgba(107, 91, 255, 0.18);
+}
+.fc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
 .fc-icon-wrap {
-  width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; font-size: 20px;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
 }
-.fc-icon-wrap.blue { background: linear-gradient(135deg, rgba(79,126,255,.15), rgba(155,110,255,.1)); }
-.fc-icon-wrap.red { background: linear-gradient(135deg, rgba(255,107,107,.15), rgba(249,168,37,.1)); }
-.fc-icon-wrap.green { background: linear-gradient(135deg, rgba(54,211,153,.15), rgba(79,126,255,.1)); }
-.fc-icon-wrap.yellow { background: linear-gradient(135deg, rgba(249,168,37,.15), rgba(255,107,107,.1)); }
-.fc-icon-wrap.purple { background: linear-gradient(135deg, rgba(155,110,255,.15), rgba(79,126,255,.1)); }
+.fc-icon-wrap.blue   { background: linear-gradient(135deg, rgba(107, 91, 255, 0.18), rgba(62, 47, 184, 0.10)); }
+.fc-icon-wrap.red    { background: linear-gradient(135deg, rgba(243, 130, 136, 0.18), rgba(245, 166, 35, 0.10)); }
+.fc-icon-wrap.green  { background: linear-gradient(135deg, rgba(77, 211, 154, 0.18), rgba(107, 91, 255, 0.10)); }
+.fc-icon-wrap.yellow { background: linear-gradient(135deg, rgba(245, 166, 35, 0.18), rgba(243, 130, 136, 0.10)); }
+.fc-icon-wrap.purple { background: linear-gradient(135deg, rgba(107, 91, 255, 0.20), rgba(62, 47, 184, 0.10)); }
 
 .fc-status {
-  font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
-  text-transform: uppercase; letter-spacing: .4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.fc-status.active { background: rgba(54,211,153,.12); color: #36D399; }
-.fc-status.beta { background: rgba(155,110,255,.12); color: #9B6EFF; }
-.fc-status.coming_soon { background: rgba(156,163,175,.12); color: #9CA3AF; }
+.fc-status.active { background: rgba(77, 211, 154, 0.14); color: #4DD39A; }
+.fc-status.beta { background: rgba(107, 91, 255, 0.16); color: #B6ABFF; }
+.fc-status.coming_soon { background: rgba(122, 130, 153, 0.14); color: #7A8299; }
 
-.fc-name { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-.fc-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; min-height: 36px; }
-
+.fc-name { font-size: 15px; font-weight: 600; color: #EEF0F4; margin: 0 0 6px; }
+.fc-desc {
+  font-size: 12px;
+  color: #7A8299;
+  line-height: 1.5;
+  margin: 0 0 14px;
+  min-height: 36px;
+}
 .fc-btn {
-  width: 100%; padding: 8px; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--rs); font-size: 12px; font-weight: 600; color: var(--accent);
-  cursor: pointer; transition: all .15s;
+  width: 100%;
+  padding: 8px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #B6ABFF;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
 }
-.fc-btn:hover:not(.disabled) { background: var(--accent-glow); border-color: var(--accent); }
-.fc-btn.disabled { color: var(--muted); cursor: not-allowed; }
+.fc-btn:hover:not(.disabled) {
+  background: rgba(107, 91, 255, 0.14);
+  border-color: #6B5BFF;
+}
+.fc-btn.disabled { color: #7A8299; cursor: not-allowed; }
 
-/* Section cards */
+/* ── Section card ── */
 .section-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 12px;
+  overflow: hidden;
 }
 .sc-head {
-  padding: 16px 20px 14px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 22px 14px;
+  border-bottom: 1px solid #232936;
 }
-.sc-title { font-size: 15px; font-weight: 600; color: var(--text); }
-.sc-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.sc-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+}
+.sc-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: #EEF0F4;
+  margin: 4px 0 0;
+}
 
-/* Insights */
+/* ── Insights ── */
 .insights-list { display: flex; flex-direction: column; }
 .insight-card {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-  padding: 16px 20px; border-bottom: 1px solid var(--border); transition: background .1s;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 22px;
+  border-bottom: 1px solid #232936;
+  transition: background 0.1s;
 }
 .insight-card:last-child { border-bottom: none; }
-.insight-card:hover { background: rgba(255,255,255,.01); }
-.insight-left { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
-.insight-impact {
-  font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 4px;
-  text-transform: uppercase; letter-spacing: .5px; flex-shrink: 0; margin-top: 2px;
+.insight-card:hover { background: rgba(255, 255, 255, 0.012); }
+.insight-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
-.impact-high { background: rgba(255,107,107,.12); color: #FF6B6B; }
-.impact-medium { background: rgba(249,168,37,.12); color: #F9A825; }
-.impact-low { background: rgba(54,211,153,.12); color: #36D399; }
-
-.insight-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-.insight-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
-
-.insight-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
-.confidence-bar-wrap { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
-.confidence-label { font-size: 10px; color: var(--dim); }
-.confidence-track { width: 80px; height: 4px; background: var(--surface3); border-radius: 2px; }
-.confidence-fill { height: 100%; border-radius: 2px; transition: width .5s ease; }
+.insight-body { min-width: 0; }
+.insight-title { font-size: 13px; font-weight: 600; color: #EEF0F4; margin: 0 0 4px; }
+.insight-desc { font-size: 12px; color: #7A8299; line-height: 1.5; margin: 0; }
+.insight-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.confidence-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-end;
+}
+.confidence-label { font-size: 10px; color: #7A8299; }
+.confidence-track { width: 80px; height: 4px; background: #222840; border-radius: 2px; }
+.confidence-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
 .action-btn {
-  padding: 5px 12px; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 6px; font-size: 11px; font-weight: 500; color: var(--accent);
-  cursor: pointer; transition: all .15s; white-space: nowrap;
+  padding: 5px 12px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #B6ABFF;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s;
 }
-.action-btn:hover { background: var(--accent-glow); border-color: var(--accent); }
+.action-btn:hover { border-color: #6B5BFF; }
 
-/* Resume section */
-.resume-section { padding: 18px 20px; display: flex; flex-direction: column; gap: 18px; }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.impact-high { background: rgba(243, 130, 136, 0.14); color: #F38288; }
+.impact-medium { background: rgba(245, 166, 35, 0.14); color: #F5A623; }
+.impact-low { background: rgba(77, 211, 154, 0.14); color: #4DD39A; }
+
+/* ── Resume section ── */
+.resume-section {
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
 .drop-zone {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 30px 20px; border: 2px dashed var(--border); border-radius: var(--r);
-  transition: all .2s; cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 30px 20px;
+  border: 2px dashed #232936;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 .drop-zone:hover, .drop-zone.drag-active {
-  border-color: var(--accent); background: var(--accent-glow);
+  border-color: #6B5BFF;
+  background: rgba(107, 91, 255, 0.06);
 }
 .dz-icon { font-size: 28px; }
-.dz-text { font-size: 13px; font-weight: 500; color: var(--text); }
-.dz-sub { font-size: 11px; color: var(--muted); }
+.dz-text { font-size: 13px; font-weight: 500; color: #EEF0F4; }
+.dz-sub { font-size: 11px; color: #7A8299; }
 .dz-btn {
-  margin-top: 6px; padding: 6px 16px; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--rs); font-size: 12px; color: var(--accent); cursor: pointer;
-  transition: all .15s;
+  margin-top: 6px;
+  padding: 6px 16px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #B6ABFF;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
 }
-.dz-btn:hover { border-color: var(--accent); }
+.dz-btn:hover { border-color: #6B5BFF; }
 
-/* Table */
 .tbl-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th {
-  text-align: left; padding: 9px 14px; font-size: 10px; font-weight: 600;
-  letter-spacing: .7px; text-transform: uppercase; color: var(--muted);
-  background: rgba(255,255,255,.02); border-bottom: 1px solid var(--border);
+  text-align: left;
+  padding: 9px 14px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7A8299;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid #232936;
 }
-tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr {
+  border-bottom: 1px solid #1B1F2A;
+  transition: background 0.1s;
+}
 tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: rgba(255,255,255,.02); }
-td { padding: 11px 14px; vertical-align: middle; }
+tbody tr:hover { background: rgba(255, 255, 255, 0.012); }
+td { padding: 11px 14px; vertical-align: middle; color: #EEF0F4; }
 
 .cand-info { display: flex; flex-direction: column; gap: 2px; }
-.cand-name { font-weight: 500; color: var(--text); }
-.cand-pos { font-size: 11px; color: var(--muted); }
+.cand-name { font-weight: 500; color: #EEF0F4; }
+.cand-pos { font-size: 11px; color: #7A8299; }
 
 .score-cell { display: flex; align-items: center; gap: 8px; }
-.score-bar-wrap { width: 80px; height: 6px; background: var(--surface3); border-radius: 3px; flex-shrink: 0; }
+.score-bar-wrap { width: 80px; height: 6px; background: #222840; border-radius: 3px; flex-shrink: 0; }
 .score-bar-wrap.sm { width: 50px; height: 4px; }
-.score-bar { height: 100%; border-radius: 3px; transition: width .5s ease; }
-.score-val { font-size: 14px; font-weight: 700; }
-.score-num { font-size: 12px; color: var(--dim); }
+.score-bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.score-val { font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.score-num { font-size: 12px; color: #7A8299; font-family: 'JetBrains Mono', monospace; }
 
 .status-pill {
-  font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 12px;
   text-transform: capitalize;
 }
-.status-green { background: rgba(54,211,153,.12); color: #36D399; }
-.status-yellow { background: rgba(249,168,37,.12); color: #F9A825; }
-.status-red { background: rgba(255,107,107,.12); color: #FF6B6B; }
-.status-blue { background: rgba(79,126,255,.12); color: #4F7EFF; }
+.status-green { background: rgba(77, 211, 154, 0.14); color: #4DD39A; padding: 3px 9px; border-radius: 12px; text-transform: capitalize; font-weight: 600; font-size: 10px; }
+.status-yellow { background: rgba(245, 166, 35, 0.14); color: #F5A623; padding: 3px 9px; border-radius: 12px; text-transform: capitalize; font-weight: 600; font-size: 10px; }
+.status-red { background: rgba(243, 130, 136, 0.14); color: #F38288; padding: 3px 9px; border-radius: 12px; text-transform: capitalize; font-weight: 600; font-size: 10px; }
+.status-blue { background: rgba(107, 91, 255, 0.14); color: #B6ABFF; padding: 3px 9px; border-radius: 12px; text-transform: capitalize; font-weight: 600; font-size: 10px; }
 
-/* Two column layout */
+/* ── Two col ── */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-/* Attrition risk */
-.risk-list { padding: 14px 20px; display: flex; flex-direction: column; gap: 14px; }
+/* ── Risk ── */
+.risk-list {
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 .risk-item {
-  padding: 14px; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--rs); display: flex; flex-direction: column; gap: 8px;
+  padding: 14px;
+  background: #1C2030;
+  border: 1px solid #232936;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .risk-header { display: flex; align-items: center; justify-content: space-between; }
 .risk-info { display: flex; flex-direction: column; gap: 2px; }
-.risk-name { font-size: 13px; font-weight: 600; color: var(--text); }
-.risk-dept { font-size: 11px; color: var(--muted); }
+.risk-name { font-size: 13px; font-weight: 600; color: #EEF0F4; }
+.risk-dept { font-size: 11px; color: #7A8299; }
 .risk-score-badge {
-  font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
 }
-.risk-bar-track { width: 100%; height: 4px; background: var(--surface3); border-radius: 2px; }
-.risk-bar-fill { height: 100%; border-radius: 2px; transition: width .5s ease; }
+.risk-bar-track { width: 100%; height: 4px; background: #222840; border-radius: 2px; }
+.risk-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
 .risk-factors { display: flex; flex-wrap: wrap; gap: 4px; }
 .risk-tag {
-  font-size: 10px; padding: 2px 7px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 4px; color: var(--dim);
+  font-size: 10px;
+  padding: 2px 7px;
+  background: #161A23;
+  border: 1px solid #232936;
+  border-radius: 4px;
+  color: #B6BCC9;
 }
-.risk-predicted { font-size: 10px; color: var(--muted); }
+.risk-predicted { font-size: 10px; color: #7A8299; font-family: 'JetBrains Mono', monospace; }
 
-/* Sentiment */
-.sentiment-content { padding: 20px; }
+/* ── Sentiment ── */
+.sentiment-content { padding: 22px; }
 .gauge-wrap {
-  display: flex; flex-direction: column; align-items: center; margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 22px;
 }
 .gauge-svg { width: 160px; height: 95px; }
-.gauge-fill { transition: stroke-dasharray .8s ease; }
-.gauge-val { font-size: 32px; font-weight: 700; margin-top: -10px; }
-.gauge-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.gauge-fill { transition: stroke-dasharray 0.8s ease; }
+.gauge-val {
+  font-family: 'Instrument Serif', serif;
+  font-size: 34px;
+  font-weight: 400;
+  margin-top: -10px;
+  letter-spacing: -0.02em;
+}
+.gauge-label { font-size: 11px; color: #7A8299; margin-top: 2px; letter-spacing: 0.04em; text-transform: uppercase; }
 
 .dept-bars { display: flex; flex-direction: column; gap: 10px; }
 .dept-row { display: flex; align-items: center; gap: 10px; }
-.dept-name { font-size: 12px; color: var(--dim); width: 90px; flex-shrink: 0; }
-.dept-bar-track { flex: 1; height: 6px; background: var(--surface3); border-radius: 3px; }
-.dept-bar-fill { height: 100%; border-radius: 3px; transition: width .5s ease; }
-.dept-score { font-size: 12px; font-weight: 600; width: 28px; text-align: right; }
+.dept-name { font-size: 12px; color: #B6BCC9; width: 90px; flex-shrink: 0; }
+.dept-bar-track { flex: 1; height: 6px; background: #222840; border-radius: 3px; }
+.dept-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.dept-score {
+  font-size: 12px;
+  font-weight: 600;
+  width: 28px;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+}
 
-/* Activity timeline */
-.activity-timeline { padding: 16px 20px; display: flex; flex-direction: column; }
+/* ── Activity ── */
+.activity-timeline {
+  padding: 16px 22px;
+  display: flex;
+  flex-direction: column;
+}
 .activity-item {
-  display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid #232936;
   position: relative;
 }
 .activity-item:last-child { border-bottom: none; }
 .act-dot {
-  width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
-  flex-shrink: 0; margin-top: 4px; position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6B5BFF;
+  flex-shrink: 0;
+  margin-top: 4px;
+  position: relative;
 }
 .act-dot::after {
-  content: ''; position: absolute; left: 4px; top: 14px;
-  width: 2px; height: calc(100% + 18px); background: var(--border);
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 14px;
+  width: 2px;
+  height: calc(100% + 18px);
+  background: #232936;
 }
 .activity-item:last-child .act-dot::after { display: none; }
 .act-content { flex: 1; min-width: 0; }
-.act-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
-.act-action { font-size: 13px; font-weight: 500; color: var(--text); }
-.act-time { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.act-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.act-action { font-size: 13px; font-weight: 500; color: #EEF0F4; }
+.act-time { font-size: 11px; color: #7A8299; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
 .act-meta { display: flex; align-items: center; gap: 8px; }
 .act-feature {
-  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
-  background: rgba(79,126,255,.1); color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(107, 91, 255, 0.14);
+  color: #B6ABFF;
 }
-.act-result { font-size: 11px; color: var(--dim); }
+.act-result { font-size: 11px; color: #B6BCC9; }
 
-/* Responsive */
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .chat-shell { grid-template-columns: 240px 1fr; height: auto; }
+  .prompt-rail { display: none; }
+}
 @media (max-width: 1100px) {
   .features-grid { grid-template-columns: repeat(2, 1fr); }
   .two-col { grid-template-columns: 1fr; }
 }
-@media (max-width: 640px) {
+@media (max-width: 720px) {
+  .ph { flex-direction: column; align-items: flex-start; }
+  .chat-shell { grid-template-columns: 1fr; }
+  .chat-rail { display: none; }
   .features-grid { grid-template-columns: 1fr; }
   .skeleton-grid { grid-template-columns: 1fr; }
   .insight-card { flex-direction: column; }

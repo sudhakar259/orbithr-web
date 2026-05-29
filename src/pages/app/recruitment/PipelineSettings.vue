@@ -99,94 +99,85 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-white">Pipeline Settings</h2>
-      <button
-        @click="openCreatePipeline"
-        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-        New Pipeline
-      </button>
+  <div class="ps-page">
+    <div class="ps-header">
+      <h2 class="ps-title">Pipeline Settings</h2>
+      <button class="ps-btn-primary" @click="openCreatePipeline">+ New Pipeline</button>
     </div>
 
-    <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4">
-      <p class="text-sm text-red-400">{{ error }}</p>
-    </div>
+    <div v-if="error" class="ps-error">{{ error }}</div>
 
     <!-- Create/Edit Pipeline Form -->
-    <div v-if="showPipelineForm" class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
-      <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">{{ editingPipeline ? 'Edit Pipeline' : 'New Pipeline' }}</h3>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Name *</label>
-          <input v-model="pipelineForm.name" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+    <div v-if="showPipelineForm" class="ps-form-card">
+      <h3 class="ps-form-label">{{ editingPipeline ? 'Edit Pipeline' : 'New Pipeline' }}</h3>
+      <div class="ps-form-grid">
+        <div class="ps-field">
+          <label class="ps-label">Name <span class="ps-req">*</span></label>
+          <input v-model="pipelineForm.name" type="text" class="ps-input" />
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Description</label>
-          <input v-model="pipelineForm.description" type="text" class="bg-gray-700 border border-gray-600 text-white rounded-lg text-sm px-3 py-2 w-full focus:border-blue-500 focus:outline-none" />
+        <div class="ps-field">
+          <label class="ps-label">Description</label>
+          <input v-model="pipelineForm.description" type="text" class="ps-input" />
         </div>
       </div>
-      <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-        <input v-model="pipelineForm.is_default" type="checkbox" class="rounded" />
-        Set as default pipeline
+      <label class="ps-check-row">
+        <input v-model="pipelineForm.is_default" type="checkbox" class="ps-checkbox" />
+        <span>Set as default pipeline</span>
       </label>
-      <div class="flex gap-3">
-        <button @click="savePipeline" :disabled="saving" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50">
-          {{ saving ? 'Saving...' : 'Save' }}
+      <div class="ps-form-actions">
+        <button class="ps-btn-primary" :disabled="saving" @click="savePipeline">
+          {{ saving ? 'Saving…' : 'Save' }}
         </button>
-        <button @click="showPipelineForm = false" class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors">Cancel</button>
+        <button class="ps-btn-ghost" @click="showPipelineForm = false">Cancel</button>
       </div>
     </div>
 
-    <div v-if="loading" class="space-y-4">
-      <div v-for="i in 2" :key="i" class="bg-gray-800 border border-gray-700 rounded-lg p-6 animate-pulse">
-        <div class="h-5 bg-gray-700 rounded w-1/4 mb-4"></div>
-        <div class="space-y-2">
-          <div v-for="j in 4" :key="j" class="h-8 bg-gray-700 rounded"></div>
+    <!-- Loading -->
+    <div v-if="loading" class="ps-loading">
+      <div v-for="i in 2" :key="i" class="ps-skeleton-card">
+        <div class="ps-sk ps-sk-title"></div>
+        <div class="ps-sk-rows">
+          <div v-for="j in 3" :key="j" class="ps-sk ps-sk-row"></div>
         </div>
       </div>
     </div>
 
-    <div v-else-if="pipelines.length === 0" class="bg-gray-800 border border-gray-700 rounded-lg p-12 text-center">
-      <p class="text-gray-500">No pipelines yet. Create one to get started.</p>
+    <div v-else-if="pipelines.length === 0" class="ps-empty">
+      No pipelines yet. Create one to get started.
     </div>
 
     <!-- Pipeline Cards -->
-    <div v-else class="space-y-6">
-      <div v-for="pipeline in pipelines" :key="pipeline.id" class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <h3 class="text-base font-semibold text-white">{{ pipeline.name }}</h3>
-            <span v-if="pipeline.is_default" class="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-900/50 text-blue-400">Default</span>
+    <div v-else class="ps-list">
+      <div v-for="pipeline in pipelines" :key="pipeline.id" class="ps-card">
+        <div class="ps-card-head">
+          <div class="ps-card-name-row">
+            <h3 class="ps-card-name">{{ pipeline.name }}</h3>
+            <span v-if="pipeline.is_default" class="ps-default-badge">Default</span>
           </div>
-          <div class="flex gap-2">
-            <button @click="openEditPipeline(pipeline)" class="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-700 transition-colors">Edit</button>
-            <button @click="deletePipeline(pipeline.id)" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-gray-700 transition-colors">Delete</button>
+          <div class="ps-card-actions">
+            <button class="ps-action-btn" @click="openEditPipeline(pipeline)">Edit</button>
+            <button class="ps-delete-btn" @click="deletePipeline(pipeline.id)">Delete</button>
           </div>
         </div>
 
+        <p v-if="pipeline.description" class="ps-card-desc">{{ pipeline.description }}</p>
+
         <!-- Stages -->
-        <div class="p-4 space-y-2">
-          <div
-            v-for="stage in pipeline.stages"
-            :key="stage.id"
-            class="flex items-center justify-between bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2"
-          >
-            <div class="flex items-center gap-3">
-              <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: stage.color ?? '#6B7280' }"></div>
-              <span class="text-sm text-white">{{ stage.name }}</span>
-              <span class="text-xs text-gray-500 capitalize">{{ stage.type }}</span>
+        <div class="ps-stages">
+          <div v-for="stage in pipeline.stages" :key="stage.id" class="ps-stage-row">
+            <div class="ps-stage-left">
+              <span class="ps-stage-dot" :style="{ background: stage.color ?? '#6B7280' }"></span>
+              <span class="ps-stage-name">{{ stage.name }}</span>
+              <span class="ps-stage-type">{{ stage.type }}</span>
             </div>
-            <button @click="deleteStage(pipeline.id, stage.id)" class="text-xs text-red-400 hover:text-red-300">Remove</button>
+            <button class="ps-stage-remove" @click="deleteStage(pipeline.id, stage.id)">Remove</button>
           </div>
 
-          <!-- Add Stage -->
-          <div v-if="showStageForm === pipeline.id" class="bg-gray-900/50 border border-gray-700 rounded-lg p-3 space-y-2">
-            <div class="grid grid-cols-3 gap-2">
-              <input v-model="stageForm.name" type="text" placeholder="Stage name" class="bg-gray-700 border border-gray-600 text-white rounded text-sm px-2 py-1.5 focus:border-blue-500 focus:outline-none" />
-              <select v-model="stageForm.type" class="bg-gray-700 border border-gray-600 text-white rounded text-sm px-2 py-1.5 focus:border-blue-500 focus:outline-none">
+          <!-- Add Stage Form -->
+          <div v-if="showStageForm === pipeline.id" class="ps-stage-form">
+            <div class="ps-stage-form-grid">
+              <input v-model="stageForm.name" type="text" placeholder="Stage name" class="ps-input ps-input-sm" />
+              <select v-model="stageForm.type" class="ps-input ps-input-sm">
                 <option value="applied">Applied</option>
                 <option value="screening">Screening</option>
                 <option value="interview">Interview</option>
@@ -194,20 +185,89 @@ onMounted(load)
                 <option value="hired">Hired</option>
                 <option value="rejected">Rejected</option>
               </select>
-              <div class="flex gap-2">
-                <input v-model="stageForm.color" type="color" class="w-10 h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
-                <button @click="addStage(pipeline.id)" :disabled="saving" class="flex-1 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors disabled:opacity-50 px-2">Add</button>
+              <div class="ps-color-add">
+                <input v-model="stageForm.color" type="color" class="ps-color-input" />
+                <button class="ps-btn-primary ps-btn-sm" :disabled="saving" @click="addStage(pipeline.id)">Add</button>
               </div>
             </div>
-            <button @click="showStageForm = null" class="text-xs text-gray-400 hover:text-white">Cancel</button>
+            <button class="ps-cancel-link" @click="showStageForm = null">Cancel</button>
           </div>
+
           <button
             v-else
+            class="ps-add-stage-btn"
             @click="showStageForm = pipeline.id"
-            class="w-full text-sm text-gray-400 hover:text-white border border-dashed border-gray-700 hover:border-gray-500 rounded-lg py-2 transition-colors"
           >+ Add Stage</button>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.ps-page { display: flex; flex-direction: column; gap: 16px; }
+.ps-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.ps-title { font-size: 16px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.ps-btn-primary { background: #6B5BFF; border: none; color: #fff; border-radius: 7px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.ps-btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.ps-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.ps-btn-sm { padding: 6px 14px; font-size: 12px; }
+.ps-btn-ghost { background: #232936; border: 1px solid #2D3448; color: #B6BED0; border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+.ps-btn-ghost:hover { color: #EEF0F4; }
+.ps-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+
+.ps-form-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.ps-form-label { font-size: 11px; font-weight: 600; color: #7A8299; text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
+.ps-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ps-field { display: flex; flex-direction: column; gap: 5px; }
+.ps-label { font-size: 12px; font-weight: 500; color: #B6BED0; }
+.ps-req { color: #F38288; }
+.ps-input { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 8px 11px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+.ps-input:focus { border-color: #6B5BFF; }
+.ps-input-sm { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
+.ps-check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #B6BED0; cursor: pointer; }
+.ps-checkbox { accent-color: #6B5BFF; }
+.ps-form-actions { display: flex; gap: 10px; }
+
+.ps-loading { display: flex; flex-direction: column; gap: 14px; }
+.ps-skeleton-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.ps-sk { background: #232936; border-radius: 6px; animation: ps-pulse 1.2s ease-in-out infinite; }
+.ps-sk-title { height: 14px; width: 35%; }
+.ps-sk-rows { display: flex; flex-direction: column; gap: 8px; }
+.ps-sk-row { height: 36px; }
+@keyframes ps-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.ps-empty { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 60px 20px; text-align: center; font-size: 13px; color: #7A8299; }
+
+.ps-list { display: flex; flex-direction: column; gap: 14px; }
+.ps-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.ps-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #1C2030; }
+.ps-card-name-row { display: flex; align-items: center; gap: 10px; }
+.ps-card-name { font-size: 14px; font-weight: 600; color: #EEF0F4; margin: 0; }
+.ps-default-badge { background: rgba(107,91,255,0.12); color: #8A7BFF; border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 500; }
+.ps-card-actions { display: flex; gap: 6px; }
+.ps-action-btn { font-size: 12px; color: #7A8299; background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 5px; }
+.ps-action-btn:hover { color: #EEF0F4; background: #232936; }
+.ps-delete-btn { font-size: 12px; color: #F38288; background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 5px; }
+.ps-delete-btn:hover { background: rgba(243,130,136,0.08); }
+.ps-card-desc { font-size: 12px; color: #7A8299; margin: 0; padding: 8px 16px 0; }
+
+.ps-stages { padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.ps-stage-row { display: flex; align-items: center; justify-content: space-between; background: rgba(13,15,23,0.5); border: 1px solid #1C2030; border-radius: 7px; padding: 8px 12px; }
+.ps-stage-left { display: flex; align-items: center; gap: 10px; }
+.ps-stage-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ps-stage-name { font-size: 13px; color: #EEF0F4; }
+.ps-stage-type { font-size: 11px; color: #7A8299; text-transform: capitalize; background: #232936; border-radius: 4px; padding: 1px 7px; }
+.ps-stage-remove { font-size: 11px; color: #F38288; background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+.ps-stage-remove:hover { background: rgba(243,130,136,0.08); }
+
+.ps-stage-form { background: rgba(13,15,23,0.5); border: 1px solid #232936; border-radius: 7px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.ps-stage-form-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+.ps-color-add { display: flex; align-items: center; gap: 6px; }
+.ps-color-input { width: 36px; height: 32px; border: 1px solid #232936; border-radius: 6px; background: #0D0F17; cursor: pointer; padding: 2px; }
+.ps-cancel-link { font-size: 11px; color: #7A8299; background: none; border: none; cursor: pointer; padding: 0; align-self: flex-start; }
+.ps-cancel-link:hover { color: #EEF0F4; }
+
+.ps-add-stage-btn { width: 100%; font-size: 12px; color: #7A8299; background: none; border: 1px dashed #2D3448; border-radius: 7px; padding: 8px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+.ps-add-stage-btn:hover { color: #EEF0F4; border-color: #3D4560; }
+</style>

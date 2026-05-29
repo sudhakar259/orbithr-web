@@ -108,36 +108,37 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6 max-w-3xl">
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-medium text-white">{{ isEdit ? 'Edit Goal' : 'New Goal' }}</h2>
-      <button @click="router.back()" class="text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
+  <div class="pgf-page">
+    <div class="pgf-header">
+      <h2 class="pgf-title">{{ isEdit ? 'Edit Goal' : 'New Goal' }}</h2>
+      <button class="pgf-cancel-link" @click="router.back()">Cancel</button>
     </div>
 
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+    <div v-if="loading" class="pgf-loading">
+      <div v-for="i in 5" :key="i" class="pgf-skeleton"></div>
     </div>
 
-    <form v-else @submit.prevent="handleSubmit" class="space-y-6">
-      <div v-if="error" class="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-400">{{ error }}</div>
+    <form v-else class="pgf-form" @submit.prevent="handleSubmit">
+      <div v-if="error" class="pgf-error">{{ error }}</div>
 
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
-        <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Goal Details</h3>
+      <!-- Goal Details -->
+      <div class="pgf-section">
+        <h3 class="pgf-section-title">Goal Details</h3>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-300">Title <span class="text-red-500">*</span></label>
-          <input v-model="form.title" required type="text" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2" placeholder="Goal title" />
+        <div class="pgf-field">
+          <label class="pgf-label">Title <span class="pgf-required">*</span></label>
+          <input v-model="form.title" required type="text" class="pgf-input" placeholder="Goal title" />
         </div>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-300">Description</label>
-          <textarea v-model="form.description" rows="3" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2" placeholder="Describe the goal..." />
+        <div class="pgf-field">
+          <label class="pgf-label">Description</label>
+          <textarea v-model="form.description" rows="3" class="pgf-input pgf-textarea" placeholder="Describe the goal…" />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-300">Type</label>
-            <select v-model="form.type" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2">
+        <div class="pgf-grid-3">
+          <div class="pgf-field">
+            <label class="pgf-label">Type</label>
+            <select v-model="form.type" class="pgf-input">
               <option value="okr">OKR</option>
               <option value="kpi">KPI</option>
               <option value="individual">Individual</option>
@@ -145,17 +146,17 @@ onMounted(() => {
               <option value="company">Company</option>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300">Level</label>
-            <select v-model="form.level" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2">
+          <div class="pgf-field">
+            <label class="pgf-label">Level</label>
+            <select v-model="form.level" class="pgf-input">
               <option value="individual">Individual</option>
               <option value="team">Team</option>
               <option value="company">Company</option>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300">Framework</label>
-            <select v-model="form.framework" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2">
+          <div class="pgf-field">
+            <label class="pgf-label">Framework</label>
+            <select v-model="form.framework" class="pgf-input">
               <option value="smart">SMART</option>
               <option value="okr">OKR</option>
               <option value="kpi">KPI</option>
@@ -163,62 +164,100 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-300">Start Date <span class="text-red-500">*</span></label>
-            <input v-model="form.start_date" required type="date" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2" />
+        <div class="pgf-grid-3">
+          <div class="pgf-field">
+            <label class="pgf-label">Start Date <span class="pgf-required">*</span></label>
+            <input v-model="form.start_date" required type="date" class="pgf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300">End Date <span class="text-red-500">*</span></label>
-            <input v-model="form.end_date" required type="date" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2" />
+          <div class="pgf-field">
+            <label class="pgf-label">End Date <span class="pgf-required">*</span></label>
+            <input v-model="form.end_date" required type="date" class="pgf-input" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300">Weightage (%)</label>
-            <input v-model.number="form.weightage" type="number" min="1" max="100" class="mt-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none block w-full px-3 py-2" />
+          <div class="pgf-field">
+            <label class="pgf-label">Weightage (%)</label>
+            <input v-model.number="form.weightage" type="number" min="1" max="100" class="pgf-input" />
           </div>
         </div>
       </div>
 
       <!-- Key Results -->
-      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Key Results</h3>
-          <button type="button" @click="addKeyResult" class="text-sm text-blue-400 hover:text-blue-300 font-medium">+ Add Key Result</button>
+      <div class="pgf-section">
+        <div class="pgf-section-head">
+          <h3 class="pgf-section-title">Key Results</h3>
+          <button type="button" class="pgf-add-link" @click="addKeyResult">+ Add Key Result</button>
         </div>
 
-        <div v-if="keyResults.length === 0" class="text-sm text-gray-500 text-center py-4">No key results yet. Click "+ Add Key Result" to add one.</div>
+        <div v-if="keyResults.length === 0" class="pgf-empty">No key results yet. Click "+ Add Key Result" to add one.</div>
 
-        <div v-for="(kr, index) in keyResults" :key="index" class="bg-gray-900/50 border border-gray-700 rounded-lg p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-medium text-gray-400 uppercase">Key Result {{ index + 1 }}</span>
-            <button type="button" @click="removeKeyResult(index)" class="text-red-400 hover:text-red-300 text-sm">Remove</button>
+        <div v-for="(kr, index) in keyResults" :key="index" class="pgf-kr-card">
+          <div class="pgf-kr-head">
+            <span class="pgf-kr-num">Key Result {{ index + 1 }}</span>
+            <button type="button" class="pgf-remove-btn" @click="removeKeyResult(index)">Remove</button>
           </div>
-          <div>
-            <input v-model="kr.title" type="text" placeholder="Key result title" class="block w-full bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none px-3 py-2" />
+          <div class="pgf-field">
+            <input v-model="kr.title" type="text" placeholder="Key result title" class="pgf-input" />
           </div>
-          <div class="grid grid-cols-3 gap-3">
-            <div>
-              <label class="block text-xs text-gray-400">Target Value</label>
-              <input v-model.number="kr.target_value" type="number" class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none px-3 py-2" />
+          <div class="pgf-grid-3">
+            <div class="pgf-field">
+              <label class="pgf-label-sm">Target Value</label>
+              <input v-model.number="kr.target_value" type="number" class="pgf-input" />
             </div>
-            <div>
-              <label class="block text-xs text-gray-400">Unit</label>
-              <input v-model="kr.unit" type="text" placeholder="e.g. %, $, units" class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none px-3 py-2" />
+            <div class="pgf-field">
+              <label class="pgf-label-sm">Unit</label>
+              <input v-model="kr.unit" type="text" placeholder="e.g. %, $, units" class="pgf-input" />
             </div>
-            <div>
-              <label class="block text-xs text-gray-400">Due Date</label>
-              <input v-model="kr.due_date" type="date" class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none px-3 py-2" />
+            <div class="pgf-field">
+              <label class="pgf-label-sm">Due Date</label>
+              <input v-model="kr.due_date" type="date" class="pgf-input" />
             </div>
           </div>
         </div>
       </div>
 
-      <div class="flex justify-end gap-3">
-        <button type="button" @click="router.back()" class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors">Cancel</button>
-        <button type="submit" :disabled="saving" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50">
-          {{ saving ? 'Saving...' : (isEdit ? 'Update Goal' : 'Create Goal') }}
+      <div class="pgf-footer">
+        <button type="button" class="pgf-btn-ghost" @click="router.back()">Cancel</button>
+        <button type="submit" :disabled="saving" class="pgf-btn-primary">
+          {{ saving ? 'Saving…' : (isEdit ? 'Update Goal' : 'Create Goal') }}
         </button>
       </div>
     </form>
   </div>
 </template>
+
+<style scoped>
+.pgf-page { display: flex; flex-direction: column; gap: 20px; max-width: 760px; }
+.pgf-header { display: flex; align-items: center; justify-content: space-between; }
+.pgf-title { font-size: 16px; font-weight: 700; color: #EEF0F4; margin: 0; }
+.pgf-cancel-link { font-size: 13px; color: #7A8299; background: none; border: none; cursor: pointer; }
+.pgf-cancel-link:hover { color: #EEF0F4; }
+.pgf-loading { display: flex; flex-direction: column; gap: 10px; }
+.pgf-skeleton { height: 38px; background: #232936; border-radius: 7px; animation: pgf-pulse 1.2s ease-in-out infinite; }
+@keyframes pgf-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.pgf-form { display: flex; flex-direction: column; gap: 16px; }
+.pgf-error { padding: 12px 16px; background: rgba(243,130,136,0.1); border: 1px solid rgba(243,130,136,0.25); border-radius: 8px; font-size: 13px; color: #F38288; }
+.pgf-section { background: #161A23; border: 1px solid #232936; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.pgf-section-head { display: flex; align-items: center; justify-content: space-between; }
+.pgf-section-title { font-size: 11px; font-weight: 600; color: #7A8299; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; }
+.pgf-field { display: flex; flex-direction: column; gap: 5px; }
+.pgf-label { font-size: 12px; font-weight: 500; color: #B6BED0; }
+.pgf-label-sm { font-size: 11px; color: #7A8299; }
+.pgf-required { color: #F38288; }
+.pgf-input { background: #0D0F17; border: 1px solid #232936; color: #EEF0F4; border-radius: 7px; padding: 8px 11px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+.pgf-input:focus { border-color: #6B5BFF; }
+.pgf-textarea { resize: vertical; min-height: 72px; }
+.pgf-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.pgf-add-link { font-size: 13px; color: #6B5BFF; background: none; border: none; cursor: pointer; font-weight: 500; }
+.pgf-add-link:hover { color: #8A7BFF; }
+.pgf-empty { font-size: 13px; color: #7A8299; text-align: center; padding: 8px 0; }
+.pgf-kr-card { background: rgba(13,15,23,0.6); border: 1px solid #232936; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.pgf-kr-head { display: flex; align-items: center; justify-content: space-between; }
+.pgf-kr-num { font-size: 11px; font-weight: 600; color: #7A8299; text-transform: uppercase; letter-spacing: 0.06em; }
+.pgf-remove-btn { font-size: 12px; color: #F38288; background: none; border: none; cursor: pointer; }
+.pgf-remove-btn:hover { color: #ff9ea1; }
+.pgf-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+.pgf-btn-primary { background: #6B5BFF; border: none; color: #fff; border-radius: 7px; padding: 8px 20px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.pgf-btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.pgf-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.pgf-btn-ghost { background: #232936; border: 1px solid #2D3448; color: #B6BED0; border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+.pgf-btn-ghost:hover { color: #EEF0F4; }
+</style>

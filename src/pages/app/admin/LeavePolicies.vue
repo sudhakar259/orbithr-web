@@ -1,63 +1,61 @@
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
+  <section class="lp-page">
+    <div class="lp-header">
       <div>
-        <h1 class="text-xl font-semibold text-white">Leave Policies</h1>
-        <p class="mt-1 text-sm text-gray-400">Manage leave allocation and accrual policies for your organisation.</p>
+        <h1 class="lp-title">Leave Policies</h1>
+        <p class="lp-sub">Manage leave allocation and accrual policies for your organisation.</p>
       </div>
-      <button class="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
-        @click="router.push({ name: 'leave-policies.create' })">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      <button class="lp-btn-primary" @click="router.push({ name: 'leave-policies.create' })">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         New Policy
       </button>
     </div>
 
-    <div v-if="loading" class="space-y-2">
-      <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded-lg bg-gray-800"></div>
+    <div v-if="loading" class="lp-loading">
+      <div v-for="i in 3" :key="i" class="lp-skeleton"></div>
     </div>
 
-    <div v-else-if="!policies.length" class="rounded-lg border border-dashed border-gray-600 py-16 text-center">
-      <p class="text-gray-400">No policies yet.</p>
-      <button class="mt-3 text-sm text-brand-400 hover:underline" @click="router.push({ name: 'leave-policies.create' })">Create your first policy →</button>
+    <div v-else-if="!policies.length" class="lp-empty">
+      <p>No policies yet.</p>
+      <button class="lp-empty-link" @click="router.push({ name: 'leave-policies.create' })">Create your first policy →</button>
     </div>
 
-    <div v-else class="overflow-hidden rounded-lg border border-gray-700 bg-gray-800">
-      <table class="min-w-full divide-y divide-gray-700">
-        <thead class="bg-gray-700/50">
+    <div v-else class="lp-card">
+      <table class="lp-table">
+        <thead>
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Name</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Description</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Auto Accrual</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Frequency</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">Status</th>
-            <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-400">Actions</th>
+            <th class="lp-th">Name</th>
+            <th class="lp-th">Description</th>
+            <th class="lp-th">Auto Accrual</th>
+            <th class="lp-th">Frequency</th>
+            <th class="lp-th">Status</th>
+            <th class="lp-th lp-th-right">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-700">
-          <tr v-for="p in policies" :key="p.id" class="hover:bg-gray-700/30 transition-colors">
-            <td class="px-4 py-3 font-medium text-white">{{ p.name }}</td>
-            <td class="px-4 py-3 text-gray-400">{{ p.description || '—' }}</td>
-            <td class="px-4 py-3 text-gray-400">{{ p.auto_accrual ? 'Yes' : 'No' }}</td>
-            <td class="px-4 py-3 text-gray-400 capitalize">{{ p.accrual_frequency }}</td>
-            <td class="px-4 py-3">
-              <span :class="p.is_active ? 'bg-green-900/40 text-green-400' : 'bg-gray-700 text-gray-400'"
-                class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium">
+        <tbody>
+          <tr v-for="p in policies" :key="p.id" class="lp-row">
+            <td class="lp-td lp-td-name">{{ p.name }}</td>
+            <td class="lp-td lp-td-desc">{{ p.description || '—' }}</td>
+            <td class="lp-td">
+              <span :class="['lp-badge', p.auto_accrual ? 'lp-badge-green' : 'lp-badge-muted']">
+                {{ p.auto_accrual ? 'Yes' : 'No' }}
+              </span>
+            </td>
+            <td class="lp-td lp-td-freq">{{ p.accrual_frequency }}</td>
+            <td class="lp-td">
+              <span :class="['lp-badge', p.is_active ? 'lp-badge-green' : 'lp-badge-muted']">
                 {{ p.is_active ? 'Active' : 'Inactive' }}
               </span>
             </td>
-            <td class="px-4 py-3">
-              <div class="flex justify-end gap-2">
-                <button class="rounded border border-gray-600 px-3 py-1 text-sm text-gray-300 hover:border-gray-400 hover:text-white transition-colors"
-                  @click="router.push({ name: 'leave-policies.edit', params: { id: p.id } })">Edit</button>
-                <button class="rounded border border-red-800/50 bg-red-900/20 px-3 py-1 text-sm text-red-400 hover:bg-red-900/40 transition-colors"
-                  @click="remove(p)">Delete</button>
-              </div>
+            <td class="lp-td lp-td-right">
+              <button class="lp-btn-ghost" @click="router.push({ name: 'leave-policies.edit', params: { id: p.id } })">Edit</button>
+              <button class="lp-btn-danger" @click="remove(p)">Delete</button>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -99,3 +97,55 @@ async function remove(p: LeavePolicy) {
   }
 }
 </script>
+
+<style scoped>
+.lp-page { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+.lp-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.lp-title { margin: 0; font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: #EEF0F4; letter-spacing: -0.02em; }
+.lp-sub { margin: 4px 0 0; font-size: 13px; color: #7A8299; }
+
+.lp-btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #6B5BFF; border: none; color: #fff;
+  border-radius: 7px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.lp-btn-primary:hover { opacity: 0.88; }
+
+.lp-loading { display: flex; flex-direction: column; gap: 8px; }
+.lp-skeleton { height: 52px; border-radius: 8px; background: #161A23; animation: lp-pulse 1.2s ease-in-out infinite; }
+@keyframes lp-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.lp-empty { background: #161A23; border: 1px dashed #232936; border-radius: 10px; padding: 48px 24px; text-align: center; }
+.lp-empty p { margin: 0; font-size: 14px; color: #7A8299; }
+.lp-empty-link { margin-top: 10px; display: inline-block; font-size: 13px; color: #6B5BFF; background: none; border: none; cursor: pointer; }
+.lp-empty-link:hover { text-decoration: underline; }
+
+.lp-card { background: #161A23; border: 1px solid #232936; border-radius: 10px; overflow: hidden; }
+.lp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lp-th { padding: 11px 16px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #7A8299; background: #11141C; border-bottom: 1px solid #232936; }
+.lp-th-right { text-align: right; }
+.lp-row { border-bottom: 1px solid #1C2030; transition: background 0.12s; }
+.lp-row:last-child { border-bottom: none; }
+.lp-row:hover { background: rgba(255,255,255,0.02); }
+.lp-td { padding: 13px 16px; color: #B6BED0; vertical-align: middle; }
+.lp-td-name { color: #EEF0F4; font-weight: 500; }
+.lp-td-desc { font-size: 12px; color: #7A8299; max-width: 240px; }
+.lp-td-freq { text-transform: capitalize; }
+.lp-td-right { text-align: right; display: flex; justify-content: flex-end; gap: 6px; }
+
+.lp-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.lp-badge-green { background: rgba(77,211,154,0.12); color: #4DD39A; }
+.lp-badge-muted { background: rgba(122,130,153,0.12); color: #7A8299; }
+
+.lp-btn-ghost {
+  background: transparent; border: 1px solid #232936; color: #7A8299;
+  border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; transition: background 0.12s;
+}
+.lp-btn-ghost:hover { background: #232936; color: #EEF0F4; }
+.lp-btn-danger {
+  background: rgba(243,130,136,0.08); border: 1px solid rgba(243,130,136,0.25); color: #F38288;
+  border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; transition: background 0.12s;
+}
+.lp-btn-danger:hover { background: rgba(243,130,136,0.16); }
+</style>

@@ -42,6 +42,30 @@ const routes: RouteRecordRaw[] = [
     meta: { layout: 'marketing', title: 'Sign in' },
   },
   {
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: () => import('@/pages/marketing/ForgotPassword.vue'),
+    meta: { layout: 'marketing', title: 'Forgot Password' },
+  },
+  {
+    path: '/oauth/google/callback',
+    name: 'oauth-google-callback',
+    component: () => import('@/pages/marketing/GoogleOAuthCallback.vue'),
+    meta: { layout: 'marketing', title: 'Connecting Google…' },
+  },
+  {
+    path: '/oauth/microsoft/callback',
+    name: 'oauth-microsoft-callback',
+    component: () => import('@/pages/marketing/MicrosoftOAuthCallback.vue'),
+    meta: { layout: 'marketing', title: 'Connecting Microsoft…' },
+  },
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('@/pages/marketing/ResetPassword.vue'),
+    meta: { layout: 'marketing', title: 'Reset Password' },
+  },
+  {
     path: '/accept-invite',
     name: 'accept-invite',
     component: () => import('@/pages/marketing/AcceptInvite.vue'),
@@ -93,8 +117,9 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'admin/modules',
-        name: 'modules',
-        redirect: '/super/modules',
+        name: 'admin-modules',
+        component: () => import('@/pages/app/admin/Modules.vue'),
+        meta: { title: 'Modules', roles: ['admin'] },
       },
       {
         path: 'admin/tenant-modules',
@@ -110,13 +135,15 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'admin/plans',
-        name: 'plans',
-        redirect: '/super/plans',
+        name: 'admin-plans',
+        component: () => import('@/pages/app/admin/Plans.vue'),
+        meta: { title: 'Plans', roles: ['admin'] },
       },
       {
         path: 'admin/transactions',
-        name: 'transactions',
-        redirect: '/super/transactions',
+        name: 'admin-transactions',
+        component: () => import('@/pages/app/admin/Transactions.vue'),
+        meta: { title: 'Transactions', roles: ['admin'] },
       },
       {
         path: 'admin/settings',
@@ -875,10 +902,24 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Workflow Automation', roles: ['admin', 'hr_manager'] },
       },
       {
+        // WorkflowRules.vue is the legacy/secondary implementation; its unique
+        // execution-logs feature was merged into WorkflowAutomation.vue.
+        // Redirect to the single canonical workflow management route.
+        path: 'workflow-rules',
+        name: 'workflow-rules',
+        redirect: { name: 'workflow-automation' },
+      },
+      {
         path: 'ai-features',
         name: 'ai-features',
         component: () => import('@/pages/app/AiFeatures.vue'),
         meta: { title: 'AI Features', roles: ['admin', 'hr_manager'] },
+      },
+      {
+        path: 'chat',
+        name: 'chat',
+        component: () => import('@/pages/app/Chat.vue'),
+        meta: { title: 'Chat', requiresAuth: true, roles: ['admin', 'hr_manager', 'manager', 'employee'] },
       },
     ],
   },

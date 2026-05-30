@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OrbitHR — Incomplete Features & Bug Report</title>
+<style>
+  :root {
+    --bg: #0C0E14;
+    --surface: #141720;
+    --surface2: #1C2030;
+    --surface3: #222840;
+    --accent: #4F7EFF;
+    --green: #36D399;
+    --yellow: #F9A825;
+    --red: #FF6B6B;
+    --purple: #9B6EFF;
+    --orange: #FF9A3E;
+    --text: #E8EAF0;
+    --muted: #6B7280;
+    --border: #2A3050;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 32px 24px 60px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 28px;
+  }
+
+  /* ── Summary cards ── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .card-value { font-size: 26px; font-weight: 700; }
+  .card-value.red    { color: var(--red); }
+  .card-value.orange { color: var(--orange); }
+  .card-value.yellow { color: var(--yellow); }
+  .card-value.green  { color: var(--green); }
+  .card-value.purple { color: var(--purple); }
+  .card-value.blue   { color: var(--accent); }
+
+  /* ── Section headers ── */
+  .section {
+    margin-bottom: 36px;
+  }
+
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    padding: 8px 0 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* ── Table ── */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+  }
+
+  thead th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 10px 12px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 9px 12px;
+    vertical-align: top;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 4px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    letter-spacing: .03em;
+  }
+
+  .badge-critical  { background: rgba(255,107,107,.15); color: var(--red);    border: 1px solid rgba(255,107,107,.3); }
+  .badge-high      { background: rgba(255,154,62,.15);  color: var(--orange); border: 1px solid rgba(255,154,62,.3); }
+  .badge-medium    { background: rgba(249,168,37,.15);  color: var(--yellow); border: 1px solid rgba(249,168,37,.3); }
+  .badge-low       { background: rgba(54,211,153,.15);  color: var(--green);  border: 1px solid rgba(54,211,153,.3); }
+
+  .badge-backend   { background: rgba(79,126,255,.12);  color: var(--accent); border: 1px solid rgba(79,126,255,.25); }
+  .badge-frontend  { background: rgba(155,110,255,.12); color: var(--purple); border: 1px solid rgba(155,110,255,.25); }
+  .badge-fullstack { background: rgba(255,107,107,.12); color: var(--red);    border: 1px solid rgba(255,107,107,.25); }
+  .badge-infra     { background: rgba(54,211,153,.12);  color: var(--green);  border: 1px solid rgba(54,211,153,.25); }
+
+  .id-cell {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--accent);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .file-ref {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--surface3);
+    border-radius: 3px;
+    padding: 1px 5px;
+    display: inline-block;
+    margin-top: 2px;
+    word-break: break-all;
+  }
+
+  .desc-title { font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .desc-body  { color: var(--muted); }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<h1>OrbitHR — Incomplete Features &amp; Bug Report</h1>
+<p class="subtitle">Full-stack audit · Generated 2026-05-29 · Both orbithr-api (Laravel 12) and orbithr-web (Vue 3)</p>
+
+<!-- ── Summary ── -->
+<div class="summary-grid">
+  <div class="card"><span class="card-label">Total Issues</span><span class="card-value red">47</span></div>
+  <div class="card"><span class="card-label">Critical</span><span class="card-value red">8</span></div>
+  <div class="card"><span class="card-label">High</span><span class="card-value orange">13</span></div>
+  <div class="card"><span class="card-label">Medium</span><span class="card-value yellow">16</span></div>
+  <div class="card"><span class="card-label">Low</span><span class="card-value green">10</span></div>
+  <div class="card"><span class="card-label">Backend</span><span class="card-value blue">26</span></div>
+  <div class="card"><span class="card-label">Frontend</span><span class="card-value purple">14</span></div>
+  <div class="card"><span class="card-label">Full-stack</span><span class="card-value red">7</span></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="badge badge-critical">Critical</span> Application broken / data loss risk</div>
+  <div class="legend-item"><span class="badge badge-high">High</span> Feature unusable / silent failure</div>
+  <div class="legend-item"><span class="badge badge-medium">Medium</span> Degraded UX / partial feature</div>
+  <div class="legend-item"><span class="badge badge-low">Low</span> Polish / minor gap</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 1 — Missing / Incomplete Modules
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--red)"></span>1. Missing &amp; Incomplete Modules</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Layer</th>
+          <th>Module</th>
+          <th>Issue Description</th>
+          <th>File / Location</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">M-001</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-fullstack">Full-stack</span></td>
+          <td>Chat ($19.99/mo)</td>
+          <td>
+            <div class="desc-title">Chat module completely absent from codebase</div>
+            <div class="desc-body">Documented as a paid module in CLAUDE.md and listed in the module table, but there are zero Chat controllers, models, migrations, routes, or Vue components anywhere in the repo. Tenants can potentially purchase this via Stripe but receive nothing functional.</div>
+          </td>
+          <td><span class="file-ref">routes/api.php</span><br><span class="file-ref">orbithr-web/src/</span></td>
+          <td>Complete module non-existence. Billing without delivery.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-002</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-fullstack">Full-stack</span></td>
+          <td>AI Features</td>
+          <td>
+            <div class="desc-title">Frontend calls /api/ai/chat — no backend route exists</div>
+            <div class="desc-body">AiChatbot.vue posts to <code>/ai/chat</code>; AiFeatures.vue is a routed page at /app/ai. No corresponding route, controller, or service exists in the Laravel API. Every AI chat message will return 404.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/components/layout/AiChatbot.vue:118</span><br><span class="file-ref">orbithr-web/src/pages/app/AiFeatures.vue</span><br><span class="file-ref">routes/api.php (missing)</span></td>
+          <td>AI chatbot completely non-functional; 404 on every message.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-003</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Performance</td>
+          <td>
+            <div class="desc-title">Performance.vue deleted; backend routes active</div>
+            <div class="desc-body">Performance.vue has been renamed to Performance.vue-delete. The backend has full performance routes (goals, appraisals, calibration, skill-matrix) and controllers. There is a new sub-directory of performance pages under /pages/app/performance/ but no router entry connecting them to the nav.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/pages/app/Performance.vue-delete</span><br><span class="file-ref">orbithr-web/src/pages/app/performance/ (disconnected)</span></td>
+          <td>Performance module invisible despite backend being implemented.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-004</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Reports</td>
+          <td>
+            <div class="desc-title">Reports.vue-delete exists; replacement unknown</div>
+            <div class="desc-body">Reports.vue has been renamed to Reports.vue-delete. There is a new reports sub-directory under /pages/app/reports/ but no visible router connection. The old Reports.vue file is inaccessible.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/pages/app/Reports.vue-delete</span><br><span class="file-ref">orbithr-web/src/pages/app/reports/ (status unclear)</span></td>
+          <td>Reports page may be unreachable to tenants.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-005</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>ESS (Employee Self Service)</td>
+          <td>
+            <div class="desc-title">EssDashboard.vue deleted; ESS entry point broken</div>
+            <div class="desc-body">EssDashboard.vue has been renamed to EssDashboard.vue-delete. All other ESS pages (EssAttendance, EssLeave, EssPayslips, EssProfile, EssTickets, EssNotifications) still exist, but the ESS home/dashboard is gone. The default route for ESS portal likely 404s.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/pages/app/ess/EssDashboard.vue-delete</span></td>
+          <td>ESS employees may land on a broken/empty page.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-006</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-fullstack">Full-stack</span></td>
+          <td>Projects</td>
+          <td>
+            <div class="desc-title">Projects module is a skeleton — basic CRUD only</div>
+            <div class="desc-body">Backend has ProjectController with index/store/show/update/destroy/assignEmployees. There is no task management, Kanban, timeline, milestones, comments, files, or reporting. The frontend has no Projects page at all (only ProjectAssignment component). Documented as $29.99/mo module.</div>
+          </td>
+          <td><span class="file-ref">orbithr-api/app/Http/Controllers/ProjectController.php</span><br><span class="file-ref">orbithr-web/src/components/employee/ProjectAssignment.vue</span></td>
+          <td>Module is effectively empty shell; unusable as a project management tool.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 2 — Backend Stub Methods (Return Fake Data)
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--orange)"></span>2. Backend Stub Methods (Return Fake / Empty Data)</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Layer</th>
+          <th>Module</th>
+          <th>Issue Description</th>
+          <th>File / Location</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">B-001</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Payroll — Payslips</td>
+          <td>
+            <div class="desc-title">Payslip email sending is TODO — no emails are ever sent</div>
+            <div class="desc-body">Both email() and bulkEmail() in PayslipController have the actual Mail::to(...)->send(...) line commented out with a TODO comment. The methods update emailed_at and email_count in the database, giving a false impression that emails were sent. Payslip distribution is completely non-functional.</div>
+          </td>
+          <td><span class="file-ref">PayslipController.php:255</span><br><span class="file-ref">PayslipController.php:305</span></td>
+          <td>Payslips appear "emailed" in DB but employees never receive them. Silent data corruption.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">B-002</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Integrations — Payment</td>
+          <td>
+            <div class="desc-title">Stripe &amp; Razorpay payment drivers are pure stubs</div>
+            <div class="desc-body">StripePaymentDriver and RazorpayPaymentDriver in the Integrations payment layer always return hardcoded success: "Payment processed successfully (stub)" and "Refund processed successfully (stub)". No real API calls are made. This is separate from the Stripe billing flow used for module purchases.</div>
+          </td>
+          <td><span class="file-ref">Services/Integrations/Payment/StripePaymentDriver.php:22,34,46</span><br><span class="file-ref">Services/Integrations/Payment/RazorpayPaymentDriver.php:20,32,44</span></td>
+          <td>Any payment processing feature using these drivers will silently succeed without charging.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">B-003</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Integrations — SMS &amp; WhatsApp</td>
+          <td>
+            <div class="desc-title">All SMS and WhatsApp drivers are stubs</div>
+            <div class="desc-body">Msg91SmsDriver, TwilioSmsDriver, WhatsAppCloudApiDriver, and TwilioWhatsAppDriver all return hardcoded success responses without making any real API calls. OTP delivery via SMS, leave notifications via WhatsApp, and any SMS-based alerts are non-functional.</div>
+          </td>
+          <td><span class="file-ref">Services/Integrations/Sms/TwilioSmsDriver.php:21</span><br><span class="file-ref">Services/Integrations/Sms/Msg91SmsDriver.php:19</span><br><span class="file-ref">Services/Integrations/WhatsApp/WhatsAppCloudApiDriver.php:20,31</span><br><span class="file-ref">Services/Integrations/WhatsApp/TwilioWhatsAppDriver.php:20,31</span></td>
+          <td>All SMS/WhatsApp notifications silently fail without error.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">B-004</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Recruitment — Job Boards</td>
+          <td>
+            <div class="desc-title">Job Board publishing returns placeholder IDs for LinkedIn, Indeed, Naukri</div>
+            <div class="desc-body">JobBoardService has publishing methods for LinkedIn, Indeed, Naukri, and custom boards. All return placeholder job IDs (not real external IDs) and log "returning placeholder ID for dev". Application fetching from external platforms is also a stub returning an empty array.</div>
+          </td>
+          <td><span class="file-ref">Services/JobBoardService.php:176,200,218,263,290,310,337,357–365</span></td>
+          <td>Jobs posted to boards never actually appear on external platforms.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">B-005</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Recruitment — Calendar</td>
+          <td>
+            <div class="desc-title">Interview calendar sync to Google/Outlook is a stub</div>
+            <div class="desc-body">CalendarController::syncInterviewToCalendar() generates a random event ID (evt_XXXXXXXX) and stores it as if a real calendar event was created, but never calls Google Calendar or Outlook APIs. Comments explicitly say "Stub: in production this calls the Google/Outlook API".</div>
+          </td>
+          <td><span class="file-ref">CalendarController.php:509,523</span></td>
+          <td>Calendar sync shows "synced" in UI but interviews never appear in Google/Outlook calendars.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">B-006</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Integrations</td>
+          <td>
+            <div class="desc-title">Integration "Test Connection" always returns success</div>
+            <div class="desc-body">TenantIntegrationController::test() validates that credentials exist, then unconditionally returns success with message "Connection to {provider} verified successfully" without actually attempting a connection. Any misconfigured integration will appear healthy.</div>
+          </td>
+          <td><span class="file-ref">TenantIntegrationController.php:136,155</span></td>
+          <td>Admins cannot validate integrations; broken credentials pass connection tests.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">B-007</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Recruitment — Email</td>
+          <td>
+            <div class="desc-title">Gmail/Outlook OAuth email send not implemented — falls back to outbox</div>
+            <div class="desc-body">EmailIntegrationController send method has a comment "Gmail/Outlook OAuth send not yet implemented" and saves emails to an outbox table instead of sending. Candidate communication via Gmail/Outlook OAuth integration is non-functional.</div>
+          </td>
+          <td><span class="file-ref">EmailIntegrationController.php:402</span></td>
+          <td>Emails composed through OAuth-integrated accounts are queued but never delivered.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">B-008</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Recruitment — Candidates</td>
+          <td>
+            <div class="desc-title">Candidate merge returns HTTP 501 Not Implemented</div>
+            <div class="desc-body">CandidateController::merge() explicitly returns HTTP 501 with "Candidate merge is not yet implemented." A route exists for this endpoint so the UI could expose this functionality, but calling it will always fail.</div>
+          </td>
+          <td><span class="file-ref">CandidateController.php:249–256</span></td>
+          <td>Duplicate candidate management is unavailable; data quality degrades over time.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">B-009</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Reports</td>
+          <td>
+            <div class="desc-title">Report scheduling always returns success without persisting schedule</div>
+            <div class="desc-body">ReportController::scheduleReport() echoes back the request payload as if it were saved but does not persist anything. ReportController::scheduledReports() returns an empty array. No actual scheduling mechanism exists.</div>
+          </td>
+          <td><span class="file-ref">ReportController.php:171–191</span></td>
+          <td>Users can "schedule" reports but they never run; scheduled reports list always empty.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">B-010</td>
+          <td><span class="badge badge-low">Low</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Billing</td>
+          <td>
+            <div class="desc-title">getInvoices falls back to empty response when no Stripe customer ID</div>
+            <div class="desc-body">BillingController::getInvoices() attempts to list Stripe invoices but silently returns an empty array when no Stripe customer ID is configured. No error is surfaced. The UI shows an empty invoice history rather than a useful "billing not set up" message.</div>
+          </td>
+          <td><span class="file-ref">BillingController.php:228–244</span></td>
+          <td>Invoice history silently blank for tenants without Stripe configured.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 3 — Authentication & Security Gaps
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--red)"></span>3. Authentication &amp; Security Gaps</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Layer</th>
+          <th>Module</th>
+          <th>Issue Description</th>
+          <th>File / Location</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">A-001</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Authentication — 2FA/MFA</td>
+          <td>
+            <div class="desc-title">All 2FA / MFA routes are commented out</div>
+            <div class="desc-body">routes/api.php has an entire 2FA prefix block (show2faForm, generateSecret, enable2fa, disable2fa, 2faVerify, verify-2fa, activate-2fa, enable-2fa) that is commented out. LoginSecurityController exists but is unused. MFA is completely non-functional even though documentation implies it should work.</div>
+          </td>
+          <td><span class="file-ref">routes/api.php:74–89</span><br><span class="file-ref">Controllers/LoginSecurityController.php (unreachable)</span></td>
+          <td>No MFA available; accounts vulnerable to credential compromise.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">A-002</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-fullstack">Full-stack</span></td>
+          <td>Authentication — Password Reset</td>
+          <td>
+            <div class="desc-title">Forgot password flow has no backend route or frontend page</div>
+            <div class="desc-body">No forgot-password or password-reset route exists in routes/api.php. No ForgotPassword Vue page or component exists in the frontend. Users who forget their password have no self-service recovery path and must contact super admin.</div>
+          </td>
+          <td><span class="file-ref">routes/api.php (missing route)</span><br><span class="file-ref">orbithr-web/src/pages/marketing/ (missing page)</span></td>
+          <td>No password recovery for any user; major UX and support burden.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">A-003</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Employee Profile — Security Settings</td>
+          <td>
+            <div class="desc-title">SecuritySettingsCard has no 2FA toggle (UI placeholder only)</div>
+            <div class="desc-body">SecuritySettingsCard.vue renders a form for changing password but the 2FA section has no enable/disable toggle because backend 2FA routes are commented out. The component emits change-password but the parent Profile.vue must wire it to the API.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/components/employee/profile/SecuritySettingsCard.vue</span></td>
+          <td>Security settings page incomplete; 2FA management impossible.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 4 — Frontend Incomplete Pages & "Coming Soon"
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--purple)"></span>4. Frontend Incomplete Pages &amp; "Coming Soon" Placeholders</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Layer</th>
+          <th>Module</th>
+          <th>Issue Description</th>
+          <th>File / Location</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">F-001</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Payroll</td>
+          <td>
+            <div class="desc-title">Three Payroll tabs show "coming soon" placeholders</div>
+            <div class="desc-body">Payroll.vue has three active tabs — "Cycles", "Advances", and "Salary Structures" — that render only a placeholder div with the text: "Detailed payroll cycle management coming soon", "Advance request management coming soon", and "Employee salary structure management coming soon". The backend has complete APIs for all three.</div>
+          </td>
+          <td><span class="file-ref">Payroll.vue:375,382,386,393,397,404</span></td>
+          <td>Payroll Cycles, Advances, and Salary Structures are completely inaccessible through the UI.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">F-002</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Employee Profile</td>
+          <td>
+            <div class="desc-title">5 of 8 Employee Profile tabs show "coming soon"</div>
+            <div class="desc-body">EmployeeProfile.vue defines 8 tabs but only Overview, Job &amp; Compensation, and Documents are implemented. Attendance, Leave, Performance, Assets, and Audit tabs all render the generic "— coming soon" placeholder. The backend data for most of these exists.</div>
+          </td>
+          <td><span class="file-ref">EmployeeProfile.vue:54–62, 371–379</span></td>
+          <td>HR managers cannot view employee attendance, leave history, or asset assignments from the profile page.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">F-003</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Marketplace</td>
+          <td>
+            <div class="desc-title">ModuleCard has TODO: navigation not implemented for owned modules</div>
+            <div class="desc-body">ModuleCard.vue has a comment "TODO: implement navigation" for when a tenant clicks on a module they already own. Currently clicking an owned module card does nothing. Users cannot navigate directly to a module from the marketplace.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/components/marketplace/ModuleCard.vue:154</span></td>
+          <td>No quick-access navigation from module marketplace to active module.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">F-004</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Org Chart</td>
+          <td>
+            <div class="desc-title">Open Roles section in OrgChart is a placeholder</div>
+            <div class="desc-body">OrgChart.vue has an "Open roles" div that is explicitly commented as a placeholder. No data is loaded or displayed. There is no connection to the recruitment module to show vacancies.</div>
+          </td>
+          <td><span class="file-ref">OrgChart.vue:317–319</span></td>
+          <td>Org chart missing open position visibility for hiring planning.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">F-005</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Workflow</td>
+          <td>
+            <div class="desc-title">Two separate Workflow pages exist — WorkflowAutomation.vue and WorkflowRules.vue</div>
+            <div class="desc-body">There are two distinct workflow pages: WorkflowAutomation.vue and WorkflowRules.vue. It is unclear which is the canonical page, whether both are routed, and whether they overlap in functionality. This suggests an incomplete migration or refactoring.</div>
+          </td>
+          <td><span class="file-ref">pages/app/WorkflowAutomation.vue</span><br><span class="file-ref">pages/app/WorkflowRules.vue</span></td>
+          <td>Duplicate pages cause confusion; one may be orphaned or missing routes.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">F-006</td>
+          <td><span class="badge badge-low">Low</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Employee Form</td>
+          <td>
+            <div class="desc-title">EmployeeForm only validates 3 fields client-side</div>
+            <div class="desc-body">EmployeeForm.vue performs manual validation only for first_name, email, and phone. Fields such as bank_account_number, IFSC code, PAN number, Aadhaar, and emergency contact phone lack any client-side format validation. Invalid data formats are submitted to the backend.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/components/employee/EmployeeForm.vue</span></td>
+          <td>Invalid bank/tax details can be saved; downstream payroll calculations may fail silently.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 5 — Backend Logic Bugs
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--yellow)"></span>5. Backend Logic Bugs &amp; Hardcoded Values</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Layer</th>
+          <th>Module</th>
+          <th>Issue Description</th>
+          <th>File / Location</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">BL-001</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Leave — Accrual</td>
+          <td>
+            <div class="desc-title">Leave proration rules hardcoded; not configurable per tenant</div>
+            <div class="desc-body">LeaveManagementService has hardcoded proration logic: if joining day ≤ 15 → 100% accrual, else → 50% accrual. There is no admin configuration for this. Organizations with different HR policies (e.g., pro-rated by exact days worked) cannot change this without modifying source code.</div>
+          </td>
+          <td><span class="file-ref">Services/LeaveManagementService.php:535,556</span></td>
+          <td>Incorrect leave balances for tenants with non-standard proration policies.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">BL-002</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Performance — Goals</td>
+          <td>
+            <div class="desc-title">GoalController returns empty array when employee not found instead of 404</div>
+            <div class="desc-body">GoalController::index() silently returns an empty data array when the authenticated user has no linked employee record. This masks the underlying data integrity issue and makes it impossible for the frontend to distinguish "no goals" from "employee not found".</div>
+          </td>
+          <td><span class="file-ref">GoalController.php:388</span></td>
+          <td>Misconfigured users (no employee record) see an empty goals list with no error.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">BL-003</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Attendance</td>
+          <td>
+            <div class="desc-title">AttendanceController returns empty array when no employee ID instead of 401/404</div>
+            <div class="desc-body">AttendanceController::calendar() silently returns empty data when the user has no linked employee record. Same silent-failure pattern as GoalController — masking configuration issues.</div>
+          </td>
+          <td><span class="file-ref">AttendanceController.php:309</span></td>
+          <td>Users without employee records see empty attendance calendar with no explanation.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">BL-004</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Notifications</td>
+          <td>
+            <div class="desc-title">Multiple Mailable classes have empty attachments/with methods</div>
+            <div class="desc-body">ExitInterviewMail, PunchNotificationMail, LeaveRequestNotification, PayslipMail, OtpMail, and WorkflowNotificationMail return empty arrays from their attachments() or with() methods. Some of these should include actual attachments (e.g., PayslipMail should attach the PDF) or template variables.</div>
+          </td>
+          <td>
+            <span class="file-ref">Mail/ExitInterviewMail.php:50</span><br>
+            <span class="file-ref">Mail/PunchNotificationMail.php:51</span><br>
+            <span class="file-ref">Mail/LeaveRequestNotification.php:74</span><br>
+            <span class="file-ref">Mail/PayslipMail.php:48</span><br>
+            <span class="file-ref">Mail/OtpMail.php:55</span><br>
+            <span class="file-ref">Mail/WorkflowNotificationMail.php:31</span>
+          </td>
+          <td>PayslipMail sends no PDF attachment; OTP emails may lack the actual OTP token.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">BL-005</td>
+          <td><span class="badge badge-low">Low</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Reports — Scheduled Reports</td>
+          <td>
+            <div class="desc-title">scheduledReports() always returns empty array</div>
+            <div class="desc-body">ReportController::scheduledReports() unconditionally returns response()->json(['data' => []]). Even if scheduling were implemented, the list endpoint would never show anything.</div>
+          </td>
+          <td><span class="file-ref">ReportController.php:190</span></td>
+          <td>Scheduled reports list always empty; no way to see, edit, or delete scheduled reports.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 6 — Broken / Orphaned Files
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--orange)"></span>6. Broken &amp; Orphaned Files (-delete pattern)</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Layer</th>
+          <th>File (renamed to -delete)</th>
+          <th>Issue Description</th>
+          <th>Replacement Status</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">D-001</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td><span class="file-ref">pages/app/Performance.vue-delete</span></td>
+          <td>Original Performance page deleted mid-refactor. New pages exist under pages/app/performance/ sub-directory but are not wired into router.</td>
+          <td>New sub-pages exist but no router entry</td>
+          <td>Performance module inaccessible through navigation.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">D-002</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td><span class="file-ref">pages/app/Reports.vue-delete</span></td>
+          <td>Original Reports page deleted mid-refactor. A new reports sub-directory exists but router connection unclear.</td>
+          <td>New sub-pages may exist but routing unconfirmed</td>
+          <td>Reports page possibly unreachable; users see 404 or navigation dead-end.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">D-003</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td><span class="file-ref">pages/app/ess/EssDashboard.vue-delete</span></td>
+          <td>ESS (Employee Self Service) dashboard deleted. No replacement detected. ESS layout likely renders nothing on the default ESS route.</td>
+          <td>No replacement found</td>
+          <td>ESS portal home is broken for all employees using ESS access.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">D-004</td>
+          <td><span class="badge badge-low">Low</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td><span class="file-ref">pages/app/lnd/Courses.vue-delete</span></td>
+          <td>Original L&amp;D Courses page deleted. New LndCourses.vue exists in the same directory and presumably replaces it.</td>
+          <td>LndCourses.vue appears to be the replacement</td>
+          <td>Low risk if router correctly points to LndCourses.vue instead.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 7 — Frontend Route / Navigation Issues
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--yellow)"></span>7. Frontend Route &amp; Navigation Issues</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Layer</th>
+          <th>Route</th>
+          <th>Issue Description</th>
+          <th>File / Location</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">R-001</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>/app/admin/modules → /super/modules</td>
+          <td>
+            <div class="desc-title">Admin route redirects to super-admin area</div>
+            <div class="desc-body">The /app/admin/modules route redirects to /super/modules. This will fail or redirect loop for tenant admin users who do not have super-admin access. Similarly /app/admin/plans → /super/plans and /app/admin/transactions → /super/transactions.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/router/index.ts:97,114,119</span></td>
+          <td>Tenant admins clicking admin module links are redirected to super-admin pages they cannot access.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">R-002</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>/app/ai</td>
+          <td>
+            <div class="desc-title">AI Features page routes exist but backend endpoint is missing</div>
+            <div class="desc-body">Route at /app/ai loads AiFeatures.vue and the AiChatbot component calls /api/ai/chat. The page will load but all chat functionality returns 404.</div>
+          </td>
+          <td><span class="file-ref">router/index.ts:880–881</span><br><span class="file-ref">components/layout/AiChatbot.vue:118</span></td>
+          <td>AI page opens but every message fails with a 404 network error.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">R-003</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>/app/performance/*</td>
+          <td>
+            <div class="desc-title">Performance sub-pages exist but appear disconnected from main router</div>
+            <div class="desc-body">Pages under /pages/app/performance/ (AppraisalCycles, Goals, Calibration, ContinuousFeedback, etc.) are present as files but need verification that they are wired into the router after Performance.vue was deleted.</div>
+          </td>
+          <td><span class="file-ref">router/index.ts (needs verification)</span><br><span class="file-ref">pages/app/performance/</span></td>
+          <td>Performance module entirely inaccessible from app navigation if routes are missing.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 8 — Integration & Third-Party Gaps
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--accent)"></span>8. Integration &amp; Third-Party Gaps</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Layer</th>
+          <th>Integration</th>
+          <th>Issue Description</th>
+          <th>File / Location</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">I-001</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>LinkedIn Job Board</td>
+          <td>No real LinkedIn API calls — returns random placeholder job IDs regardless of credentials.</td>
+          <td><span class="file-ref">Services/JobBoardService.php:176,200</span></td>
+          <td>Jobs never published to LinkedIn.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">I-002</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Indeed Job Board</td>
+          <td>No real Indeed API calls — returns placeholder IDs.</td>
+          <td><span class="file-ref">Services/JobBoardService.php:218,245</span></td>
+          <td>Jobs never published to Indeed.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">I-003</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Naukri Job Board</td>
+          <td>No real Naukri API calls — returns placeholder IDs.</td>
+          <td><span class="file-ref">Services/JobBoardService.php:263,290</span></td>
+          <td>Jobs never published to Naukri.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">I-004</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Job Applications Sync</td>
+          <td>fetchApplicationsFromPlatform() is a stub returning empty array for all platforms. Applications from job boards are never imported.</td>
+          <td><span class="file-ref">Services/JobBoardService.php:357–365</span></td>
+          <td>ATS cannot import candidates from any external job board.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">I-005</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Google Calendar / Outlook</td>
+          <td>Interview calendar sync stores fake event IDs. No real Google/Outlook API calls are made.</td>
+          <td><span class="file-ref">CalendarController.php:509–540</span></td>
+          <td>Interviewers never receive calendar invites; schedule misalignment in real use.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">I-006</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Twilio / Msg91 SMS</td>
+          <td>All SMS drivers return stub success. No texts are ever sent.</td>
+          <td><span class="file-ref">Services/Integrations/Sms/</span></td>
+          <td>OTPs, leave alerts, and HR notifications via SMS all silently fail.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">I-007</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>WhatsApp (Twilio / Cloud API)</td>
+          <td>Both WhatsApp drivers return stub success. No messages sent.</td>
+          <td><span class="file-ref">Services/Integrations/WhatsApp/</span></td>
+          <td>WhatsApp notifications non-functional despite UI showing them as enabled.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">I-008</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Stripe (Integration Driver)</td>
+          <td>StripePaymentDriver in the Integrations layer (not BillingService) is a stub. Any custom payment collection flows using this driver will not charge users.</td>
+          <td><span class="file-ref">Services/Integrations/Payment/StripePaymentDriver.php</span></td>
+          <td>Custom payment collection silently reports success without charging.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">I-009</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Gmail/Outlook OAuth Send</td>
+          <td>Emails composed using OAuth-connected Gmail/Outlook accounts are saved to outbox but never sent. Candidate communication is silently broken.</td>
+          <td><span class="file-ref">EmailIntegrationController.php:402–403</span></td>
+          <td>Recruitment email through OAuth integrations never delivered to candidates.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 9 — Known Bugs (from Previous Audit)
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--red)"></span>9. Known Bugs (Documented in project_bug_report.md — 2026-04-08)</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Severity</th>
+          <th>Layer</th>
+          <th>Module</th>
+          <th>Bug Description</th>
+          <th>File / Location</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">KB-001</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Leave Service</td>
+          <td>Critical bug in LeaveManagementService — see project_bug_report.md for details (5 critical bugs flagged in the April 2026 audit).</td>
+          <td><span class="file-ref">Services/LeaveManagementService.php</span></td>
+          <td>Status unknown — verify if resolved</td>
+        </tr>
+        <tr>
+          <td class="id-cell">KB-002</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Payroll Service</td>
+          <td>Critical bugs in PayrollCalculationService / PayrollProcessingService — see project_bug_report.md for full details.</td>
+          <td><span class="file-ref">Services/PayrollCalculationService.php</span><br><span class="file-ref">Services/PayrollProcessingService.php</span></td>
+          <td>Status unknown — verify if resolved</td>
+        </tr>
+        <tr>
+          <td class="id-cell">KB-003</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Role Logic / Router</td>
+          <td>3 high-severity frontend bugs in role-based logic and router guard — see project_bug_report.md. Without roles in route meta, admins are silently redirected to dashboard.</td>
+          <td><span class="file-ref">router/index.ts</span></td>
+          <td>Status unknown — verify if resolved</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 10 — Priority Matrix
+     ══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--green)"></span>10. Recommended Fix Priority</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Priority</th>
+          <th>Issue IDs</th>
+          <th>Rationale</th>
+          <th>Estimated Effort</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong style="color:var(--red)">P0 — Immediate</strong></td>
+          <td class="id-cell">A-001, A-002, B-001, M-001, M-002</td>
+          <td>2FA commented out (security risk), no forgot password (UX blocker), payslip emails silently faked (data integrity), Chat module billed but empty, AI endpoint 404</td>
+          <td>2–5 days per item</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--orange)">P1 — This Sprint</strong></td>
+          <td class="id-cell">B-002, B-003, D-001, D-002, D-003, M-003, M-004, M-005</td>
+          <td>Stub payment/SMS drivers silently succeed, deleted pages break navigation, Performance/ESS/Reports modules inaccessible</td>
+          <td>1–3 days per item</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--yellow)">P2 — Next Sprint</strong></td>
+          <td class="id-cell">B-004, B-005, B-006, B-007, F-001, F-002, I-001–I-009, R-001</td>
+          <td>Job board stubs, calendar sync fakes, integration test always passes, Payroll coming-soon tabs, EmployeeProfile tabs, broken admin route redirects</td>
+          <td>3–8 days total</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--green)">P3 — Backlog</strong></td>
+          <td class="id-cell">B-008, B-009, BL-001–BL-005, F-003–F-006, R-002, R-003, D-004</td>
+          <td>Billing edge cases, hardcoded proration, silent empty returns, UI polish, module card navigation, OrgChart placeholder, duplicate workflow pages</td>
+          <td>1–2 days each</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p style="color:var(--muted);font-size:11px;margin-top:24px;text-align:center;">OrbitHR Audit Report · orbithr-api + orbithr-web · 2026-05-29 · 47 issues across 10 categories</p>
+
+</body>
+</html>

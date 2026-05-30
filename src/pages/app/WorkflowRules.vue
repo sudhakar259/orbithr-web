@@ -1,4 +1,8 @@
 <script setup lang="ts">
+// SECONDARY / LEGACY: The canonical workflow management UI is WorkflowAutomation.vue
+// (route name 'workflow-automation'). This component is no longer routed directly —
+// the 'workflow-rules' path now redirects to 'workflow-automation'. Its unique
+// execution-logs viewer has been merged into WorkflowAutomation.vue. Kept for reference.
 defineOptions({ name: 'WorkflowRulesPage' })
 import { ref, onMounted, computed } from 'vue'
 import { workflowService, type WorkflowRule, type WorkflowAction, type WorkflowCondition, type WorkflowSchema } from '@/services/workflow'

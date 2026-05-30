@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { getOrgChart, type OrgChartNode } from '@/services/employee'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import EmpAvatar from '@/components/employee/EmpAvatar.vue'
+import api from '@/services/api'
 
 defineOptions({ name: 'OrgChartPage' })
 
@@ -137,6 +138,37 @@ const inspected = computed(() => {
   }
 })
 
+// ── Open roles (recruitment module) ───────────────────────────────────────────
+interface OpenRole {
+  id: number | string
+  title: string
+  department: string
+  applicants: number
+}
+const openRoles = ref<OpenRole[]>([])
+const openRolesError = ref('')
+const openRolesLoaded = ref(false)
+
+async function fetchOpenRoles() {
+  openRolesError.value = ''
+  try {
+    const res = await api.get('/recruitment/jobs', { params: { status: 'open' } })
+    const raw = res.data?.data ?? res.data ?? []
+    openRoles.value = (Array.isArray(raw) ? raw : []).map((j: Record<string, unknown>) => ({
+      id: (j.id as number | string) ?? '',
+      title: (j.title as string) ?? 'Untitled role',
+      department: (j.department as string) ?? '—',
+      applicants: Number(j.applications_count ?? j.applicants_count ?? 0),
+    }))
+  } catch (e: unknown) {
+    const status = (e as { response?: { status?: number } })?.response?.status
+    openRolesError.value = status === 404 ? 'Recruitment module not active' : 'Failed to load open positions'
+    openRoles.value = []
+  } finally {
+    openRolesLoaded.value = true
+  }
+}
+
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 async function fetchTree() {
   loading.value = true; fetchErr.value = ''
@@ -157,6 +189,7 @@ onMounted(() => {
     { label: 'Org chart' },
   ])
   fetchTree()
+  fetchOpenRoles()
 })
 </script>
 
@@ -314,16 +347,29 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Open roles (placeholder) -->
+          <!-- Open roles (recruitment module) -->
           <div class="insp-sec">
             <div class="eyebrow">Open roles</div>
-            <div class="open-role-empty">
+
+            <!-- Open positions list -->
+            <div v-if="openRoles.length" class="open-role-list">
+              <div v-for="r in openRoles" :key="r.id" class="open-role-row">
+                <div class="or-info">
+                  <div class="or-title">{{ r.title }}</div>
+                  <div class="or-dept">{{ r.department }}</div>
+                </div>
+                <div class="or-count">{{ r.applicants }} applicants</div>
+              </div>
+            </div>
+
+            <!-- Empty / module-inactive state -->
+            <div v-else-if="openRolesLoaded" class="open-role-empty">
               <div class="or-icon">
                 <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
               </div>
               <div>
-                <div class="or-label">Post a role</div>
-                <div class="or-sub">No open roles for this team</div>
+                <div class="or-label">{{ openRolesError || 'No open positions' }}</div>
+                <div class="or-sub">{{ openRolesError ? 'Activate Recruitment to post roles' : 'No open roles right now' }}</div>
               </div>
             </div>
           </div>
@@ -686,6 +732,37 @@ onMounted(() => {
   font-size: 10.5px;
   color: #7A8299;
   margin-top: 1px;
+}
+.open-role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.open-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #161A23;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+}
+.or-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #EEF0F4;
+}
+.or-dept {
+  font-size: 10.5px;
+  color: #7A8299;
+  margin-top: 1px;
+}
+.or-count {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #8979FF;
+  white-space: nowrap;
 }
 
 .insp-hint {

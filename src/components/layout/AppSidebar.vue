@@ -408,6 +408,14 @@ const moduleGroups = computed<NavGroup[]>(() => [
     ],
   },
   {
+    key: 'chat',
+    label: 'Chat',
+    to: { name: 'chat' },
+    module: 'chat',
+    icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"/></svg>',
+    roles: ['admin', 'hr_manager', 'manager', 'employee'],
+  },
+  {
     key: 'lnd',
     label: 'Learning & Dev',
     module: 'learning',
@@ -684,7 +692,7 @@ const navSections = computed<NavSection[]>(() => [
   {
     label: 'Overview',
     items: moduleGroups.value.filter(g =>
-      ['dashboard', 'employee', 'attendance', 'leave', 'payroll', 'performance', 'social-engagement', 'lnd', 'expenses', 'recruitment', 'ess'].includes(g.key)
+      ['dashboard', 'employee', 'attendance', 'leave', 'payroll', 'performance', 'social-engagement', 'chat', 'lnd', 'expenses', 'recruitment', 'ess'].includes(g.key)
     ),
   },
   {
@@ -818,21 +826,21 @@ const navSections = computed<NavSection[]>(() => [
       {
         key: 'system-modules',
         label: 'System Modules',
-        to: { name: 'modules' },
+        to: { name: 'admin-modules' },
         icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>',
         superAdminOnly: true,
       },
       {
         key: 'plans',
         label: 'Plans',
-        to: { name: 'plans' },
+        to: { name: 'admin-plans' },
         icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z"/></svg>',
         superAdminOnly: true,
       },
       {
         key: 'transactions',
         label: 'Transactions',
-        to: { name: 'transactions' },
+        to: { name: 'admin-transactions' },
         icon: '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>',
         superAdminOnly: true,
       },

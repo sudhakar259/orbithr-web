@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OrbitHR — Production Readiness Checklist</title>
+<style>
+  :root {
+    --bg:#0C0E14; --surface:#141720; --surface2:#1C2030; --surface3:#222840;
+    --accent:#4F7EFF; --green:#36D399; --yellow:#F9A825; --red:#FF6B6B;
+    --purple:#9B6EFF; --orange:#FF9A3E; --text:#E8EAF0; --muted:#6B7280;
+    --border:#2A3050;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; font-size:13px; line-height:1.6; padding:32px 24px 80px; max-width:1100px; margin:0 auto; }
+
+  h1 { font-size:24px; font-weight:800; margin-bottom:4px; }
+  .subtitle { color:var(--muted); font-size:12px; margin-bottom:28px; }
+
+  /* Status pills */
+  .pill { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; border-radius:99px; padding:3px 9px; white-space:nowrap; letter-spacing:.04em; }
+  .pill-block   { background:rgba(255,107,107,.15); color:var(--red);    border:1px solid rgba(255,107,107,.3); }
+  .pill-warn    { background:rgba(255,154,62,.15);  color:var(--orange); border:1px solid rgba(255,154,62,.3); }
+  .pill-caution { background:rgba(249,168,37,.15);  color:var(--yellow); border:1px solid rgba(249,168,37,.3); }
+  .pill-ok      { background:rgba(54,211,153,.15);  color:var(--green);  border:1px solid rgba(54,211,153,.3); }
+  .pill-info    { background:rgba(79,126,255,.12);  color:var(--accent); border:1px solid rgba(79,126,255,.25); }
+
+  /* Summary bar */
+  .summary { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:28px; }
+  .sum-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 18px; display:flex; flex-direction:column; gap:3px; min-width:100px; }
+  .sum-num { font-size:28px; font-weight:800; line-height:1; }
+  .sum-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+
+  /* Section */
+  .section { margin-bottom:40px; }
+  .section-header { display:flex; align-items:center; gap:10px; padding:10px 0 12px; border-bottom:1px solid var(--border); margin-bottom:2px; }
+  .section-icon { font-size:18px; }
+  .section-title { font-size:15px; font-weight:700; }
+  .section-sub { color:var(--muted); font-size:12px; margin-left:auto; }
+
+  /* Checklist items */
+  .item { display:grid; grid-template-columns:28px 1fr auto; gap:0 12px; align-items:start; padding:12px 16px; border-bottom:1px solid var(--border); background:var(--surface); transition:background .15s; }
+  .item:first-child { border-radius:10px 10px 0 0; }
+  .item:last-child { border-radius:0 0 10px 10px; border-bottom:none; }
+  .item:only-child { border-radius:10px; border-bottom:none; }
+  .item:hover { background:var(--surface2); }
+  .item-list { border-radius:10px; border:1px solid var(--border); overflow:hidden; }
+
+  .item-num { font-family:'SF Mono','Fira Code',monospace; font-size:10px; color:var(--muted); padding-top:2px; text-align:right; }
+  .item-body { display:flex; flex-direction:column; gap:4px; }
+  .item-title { font-weight:600; font-size:13px; color:var(--text); }
+  .item-desc { font-size:12px; color:var(--muted); line-height:1.5; }
+  .item-code { font-family:'SF Mono','Fira Code',monospace; font-size:11px; background:var(--surface3); border:1px solid var(--border); border-radius:5px; padding:6px 10px; margin-top:5px; color:var(--text); white-space:pre-wrap; line-height:1.6; }
+  .item-status { padding-top:2px; }
+
+  /* Progress overview */
+  .progress-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:28px; }
+  @media(max-width:600px) { .progress-grid { grid-template-columns:1fr; } }
+  .pg-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+  .pg-title { font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .pg-bar { background:var(--surface2); border-radius:99px; height:8px; margin-bottom:6px; overflow:hidden; }
+  .pg-fill { height:100%; border-radius:99px; }
+  .pg-counts { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>OrbitHR — Production Readiness Checklist</h1>
+<p class="subtitle">Scanned 2026-05-30 · orbithr-api (Laravel 12) + orbithr-web (Vue 3) · Current env: <strong style="color:var(--red)">local/development</strong></p>
+
+<!-- Summary -->
+<div class="summary">
+  <div class="sum-card"><span class="sum-num" style="color:var(--red)">7</span><span class="sum-label">Blockers</span></div>
+  <div class="sum-card"><span class="sum-num" style="color:var(--orange)">8</span><span class="sum-label">Must Fix</span></div>
+  <div class="sum-card"><span class="sum-num" style="color:var(--yellow)">6</span><span class="sum-label">Recommended</span></div>
+  <div class="sum-card"><span class="sum-num" style="color:var(--green)">11</span><span class="sum-label">Already Good</span></div>
+</div>
+
+<!-- Progress grid -->
+<div class="progress-grid">
+  <div class="pg-card">
+    <div class="pg-title">Security</div>
+    <div class="pg-bar"><div class="pg-fill" style="width:45%;background:var(--orange)"></div></div>
+    <div class="pg-counts"><span>3 blockers remain</span><span>45%</span></div>
+  </div>
+  <div class="pg-card">
+    <div class="pg-title">Infrastructure</div>
+    <div class="pg-bar"><div class="pg-fill" style="width:35%;background:var(--red)"></div></div>
+    <div class="pg-counts"><span>4 blockers remain</span><span>35%</span></div>
+  </div>
+  <div class="pg-card">
+    <div class="pg-title">Code Quality</div>
+    <div class="pg-bar"><div class="pg-fill" style="width:90%;background:var(--green)"></div></div>
+    <div class="pg-counts"><span>Nearly complete</span><span>90%</span></div>
+  </div>
+</div>
+
+<!-- ══════ SECTION 1: BLOCKERS ══════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-icon">🚫</span>
+    <span class="section-title">1. BLOCKERS — Must fix before any production deployment</span>
+    <span class="section-sub">App will not work correctly or is insecure without these</span>
+  </div>
+  <div class="item-list">
+
+    <div class="item">
+      <span class="item-num">1</span>
+      <div class="item-body">
+        <div class="item-title">APP_DEBUG must be false in production</div>
+        <div class="item-desc">Currently set to <code>true</code>. In production this exposes stack traces, database queries, environment variables, and file paths in error responses — a critical security vulnerability.</div>
+        <div class="item-code">APP_DEBUG=false</div>
+      </div>
+      <span class="item-status"><span class="pill pill-block">BLOCKER</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">2</span>
+      <div class="item-body">
+        <div class="item-title">APP_ENV must be production</div>
+        <div class="item-desc">Currently <code>local</code>. This controls caching, error handling, logging level, and service provider behavior. Running <code>local</code> in production disables critical optimizations and may expose dev tooling.</div>
+        <div class="item-code">APP_ENV=production</div>
+      </div>
+      <span class="item-status"><span class="pill pill-block">BLOCKER</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">3</span>
+      <div class="item-body">
+        <div class="item-title">Stripe TEST keys — cannot process real payments</div>
+        <div class="item-desc">Both <code>STRIPE_KEY</code> and <code>STRIPE_SECRET</code> start with <code>pk_test_</code> / <code>sk_test_</code>. Test keys never charge real cards. Replace with live keys from your Stripe dashboard before accepting payments.</div>
+        <div class="item-code">STRIPE_KEY=pk_live_...
+STRIPE_SECRET=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...   # from Stripe webhook settings</div>
+      </div>
+      <span class="item-status"><span class="pill pill-block">BLOCKER</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">4</span>
+      <div class="item-body">
+        <div class="item-title">APP_URL and FRONTEND_URL must use real domains</div>
+        <div class="item-desc">Currently <code>http://backend.test</code> and <code>http://orbithr.test:5173</code>. These affect password reset links, email links, OAuth redirects, CORS, and Stripe webhook validation. Update to your actual production URLs.</div>
+        <div class="item-code">APP_URL=https://api.yourcompany.com
+FRONTEND_URL=https://app.yourcompany.com</div>
+      </div>
+      <span class="item-status"><span class="pill pill-block">BLOCKER</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">5</span>
+      <div class="item-body">
+        <div class="item-title">Google OAuth redirect URI must use production domain</div>
+        <div class="item-desc">Currently set to <code>http://localhost:5173/oauth/google/callback</code>. For production, register your real domain in Google Cloud Console and update this. Remember to add the new URI in Google Console's "Authorized redirect URIs".</div>
+        <div class="item-code">GOOGLE_REDIRECT_URI=https://app.yourcompany.com/oauth/google/callback</div>
+      </div>
+      <span class="item-status"><span class="pill pill-block">BLOCKER</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">6</span>
+      <div class="item-body">
+        <div class="item-title">Laravel Reverb must use HTTPS/WSS in production</div>
+        <div class="item-desc">Currently configured with <code>REVERB_SCHEME=http</code> and <code>REVERB_HOST=localhost</code>. Real-time chat will not work across the internet with plain HTTP. Configure Reverb behind SSL (nginx reverse proxy) with WSS.</div>
+        <div class="item-code">REVERB_HOST=reverb.yourcompany.com
+REVERB_PORT=443
+REVERB_SCHEME=https
+VITE_REVERB_SCHEME=wss
+VITE_REVERB_HOST=reverb.yourcompany.com
+VITE_REVERB_PORT=443</div>
+      </div>
+      <span class="item-status"><span class="pill pill-block">BLOCKER</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">7</span>
+      <div class="item-body">
+        <div class="item-title">CORS allowed_origins hardcoded to local .test domain</div>
+        <div class="item-desc">In <code>config/cors.php</code>, <code>allowed_origins</code> is hardcoded to <code>http://orbithr.test:5173</code>. API requests from your production frontend domain will be blocked with CORS errors. Update to use the environment variable pattern already in a comment.</div>
+        <div class="item-code"># In config/cors.php, change to:
+'allowed_origins' => explode(',', env('FRONTEND_URLS', 'https://app.yourcompany.com')),
+'allowed_origins_patterns' => [
+    '#^https://([a-z0-9-]+\.)?yourcompany\.com$#',
+],
+
+# In .env:
+FRONTEND_URLS=https://app.yourcompany.com,https://tenant1.yourcompany.com</div>
+      </div>
+      <span class="item-status"><span class="pill pill-block">BLOCKER</span></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════ SECTION 2: MUST FIX ══════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-icon">⚠️</span>
+    <span class="section-title">2. MUST FIX — Required for stable, secure production operation</span>
+  </div>
+  <div class="item-list">
+
+    <div class="item">
+      <span class="item-num">8</span>
+      <div class="item-body">
+        <div class="item-title">Replace personal Gmail SMTP with transactional email service</div>
+        <div class="item-desc">Currently using <code>maheshmati287@gmail.com</code> with a Gmail app password. This has daily send limits (~500/day), gets flagged as spam, and is tied to a personal account. Use a transactional email service instead.</div>
+        <div class="item-code"># Option A: SendGrid
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.sendgrid.net
+MAIL_PORT=587
+MAIL_USERNAME=apikey
+MAIL_PASSWORD=SG.your_sendgrid_api_key
+MAIL_FROM_ADDRESS=noreply@yourcompany.com
+MAIL_FROM_NAME="${APP_NAME}"
+
+# Option B: AWS SES
+MAIL_MAILER=ses
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_DEFAULT_REGION=us-east-1</div>
+      </div>
+      <span class="item-status"><span class="pill pill-warn">MUST FIX</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">9</span>
+      <div class="item-body">
+        <div class="item-title">Start queue worker — bulk payslip emails won't process without it</div>
+        <div class="item-desc">Queue is now set to Redis but no worker is running. Bulk payslip emails, background jobs, and any queued notifications will pile up silently. Use Supervisor in production.</div>
+        <div class="item-code"># Install supervisor
+sudo apt install supervisor
+
+# Copy the generated config
+sudo cp /path/to/orbithr-api/config/supervisor/orbithr-worker.conf /etc/supervisor/conf.d/
+
+# Edit the file — update paths and user:
+# command=php /var/www/orbithr-api/artisan queue:work redis ...
+# user=www-data
+
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start orbithr-queue:*
+
+# Quick test (development):
+php artisan queue:work redis --tries=3 --queue=default</div>
+      </div>
+      <span class="item-status"><span class="pill pill-warn">MUST FIX</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">10</span>
+      <div class="item-body">
+        <div class="item-title">Configure file storage (S3 or persistent disk) for payslip PDFs</div>
+        <div class="item-desc">No S3 / object storage is configured. PDFs, employee documents, avatars, and company logos are stored on local disk. On serverless/container deployments these are lost on restart. For any non-single-server setup, configure S3.</div>
+        <div class="item-code">FILESYSTEM_DISK=s3
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+AWS_DEFAULT_REGION=ap-south-1
+AWS_BUCKET=orbithr-storage
+AWS_URL=https://orbithr-storage.s3.ap-south-1.amazonaws.com
+
+# Run after config:
+php artisan storage:link</div>
+      </div>
+      <span class="item-status"><span class="pill pill-warn">MUST FIX</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">11</span>
+      <div class="item-body">
+        <div class="item-title">Run Laravel production optimizations before deploying</div>
+        <div class="item-desc">None of the production caches are built. Without these, every request parses config, routes, and views from scratch — 5–10× slower than optimized.</div>
+        <div class="item-code"># Run these in sequence on every deployment:
+php artisan config:cache    # Caches all config files
+php artisan route:cache     # Caches all routes
+php artisan view:cache      # Caches all blade views
+php artisan event:cache     # Caches event listeners
+php artisan optimize        # All of the above in one command
+
+# Also build the frontend:
+cd orbithr-web && npm run build</div>
+      </div>
+      <span class="item-status"><span class="pill pill-warn">MUST FIX</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">12</span>
+      <div class="item-body">
+        <div class="item-title">Remove vueDevTools plugin from production Vite build</div>
+        <div class="item-desc"><code>vite-plugin-vue-devtools</code> is always loaded in <code>vite.config.ts</code>. In production builds it adds dead weight and can expose component internals. Conditionally include it only in development.</div>
+        <div class="item-code">// In vite.config.ts:
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import vueDevTools from 'vite-plugin-vue-devtools'
+
+export default defineConfig(({ mode }) => ({
+  plugins: [
+    vue(),
+    mode === 'development' ? vueDevTools() : null,  // ← only in dev
+  ].filter(Boolean),
+  // ... rest of config
+}))</div>
+      </div>
+      <span class="item-status"><span class="pill pill-warn">MUST FIX</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">13</span>
+      <div class="item-body">
+        <div class="item-title">Set SESSION_DOMAIN and SECURE cookies for multi-tenant subdomains</div>
+        <div class="item-desc">Currently <code>SESSION_DOMAIN=null</code>. For tenant subdomains to share the session cookie securely, set the domain and enable secure/same-site flags. Without this, cross-subdomain requests may fail.</div>
+        <div class="item-code">SESSION_DRIVER=redis
+SESSION_LIFETIME=120
+SESSION_DOMAIN=.yourcompany.com     # Note the leading dot (covers all subdomains)
+SESSION_SECURE_COOKIE=true          # Requires HTTPS
+SESSION_SAME_SITE=lax</div>
+      </div>
+      <span class="item-status"><span class="pill pill-warn">MUST FIX</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">14</span>
+      <div class="item-body">
+        <div class="item-title">DB_CONNECTION is MySQL but CLAUDE.md specifies PostgreSQL</div>
+        <div class="item-desc">The architecture document specifies PostgreSQL with Docker, but the current <code>.env</code> uses MySQL. This mismatch means migrations, raw queries, and Stancl Tenancy behaviour may differ between documented architecture and actual deployment. Align them.</div>
+        <div class="item-code"># If using PostgreSQL (as documented):
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=orbithr
+DB_USERNAME=orbithr_user
+DB_PASSWORD=strong_password_here</div>
+      </div>
+      <span class="item-status"><span class="pill pill-warn">MUST FIX</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">15</span>
+      <div class="item-body">
+        <div class="item-title">Stripe webhook secret not configured</div>
+        <div class="item-desc">The webhook secret is missing from <code>.env</code>. Without it, the <code>WebhookController</code> cannot verify webhook signatures — any attacker can send fake Stripe events to activate modules without payment. Get this from your Stripe dashboard → Webhooks → your endpoint → signing secret.</div>
+        <div class="item-code">STRIPE_WEBHOOK_SECRET=whsec_your_actual_webhook_secret</div>
+      </div>
+      <span class="item-status"><span class="pill pill-warn">MUST FIX</span></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════ SECTION 3: RECOMMENDED ══════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-icon">💡</span>
+    <span class="section-title">3. RECOMMENDED — Important for stability and observability</span>
+  </div>
+  <div class="item-list">
+
+    <div class="item">
+      <span class="item-num">16</span>
+      <div class="item-body">
+        <div class="item-title">Add error tracking (Sentry)</div>
+        <div class="item-desc">No error tracking is configured. Without it, production errors are invisible unless users report them. Sentry integrates in ~10 minutes.</div>
+        <div class="item-code">composer require sentry/sentry-laravel
+php artisan sentry:publish --dsn=https://your_dsn@sentry.io/project
+
+# .env:
+SENTRY_LARAVEL_DSN=https://your_dsn@sentry.io/project
+SENTRY_TRACES_SAMPLE_RATE=0.1
+
+# Frontend (vite.config.ts):
+# npm install @sentry/vue
+# import * as Sentry from "@sentry/vue"</div>
+      </div>
+      <span class="item-status"><span class="pill pill-caution">RECOMMENDED</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">17</span>
+      <div class="item-body">
+        <div class="item-title">Set up log rotation and use a structured log channel</div>
+        <div class="item-desc">Default logging writes to a single file that grows indefinitely. In production, use <code>daily</code> rotation or send logs to a service like Papertrail/Logtail.</div>
+        <div class="item-code">LOG_CHANNEL=daily
+LOG_LEVEL=warning         # Only log warnings and above in production
+LOG_DEPRECATIONS_CHANNEL=null</div>
+      </div>
+      <span class="item-status"><span class="pill pill-caution">RECOMMENDED</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">18</span>
+      <div class="item-body">
+        <div class="item-title">Install Laravel Horizon for queue monitoring</div>
+        <div class="item-desc">Horizon provides a dashboard for monitoring queue throughput, failed jobs, and worker status. Essential for maintaining bulk payslip email reliability.</div>
+        <div class="item-code">composer require laravel/horizon
+php artisan horizon:install
+php artisan migrate
+
+# Start alongside your app:
+php artisan horizon
+# Dashboard available at: /horizon</div>
+      </div>
+      <span class="item-status"><span class="pill pill-caution">RECOMMENDED</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">19</span>
+      <div class="item-body">
+        <div class="item-title">Set up database backups</div>
+        <div class="item-desc">No backup strategy is in place. For a multi-tenant HRMS handling payroll data, daily automated backups to S3 are essential.</div>
+        <div class="item-code">composer require spatie/laravel-backup
+
+# .env:
+BACKUP_DISK=s3
+
+# Schedule in routes/console.php:
+Schedule::command('backup:run')->daily()->at('02:00');
+Schedule::command('backup:clean')->daily()->at('01:00');</div>
+      </div>
+      <span class="item-status"><span class="pill pill-caution">RECOMMENDED</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">20</span>
+      <div class="item-body">
+        <div class="item-title">Add a /health endpoint for uptime monitoring</div>
+        <div class="item-desc">No health check endpoint exists. Uptime monitors (UptimeRobot, Pingdom) need a simple endpoint that checks DB + Redis connectivity.</div>
+        <div class="item-code"># In routes/api.php (outside auth middleware):
+Route::get('/health', function () {
+    try {
+        DB::connection()->getPdo();
+        Cache::store('redis')->put('health', 1, 5);
+        return response()->json(['status' => 'ok', 'db' => 'ok', 'cache' => 'ok']);
+    } catch (\Exception $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 503);
+    }
+});</div>
+      </div>
+      <span class="item-status"><span class="pill pill-caution">RECOMMENDED</span></span>
+    </div>
+
+    <div class="item">
+      <span class="item-num">21</span>
+      <div class="item-body">
+        <div class="item-title">Enable HTTPS everywhere and add HSTS header</div>
+        <div class="item-desc">No HTTPS enforcement or HSTS is configured. Add <code>ForceHttps</code> middleware and set HSTS headers via nginx or Laravel middleware.</div>
+        <div class="item-code"># In AppServiceProvider::boot():
+if (app()->environment('production')) {
+    URL::forceScheme('https');
+}
+
+# nginx config:
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;</div>
+      </div>
+      <span class="item-status"><span class="pill pill-caution">RECOMMENDED</span></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════ SECTION 4: ALREADY GOOD ══════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-icon">✅</span>
+    <span class="section-title">4. ALREADY PRODUCTION-READY — No changes needed</span>
+  </div>
+  <div class="item-list">
+    <div class="item"><span class="item-num">22</span><div class="item-body"><div class="item-title">APP_KEY is set</div><div class="item-desc">Encryption key is properly generated with <code>php artisan key:generate</code>.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">23</span><div class="item-body"><div class="item-title">Rate limiting configured (60 req/min API, 10 req/min auth)</div><div class="item-desc">Both <code>api</code> and <code>auth</code> rate limiters are set in bootstrap/app.php via RateLimiter::for.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">24</span><div class="item-body"><div class="item-title">JWT authentication (not sessions) for all API routes</div><div class="item-desc">Using <code>php-open-source-saver/jwt-auth</code> — stateless, no session fixation risk.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">25</span><div class="item-body"><div class="item-title">Stripe webhook signature verification implemented</div><div class="item-desc">WebhookController uses <code>Stripe\Webhook::constructEvent</code> with signature checking (once STRIPE_WEBHOOK_SECRET is set).</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">26</span><div class="item-body"><div class="item-title">Sensitive data encrypted at rest</div><div class="item-desc">OAuth access/refresh tokens, SMTP passwords, and integration credentials all use Laravel's <code>encrypted</code> cast.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">27</span><div class="item-body"><div class="item-title">Multi-tenant data isolation via TenantScope</div><div class="item-desc">Every tenant-scoped model uses <code>BelongsToTenant</code> global scope. Cross-tenant data leakage is prevented at the ORM level.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">28</span><div class="item-body"><div class="item-title">Spatie roles & permissions on all sensitive routes</div><div class="item-desc"><code>role:admin|hr_manager|manager|employee</code> middleware applied throughout. Super admin routes additionally gated.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">29</span><div class="item-body"><div class="item-title">Queue configured to Redis (not database or sync)</div><div class="item-desc"><code>QUEUE_CONNECTION=redis</code> with <code>predis</code> client. Redis is the most reliable queue driver for production Laravel apps.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">30</span><div class="item-body"><div class="item-title">Cache configured to Redis</div><div class="item-desc"><code>CACHE_DRIVER=redis</code> — sessions, rate limits, and cached data are stored in Redis, not the filesystem.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">31</span><div class="item-body"><div class="item-title">No debug tools (Telescope, Debugbar) in codebase</div><div class="item-desc">Confirmed no Laravel Telescope, Debugbar, or Clockwork in composer.json.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+    <div class="item"><span class="item-num">32</span><div class="item-body"><div class="item-title">Payslip bulk email is queued (not synchronous)</div><div class="item-desc">Bulk email now dispatches <code>SendPayslipEmail</code> jobs — no request timeouts on large payroll runs.</div></div><span class="item-status"><span class="pill pill-ok">✓ GOOD</span></span></div>
+  </div>
+</div>
+
+<!-- ══════ DEPLOYMENT SEQUENCE ══════ -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-icon">🚀</span>
+    <span class="section-title">5. Deployment Sequence (run in this exact order)</span>
+  </div>
+  <div class="item-list">
+    <div class="item"><span class="item-num" style="color:var(--accent)">①</span><div class="item-body"><div class="item-title">Fix all 7 blockers in .env</div><div class="item-desc">APP_ENV, APP_DEBUG, APP_URL, FRONTEND_URL, Stripe live keys, Reverb WSS, CORS domain</div></div><span class="item-status"><span class="pill pill-block">DO FIRST</span></span></div>
+    <div class="item"><span class="item-num" style="color:var(--accent)">②</span><div class="item-body"><div class="item-title">Point DNS, get SSL certificate</div><div class="item-code">sudo certbot --nginx -d api.yourcompany.com -d app.yourcompany.com -d *.yourcompany.com</div></div><span class="item-status"><span class="pill pill-info">INFRA</span></span></div>
+    <div class="item"><span class="item-num" style="color:var(--accent)">③</span><div class="item-body"><div class="item-title">Run database migrations</div><div class="item-code">php artisan migrate --force</div></div><span class="item-status"><span class="pill pill-info">DB</span></span></div>
+    <div class="item"><span class="item-num" style="color:var(--accent)">④</span><div class="item-body"><div class="item-title">Seed core modules</div><div class="item-code">php artisan db:seed --class=CoreModulesSeeder</div></div><span class="item-status"><span class="pill pill-info">DB</span></span></div>
+    <div class="item"><span class="item-num" style="color:var(--accent)">⑤</span><div class="item-body"><div class="item-title">Build and cache everything</div><div class="item-code">php artisan optimize
+php artisan storage:link
+cd orbithr-web && npm ci && npm run build</div></div><span class="item-status"><span class="pill pill-info">BUILD</span></span></div>
+    <div class="item"><span class="item-num" style="color:var(--accent)">⑥</span><div class="item-body"><div class="item-title">Start background processes</div><div class="item-code">supervisorctl start orbithr-queue:*    # Queue worker
+php artisan reverb:start               # WebSocket server (or via supervisor)
+php artisan schedule:work              # Scheduler (or via cron)</div></div><span class="item-status"><span class="pill pill-info">PROCS</span></span></div>
+    <div class="item"><span class="item-num" style="color:var(--accent)">⑦</span><div class="item-body"><div class="item-title">Register Stripe webhook in production dashboard</div><div class="item-desc">Point to <code>https://api.yourcompany.com/api/webhooks/billing</code>, copy the signing secret → set STRIPE_WEBHOOK_SECRET</div></div><span class="item-status"><span class="pill pill-info">STRIPE</span></span></div>
+    <div class="item"><span class="item-num" style="color:var(--accent)">⑧</span><div class="item-body"><div class="item-title">Verify health check</div><div class="item-code">curl https://api.yourcompany.com/api/health
+# Expect: {"status":"ok","db":"ok","cache":"ok"}</div></div><span class="item-status"><span class="pill pill-ok">VERIFY</span></span></div>
+  </div>
+</div>
+
+<p style="color:var(--muted);font-size:11px;margin-top:28px;text-align:center;">
+  OrbitHR Production Checklist · 2026-05-30 · 7 blockers · 8 must-fix · 6 recommended · 11 already good
+</p>
+
+</body>
+</html>

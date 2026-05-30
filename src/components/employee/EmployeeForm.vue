@@ -254,14 +254,17 @@
           <div class="ef-field">
             <label class="ef-label">Account Number</label>
             <input v-model="form.account_number" type="text" class="ef-input" placeholder="Account number" />
+            <p v-if="errors.account_number" class="ef-err">{{ errors.account_number }}</p>
           </div>
           <div class="ef-field">
             <label class="ef-label">IFSC Code</label>
             <input v-model="form.ifsc_code" type="text" class="ef-input" placeholder="HDFC0000001" />
+            <p v-if="errors.ifsc_code" class="ef-err">{{ errors.ifsc_code }}</p>
           </div>
           <div class="ef-field">
             <label class="ef-label">PAN Number</label>
             <input v-model="form.pan_number" type="text" class="ef-input" placeholder="AAAPA1234A" />
+            <p v-if="errors.pan_number" class="ef-err">{{ errors.pan_number }}</p>
           </div>
         </div>
 
@@ -488,6 +491,43 @@ async function submit() {
   if (!form.first_name?.trim()) { errors.first_name = 'First name is required'; activeTab.value = 0; return }
   if (!form.email?.trim())      { errors.email = 'Email is required'; activeTab.value = 0; return }
   if (!form.phone?.trim())      { errors.phone = 'Phone is required'; activeTab.value = 0; return }
+
+  // Phone: 7-15 digits (ignore spaces, dashes, parentheses, leading +)
+  const phoneDigits = String(form.phone).replace(/[\s\-()+]/g, '')
+  if (!/^\d{7,15}$/.test(phoneDigits)) {
+    errors.phone = 'Phone must be 7-15 digits'
+    activeTab.value = 0
+    return
+  }
+
+  // PAN (India): ABCDE1234F
+  if (form.pan_number?.trim() && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(form.pan_number.trim())) {
+    errors.pan_number = 'PAN must be in format ABCDE1234F'
+    activeTab.value = 3
+    return
+  }
+
+  // IFSC: 4 letters + 0 + 6 alphanumeric
+  if (form.ifsc_code?.trim() && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.ifsc_code.trim())) {
+    errors.ifsc_code = 'Invalid IFSC code format'
+    activeTab.value = 3
+    return
+  }
+
+  // Bank account number: 9-18 digits
+  if (form.account_number?.trim() && !/^\d{9,18}$/.test(form.account_number.trim())) {
+    errors.account_number = 'Bank account number must be 9-18 digits'
+    activeTab.value = 3
+    return
+  }
+
+  // Aadhaar: 12 digits (only validated if the field is present on the form)
+  const aadhaar = (form as Record<string, unknown>).aadhaar_number
+  if (typeof aadhaar === 'string' && aadhaar.trim() && !/^\d{12}$/.test(aadhaar.trim())) {
+    errors.aadhaar_number = 'Aadhaar must be 12 digits'
+    activeTab.value = 3
+    return
+  }
 
   loading.value = true
   try {

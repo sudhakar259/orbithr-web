@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OrbitHR — Remaining Issues Report v2 (Post-Fix Audit)</title>
+<style>
+  :root {
+    --bg:#0C0E14; --surface:#141720; --surface2:#1C2030; --surface3:#222840;
+    --accent:#4F7EFF; --green:#36D399; --yellow:#F9A825; --red:#FF6B6B;
+    --purple:#9B6EFF; --orange:#FF9A3E; --text:#E8EAF0; --muted:#6B7280;
+    --border:#2A3050;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; font-size:13px; line-height:1.55; padding:32px 24px 60px; }
+  h1 { font-size:22px; font-weight:700; margin-bottom:4px; }
+  .subtitle { color:var(--muted); font-size:12px; margin-bottom:8px; }
+  .fixed-banner { background:rgba(54,211,153,.08); border:1px solid rgba(54,211,153,.25); border-radius:8px; padding:10px 14px; font-size:12px; color:var(--green); margin-bottom:28px; }
+
+  .summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin-bottom:32px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:4px; }
+  .card-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .card-value { font-size:26px; font-weight:700; }
+  .card-value.red    { color:var(--red); }
+  .card-value.orange { color:var(--orange); }
+  .card-value.yellow { color:var(--yellow); }
+  .card-value.green  { color:var(--green); }
+  .card-value.blue   { color:var(--accent); }
+
+  .section { margin-bottom:36px; }
+  .section-title { font-size:15px; font-weight:600; padding:8px 0 10px; border-bottom:1px solid var(--border); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+  .table-wrap { overflow-x:auto; border-radius:10px; border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; background:var(--surface); }
+  thead th { background:var(--surface2); color:var(--muted); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:10px 12px; text-align:left; white-space:nowrap; border-bottom:1px solid var(--border); }
+  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); }
+  td { padding:9px 12px; vertical-align:top; font-size:12px; line-height:1.55; }
+
+  .badge { display:inline-flex; align-items:center; font-size:10px; font-weight:600; border-radius:4px; padding:2px 7px; white-space:nowrap; letter-spacing:.03em; }
+  .badge-critical { background:rgba(255,107,107,.15); color:var(--red);    border:1px solid rgba(255,107,107,.3); }
+  .badge-high     { background:rgba(255,154,62,.15);  color:var(--orange); border:1px solid rgba(255,154,62,.3); }
+  .badge-medium   { background:rgba(249,168,37,.15);  color:var(--yellow); border:1px solid rgba(249,168,37,.3); }
+  .badge-low      { background:rgba(54,211,153,.15);  color:var(--green);  border:1px solid rgba(54,211,153,.3); }
+  .badge-backend  { background:rgba(79,126,255,.12);  color:var(--accent); border:1px solid rgba(79,126,255,.25); }
+  .badge-frontend { background:rgba(155,110,255,.12); color:var(--purple); border:1px solid rgba(155,110,255,.25); }
+  .badge-fullstack{ background:rgba(255,107,107,.12); color:var(--red);    border:1px solid rgba(255,107,107,.25); }
+  .badge-improved { background:rgba(249,168,37,.10);  color:var(--yellow); border:1px solid rgba(249,168,37,.25); }
+
+  .id-cell { font-family:'SF Mono','Fira Code',monospace; color:var(--accent); font-size:11px; white-space:nowrap; }
+  .file-ref { font-family:'SF Mono','Fira Code',monospace; font-size:10px; color:var(--muted); background:var(--surface3); border-radius:3px; padding:1px 5px; display:inline-block; margin-top:2px; word-break:break-all; }
+  .desc-title { font-weight:600; color:var(--text); margin-bottom:2px; }
+  .desc-body { color:var(--muted); }
+
+  .legend { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:24px; }
+  .legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); }
+
+  .fixed-table { background:var(--surface); border-radius:10px; border:1px solid rgba(54,211,153,.2); }
+  .fixed-table thead th { background:rgba(54,211,153,.06); color:var(--green); }
+  .fixed-badge { background:rgba(54,211,153,.12); color:var(--green); border:1px solid rgba(54,211,153,.25); font-size:10px; font-weight:600; border-radius:4px; padding:2px 7px; white-space:nowrap; }
+</style>
+</head>
+<body>
+
+<h1>OrbitHR — Remaining Issues Report <span style="color:var(--accent)">v2</span></h1>
+<p class="subtitle">Post-fix audit · 2026-05-29 · After 4-agent fix pass (10 backend + 14 frontend issues resolved)</p>
+
+<div class="fixed-banner">
+  ✓ Previously fixed in this session: 2FA (TwoFactorController), forgot-password flow, payslip emails, integration stubs → honest errors, candidate merge, empty return fixes, AI chat endpoint, leave proration (4 modes), 3 payroll tabs (Cycles/Advances/Structures), 5 employee-profile tabs (Attendance/Leave/Perf/Assets/Audit), ModuleCard navigation, admin route redirects, Chat page + sidebar, ForgotPassword/ResetPassword pages + Login link, OrgChart open roles from recruitment API, EmployeeForm validation (PAN/IFSC/bank/phone), WorkflowRules secondary route added
+</div>
+
+<!-- Summary cards -->
+<div class="summary-grid">
+  <div class="card"><span class="card-label">Remaining Issues</span><span class="card-value red">21</span></div>
+  <div class="card"><span class="card-label">Critical</span><span class="card-value red">1</span></div>
+  <div class="card"><span class="card-label">High</span><span class="card-value orange">8</span></div>
+  <div class="card"><span class="card-label">Medium</span><span class="card-value yellow">7</span></div>
+  <div class="card"><span class="card-label">Low</span><span class="card-value green">5</span></div>
+  <div class="card"><span class="card-label">Backend</span><span class="card-value blue">13</span></div>
+  <div class="card"><span class="card-label">Frontend</span><span class="card-value" style="color:var(--purple)">5</span></div>
+  <div class="card"><span class="card-label">Full-stack</span><span class="card-value orange">3</span></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="badge badge-critical">Critical</span> Broken feature / 404 on all calls</div>
+  <div class="legend-item"><span class="badge badge-high">High</span> Feature always fails silently or with stub response</div>
+  <div class="legend-item"><span class="badge badge-medium">Medium</span> Partial or degraded functionality</div>
+  <div class="legend-item"><span class="badge badge-low">Low</span> Cleanup / polish</div>
+  <div class="legend-item"><span class="badge badge-improved">Improved</span> Previously silent fake-success → now honest error/warning</div>
+</div>
+
+<!-- ══════ SECTION 1: CRITICAL ══════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--red)"></span>1. Critical — Fully Broken Features</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Severity</th><th>Layer</th><th>Module</th><th>Issue Description</th><th>File / Location</th><th>Impact</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">C-001</td>
+          <td><span class="badge badge-critical">Critical</span></td>
+          <td><span class="badge badge-fullstack">Full-stack</span></td>
+          <td>Chat</td>
+          <td>
+            <div class="desc-title">Chat module has no backend — all API calls 404</div>
+            <div class="desc-body">Chat.vue exists and is routed at <code>/app/chat</code>. On mount it calls <code>GET /api/chat/channels</code>; on send it calls <code>POST /api/chat/messages</code>. Neither route exists in <code>routes/api.php</code>. There is no ChatController, no chat migrations, and no chat models (only an unrelated <code>ChMessage.php</code> exists from a package). The page renders demo fallback channels, but no real-time messaging is possible.</div>
+          </td>
+          <td>
+            <span class="file-ref">orbithr-web/src/pages/app/Chat.vue:78,92</span><br>
+            <span class="file-ref">routes/api.php (missing /chat/* routes)</span>
+          </td>
+          <td>Entire Chat module is a frontend shell with no working backend. Users see demo data only.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ SECTION 2: HIGH ══════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--orange)"></span>2. High — Features That Fail or Return Stub Responses</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Severity</th><th>Layer</th><th>Module</th><th>Issue Description</th><th>File / Location</th><th>Impact</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">H-001</td>
+          <td><span class="badge badge-high">High</span> <span class="badge badge-improved">Improved</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>SMS Notifications</td>
+          <td>
+            <div class="desc-title">Twilio SMS &amp; Msg91 SMS drivers — config-checked but no real API calls</div>
+            <div class="desc-body">Both drivers now throw <code>RuntimeException</code> when credentials are missing (improvement over silent fake-success). However, when credentials ARE configured, they only log a warning and return a stub success response without actually calling the Twilio or Msg91 APIs. No HTTP request is made to send any SMS.</div>
+          </td>
+          <td>
+            <span class="file-ref">Services/Integrations/Sms/TwilioSmsDriver.php:17–25</span><br>
+            <span class="file-ref">Services/Integrations/Sms/Msg91SmsDriver.php:17–25</span>
+          </td>
+          <td>OTP delivery, leave alerts, and attendance notifications via SMS never actually send.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">H-002</td>
+          <td><span class="badge badge-high">High</span> <span class="badge badge-improved">Improved</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>WhatsApp Notifications</td>
+          <td>
+            <div class="desc-title">WhatsApp Cloud API &amp; Twilio WhatsApp — config-checked but no real API calls</div>
+            <div class="desc-body">Both <code>sendTemplate()</code> and <code>sendMessage()</code> in both WhatsApp drivers check for the token/SID, throw on missing creds, but when credentials are present they log warnings and return stub success strings. The actual Meta WhatsApp Cloud API or Twilio API endpoints are never called.</div>
+          </td>
+          <td>
+            <span class="file-ref">Services/Integrations/WhatsApp/WhatsAppCloudApiDriver.php:17–43</span><br>
+            <span class="file-ref">Services/Integrations/WhatsApp/TwilioWhatsAppDriver.php:17–43</span>
+          </td>
+          <td>All WhatsApp notifications (leave approvals, onboarding, alerts) are never delivered.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">H-003</td>
+          <td><span class="badge badge-high">High</span> <span class="badge badge-improved">Improved</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Payment (Integration Driver)</td>
+          <td>
+            <div class="desc-title">Stripe &amp; Razorpay integration payment drivers — no real payment processing</div>
+            <div class="desc-body">Both <code>StripePaymentDriver</code> and <code>RazorpayPaymentDriver</code> (in the Integrations payment layer, distinct from the BillingService which works) check credentials but then return stub success without calling the payment gateway. <code>charge()</code>, <code>refund()</code>, and <code>handleWebhook()</code> all return fake responses when credentials are present.</div>
+          </td>
+          <td>
+            <span class="file-ref">Services/Integrations/Payment/StripePaymentDriver.php:20,39,58</span><br>
+            <span class="file-ref">Services/Integrations/Payment/RazorpayPaymentDriver.php:20,39,58</span>
+          </td>
+          <td>Custom payment collection flows using these drivers will succeed without charging customers.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">H-004</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Recruitment — Calendar</td>
+          <td>
+            <div class="desc-title">Interview calendar sync (create/update/delete) all stubbed — no Google/Outlook API calls</div>
+            <div class="desc-body"><code>syncInterviewToCalendar()</code> generates a random fake event ID and saves it to the DB without calling Google Calendar or Outlook APIs. <code>updateEvent()</code> only updates a timestamp in the DB (comment: "In production this would call the provider API"). <code>deleteEvent()</code> only clears DB fields. Three separate calendar operations are all stubs.</div>
+          </td>
+          <td>
+            <span class="file-ref">CalendarController.php:509–540 (sync stub)</span><br>
+            <span class="file-ref">CalendarController.php:318–330 (update stub)</span><br>
+            <span class="file-ref">CalendarController.php:348 (delete stub)</span>
+          </td>
+          <td>Interview invites never appear in Google Calendar or Outlook. Calendar sync status in UI is misleading.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">H-005</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Recruitment — Email</td>
+          <td>
+            <div class="desc-title">Gmail/Outlook OAuth candidate email send saves to outbox but never delivers</div>
+            <div class="desc-body">When a recruiter sends a candidate email through an OAuth-connected Gmail or Outlook account, <code>EmailIntegrationController::sendEmail()</code> saves the message to the outbox table and sets <code>$sent = false</code>, but the comment explicitly says "Gmail/Outlook OAuth send not yet implemented." The candidate never receives the email.</div>
+          </td>
+          <td><span class="file-ref">EmailIntegrationController.php:402–403</span></td>
+          <td>Candidate communication via OAuth-integrated email accounts is silently broken. Candidates never receive emails sent from inside the ATS.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">H-006</td>
+          <td><span class="badge badge-high">High</span> <span class="badge badge-improved">Improved</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Recruitment — Job Boards</td>
+          <td>
+            <div class="desc-title">LinkedIn / Indeed / Naukri publishing returns placeholder IDs when credentials absent or API unreachable</div>
+            <div class="desc-body">When <code>access_token</code> is empty, <code>publishToLinkedIn()</code> logs "credentials not configured, returning placeholder ID for dev" and returns <code>'li-dev-XXXXXXXX'</code>. The same fallback fires on any connection exception. Real HTTP calls to LinkedIn/Indeed/Naukri APIs are attempted only when credentials are configured AND the API is reachable — but on failure the fallback is a silent fake ID, not an error surfaced to the user. Application sync from job boards is still a pure stub returning an empty array.</div>
+          </td>
+          <td>
+            <span class="file-ref">Services/JobBoardService.php:176,200 (LinkedIn)</span><br>
+            <span class="file-ref">Services/JobBoardService.php:218,245 (Indeed)</span><br>
+            <span class="file-ref">Services/JobBoardService.php:263,290 (Naukri)</span><br>
+            <span class="file-ref">Services/JobBoardService.php:357–365 (app sync stub)</span>
+          </td>
+          <td>Jobs appear "published" in the UI with fake IDs. Candidates applying on job boards are never imported.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">H-007</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Payroll — Payslip Email</td>
+          <td>
+            <div class="desc-title">Payslip email does not verify PDF is generated before sending</div>
+            <div class="desc-body"><code>PayslipController::email()</code> now correctly calls <code>Mail::to()->send(new PayslipMail($payslip))</code>. However, it does NOT check whether <code>$payslip->pdf_path</code> exists or the file is on storage before sending. <code>PayslipMail::attachments()</code> silently skips the PDF attachment if it's missing. An admin could "email" a payslip that was never generated — the employee receives an email with no payslip attached and no error is returned.</div>
+          </td>
+          <td>
+            <span class="file-ref">PayslipController.php:241–270 (missing pdf check)</span><br>
+            <span class="file-ref">Mail/PayslipMail.php:33–47 (silent skip on missing PDF)</span>
+          </td>
+          <td>Employees receive blank payslip emails when PDF hasn't been generated. No error surfaced to the admin.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">H-008</td>
+          <td><span class="badge badge-high">High</span></td>
+          <td><span class="badge badge-fullstack">Full-stack</span></td>
+          <td>Reports — Scheduled Reports</td>
+          <td>
+            <div class="desc-title">Scheduled Reports page exists and is fully functional in UI — backend ignores all schedules</div>
+            <div class="desc-body"><code>ScheduledReports.vue</code> is routed at <code>/app/reports/scheduled</code> and provides a complete form to create schedules (report type, frequency, recipients, start date). The backend <code>ReportController::scheduleReport()</code> and <code>::scheduledReports()</code> are stubs — creating a schedule echoes back the request data, and listing returns an empty array with an "not yet implemented" message. No schedules are ever persisted or executed.</div>
+          </td>
+          <td>
+            <span class="file-ref">orbithr-web/src/pages/app/reports/ScheduledReports.vue</span><br>
+            <span class="file-ref">ReportController.php:171–192</span>
+          </td>
+          <td>Users can fill and "create" scheduled reports but nothing is saved. Reports never run automatically.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ SECTION 3: MEDIUM ══════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--yellow)"></span>3. Medium — Partial / Degraded Functionality</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Severity</th><th>Layer</th><th>Module</th><th>Issue Description</th><th>File / Location</th><th>Impact</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">M-001</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Chat</td>
+          <td>
+            <div class="desc-title">Chat.vue renders hardcoded demo channels and messages as fallback</div>
+            <div class="desc-body">When <code>GET /api/chat/channels</code> returns 404, <code>Chat.vue</code> falls back to hardcoded static channels: <code>general</code>, <code>announcements</code>, <code>random</code> (lines 23–42). These never update, cannot be added to, and give a false sense of functionality. The fallback message only says "Chat module not yet activated — Go to Marketplace" — the marketplace link exists but there is no Chat module to purchase there since the backend doesn't exist.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/pages/app/Chat.vue:23–42</span></td>
+          <td>Users see what looks like a functional chat UI with demo data, creating confusion about whether the feature is active.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-002</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Recruitment — Integration Test</td>
+          <td>
+            <div class="desc-title">TenantIntegrationController::test() only pings public URLs, not authenticated provider endpoints</div>
+            <div class="desc-body">The test method now makes a Guzzle request, but only to a public URL (e.g., <code>https://slack.com/api/api.test</code>) — not an authenticated call with the tenant's actual credentials. A valid connection ping tells you the provider is reachable on the internet, not that the stored credentials are valid. An expired Slack token would still pass this test.</div>
+          </td>
+          <td><span class="file-ref">TenantIntegrationController.php:136–175</span></td>
+          <td>Integration connection tests pass for providers with invalid or expired credentials, giving false confidence.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-003</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Payroll — Payslip</td>
+          <td>
+            <div class="desc-title">Payslip bulk-email has no rate limiting or batch queuing</div>
+            <div class="desc-body"><code>PayslipController::bulkEmail()</code> iterates over all payslips in a cycle and calls <code>Mail::to()->send()</code> synchronously in a loop. For tenants with hundreds of employees this will timeout or trigger rate limiting from the mail provider. Emails should be dispatched to a queue. The method also does not verify PDF existence (same issue as H-007) for each payslip in the batch.</div>
+          </td>
+          <td><span class="file-ref">PayslipController.php:281–325 (bulkEmail)</span></td>
+          <td>Bulk payslip emailing will timeout on large employee counts. Some employees receive emails without PDF attachments if payslips weren't generated.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-004</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Leave — Proration Setting</td>
+          <td>
+            <div class="desc-title">Leave proration mode stored in generic Setting model — no UI to change it</div>
+            <div class="desc-body">The proration mode is now configurable (4 modes via <code>GET/PUT /leave/proration-mode</code>). However, there is no frontend UI to change this setting. It cannot be changed without a direct API call. Tenant admins cannot discover or modify this setting from the Leave admin panel.</div>
+          </td>
+          <td>
+            <span class="file-ref">LeaveAccrualController.php (getProrationMode/setProrationMode)</span><br>
+            <span class="file-ref">orbithr-web/src/pages/app/admin/ (no UI for this setting)</span>
+          </td>
+          <td>Leave proration is configurable via API but inaccessible to tenant admins through the UI.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-005</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Payroll — Cycles</td>
+          <td>
+            <div class="desc-title">Payroll cycle "suggest-next" route ordering causes 404</div>
+            <div class="desc-body">In <code>routes/api.php</code>, the route <code>GET /payroll/cycles/suggest-next</code> is defined AFTER <code>GET /payroll/cycles/{id}</code>. Laravel will match <code>suggest-next</code> as the <code>{id}</code> parameter and attempt to find a cycle with ID "suggest-next", returning a 404. The named parameter route must come before the wildcard.</div>
+          </td>
+          <td><span class="file-ref">routes/api.php:435–439 (route ordering issue)</span></td>
+          <td>The "Suggest next cycle dates" feature in the Payroll UI always returns 404.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-006</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Employee Profile — Tabs</td>
+          <td>
+            <div class="desc-title">EmployeeProfile "Performance" tab calls generic /performance/goals — not filtered by employee</div>
+            <div class="desc-body">The performance tab fetches <code>GET /api/performance/goals</code> with no <code>employee_id</code> filter. This returns all goals for the authenticated user, not the employee being viewed. When an HR manager views a specific employee's profile, the performance tab shows the HR manager's own goals, not the employee's goals.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/pages/app/EmployeeProfile.vue (performance tab fetch)</span></td>
+          <td>HR managers see their own performance goals in the employee profile's performance tab — wrong data shown.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">M-007</td>
+          <td><span class="badge badge-medium">Medium</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>2FA — Frontend</td>
+          <td>
+            <div class="desc-title">No frontend UI for 2FA management — backend endpoints exist but are unreachable</div>
+            <div class="desc-body">The backend now has 5 working 2FA JSON endpoints (<code>/2fa/status</code>, <code>/setup</code>, <code>/enable</code>, <code>/disable</code>, <code>/verify</code>). However, there is no frontend component or page to manage 2FA. The Profile page and SecuritySettingsCard.vue do not use these endpoints. Users cannot enable, disable, or set up 2FA through the UI.</div>
+          </td>
+          <td>
+            <span class="file-ref">orbithr-api/app/Http/Controllers/TwoFactorController.php (backend ready)</span><br>
+            <span class="file-ref">orbithr-web/src/components/employee/profile/SecuritySettingsCard.vue (no 2FA UI)</span>
+          </td>
+          <td>2FA is fully implemented on the backend but completely inaccessible from the UI — the feature effectively doesn't exist for users.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ SECTION 4: LOW ══════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--green)"></span>4. Low — Cleanup &amp; Polish</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Severity</th><th>Layer</th><th>Module</th><th>Issue Description</th><th>File / Location</th><th>Impact</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="id-cell">L-001</td>
+          <td><span class="badge badge-low">Low</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>All Modules</td>
+          <td>
+            <div class="desc-title">4 orphaned .vue-delete files remain in repository</div>
+            <div class="desc-body">The following files were renamed to <code>.vue-delete</code> instead of being removed. They are not imported by anything but add confusion about what is active:<br>
+            • <code>pages/app/Performance.vue-delete</code><br>
+            • <code>pages/app/Reports.vue-delete</code><br>
+            • <code>pages/app/ess/EssDashboard.vue-delete</code><br>
+            • <code>pages/app/lnd/Courses.vue-delete</code>
+            </div>
+          </td>
+          <td>
+            <span class="file-ref">pages/app/Performance.vue-delete</span><br>
+            <span class="file-ref">pages/app/Reports.vue-delete</span><br>
+            <span class="file-ref">pages/app/ess/EssDashboard.vue-delete</span><br>
+            <span class="file-ref">pages/app/lnd/Courses.vue-delete</span>
+          </td>
+          <td>Repository clutter. New developers confused about which file is canonical.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">L-002</td>
+          <td><span class="badge badge-low">Low</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Leave — Proration</td>
+          <td>
+            <div class="desc-title">Leave proration setting uses global Setting model — no per-tenant isolation guarantee</div>
+            <div class="desc-body">The proration mode is stored in a generic <code>Setting</code> key/value store. Depending on how this model scopes its records, the setting may not be isolated per tenant. If the <code>Setting</code> model does not apply a <code>TenantScope</code> global scope, all tenants would share the same proration mode.</div>
+          </td>
+          <td><span class="file-ref">Services/LeaveManagementService.php:551–572 (getProrationMode)</span></td>
+          <td>If Setting model is not tenant-scoped, changing proration mode for one tenant changes it for all.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">L-003</td>
+          <td><span class="badge badge-low">Low</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>AI — Chat</td>
+          <td>
+            <div class="desc-title">AiController rule-based fallback responses are generic — not tenant-aware</div>
+            <div class="desc-body">When neither <code>ANTHROPIC_API_KEY</code> nor <code>OPENAI_API_KEY</code> is configured, the AI chat falls back to keyword-matched static responses. These responses reference generic features (e.g., "Leave module") without knowing what modules the tenant has activated. A tenant without the Leave module would receive instructions to use a feature they don't have.</div>
+          </td>
+          <td><span class="file-ref">AiController.php (fallbackReply method)</span></td>
+          <td>Minor UX issue — fallback responses may reference unavailable features.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">L-004</td>
+          <td><span class="badge badge-low">Low</span></td>
+          <td><span class="badge badge-frontend">Frontend</span></td>
+          <td>Payroll</td>
+          <td>
+            <div class="desc-title">Payroll Advances tab uses text input for employee ID instead of a searchable dropdown</div>
+            <div class="desc-body">The "Request Advance" modal uses a plain number input for employee ID, requiring the admin to know the employee's numeric ID. It should use a searchable employee selector (as other forms in the app do) to provide name/code lookup.</div>
+          </td>
+          <td><span class="file-ref">orbithr-web/src/pages/app/Payroll.vue (advance form)</span></td>
+          <td>Poor UX for advance requests — admins must look up employee IDs manually.</td>
+        </tr>
+        <tr>
+          <td class="id-cell">L-005</td>
+          <td><span class="badge badge-low">Low</span></td>
+          <td><span class="badge badge-backend">Backend</span></td>
+          <td>Payroll — Cycles</td>
+          <td>
+            <div class="desc-title">PayrollController::suggestNextCycle route registered after wildcard route</div>
+            <div class="desc-body">In <code>routes/api.php</code>, <code>GET payroll/cycles/suggest-next</code> is registered at line 439 but <code>GET payroll/cycles/{id}</code> is at line 434. Laravel resolves routes top-to-bottom; <code>suggest-next</code> will be captured as the <code>{id}</code> parameter and return a model-not-found error. The <code>suggest-next</code> route must be moved before the <code>{id}</code> route.</div>
+          </td>
+          <td><span class="file-ref">routes/api.php:434–439</span></td>
+          <td><code>GET /api/payroll/cycles/suggest-next</code> always returns 404 or a model-not-found error.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ SECTION 5: PREVIOUSLY FIXED ══════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--green)"></span>5. Confirmed Fixed — Issues Resolved Since Last Audit</div>
+  <div class="table-wrap">
+    <table class="fixed-table">
+      <thead><tr><th>Old ID</th><th>Status</th><th>Module</th><th>What Was Fixed</th></tr></thead>
+      <tbody>
+        <tr><td class="id-cell">A-001</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Authentication</td><td>New TwoFactorController with 5 JSON endpoints: status, setup, enable, disable, verify — all live in routes/api.php</td></tr>
+        <tr><td class="id-cell">A-002</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Authentication</td><td>PasswordResetController with forgot-password + reset-password endpoints; ForgotPassword.vue + ResetPassword.vue created; "Forgot password?" link added to Login.vue</td></tr>
+        <tr><td class="id-cell">B-001</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Payroll</td><td>PayslipController::email() and bulkEmail() now call Mail::to()->send(new PayslipMail($payslip)) with correct constructor signature</td></tr>
+        <tr><td class="id-cell">B-006</td><td><span class="fixed-badge">✓ Improved</span></td><td>Integrations</td><td>TenantIntegrationController::test() now makes real Guzzle HTTP ping to provider (not unconditional success)</td></tr>
+        <tr><td class="id-cell">B-008</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Recruitment</td><td>CandidateController::merge() implemented: transfers applications, syncs tags, fills missing fields, deletes secondary candidate</td></tr>
+        <tr><td class="id-cell">BL-001</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Leave</td><td>Leave proration now supports 4 configurable modes (day_15_rule, exact_days, full_month, no_accrual) with GET/PUT API endpoint</td></tr>
+        <tr><td class="id-cell">BL-002</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Performance</td><td>GoalController: missing employee returns 404 with message instead of empty array</td></tr>
+        <tr><td class="id-cell">BL-003</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Attendance</td><td>AttendanceController: missing employee returns 404 with message instead of empty array</td></tr>
+        <tr><td class="id-cell">M-002</td><td><span class="fixed-badge">✓ Fixed</span></td><td>AI Features</td><td>AiController created at /api/ai/chat — Anthropic API → OpenAI → rule-based fallback chain</td></tr>
+        <tr><td class="id-cell">F-001</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Payroll</td><td>3 tabs implemented: Cycles (table + actions + modal), Advances (table + approve/reject/disburse + modal), Structures (cards + assignment table + modal)</td></tr>
+        <tr><td class="id-cell">F-002</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Employee Profile</td><td>5 tabs implemented: Attendance (monthly calendar), Leave (requests + balance), Performance (goals + bars), Assets (table), Audit (log table)</td></tr>
+        <tr><td class="id-cell">F-003</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Marketplace</td><td>ModuleCard now navigates to the module's route via MODULE_ROUTE_MAP when tenant owns the module</td></tr>
+        <tr><td class="id-cell">F-004</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Org Chart</td><td>OrgChart open roles now fetches GET /recruitment/jobs?status=open with graceful fallback for missing module</td></tr>
+        <tr><td class="id-cell">F-005</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Workflow</td><td>WorkflowRules added as secondary route; WorkflowAutomation remains primary nav entry</td></tr>
+        <tr><td class="id-cell">F-006</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Employee Form</td><td>Validation added for PAN (regex), IFSC (regex), bank account (9–18 digits), phone (7–15 digits)</td></tr>
+        <tr><td class="id-cell">R-001</td><td><span class="fixed-badge">✓ Fixed</span></td><td>Admin</td><td>admin/modules, admin/plans, admin/transactions now load local admin Vue components instead of redirecting to superAdmin area</td></tr>
+        <tr><td class="id-cell">M-001</td><td><span class="fixed-badge">✓ Partial</span></td><td>Chat</td><td>Chat.vue page created with channel sidebar + message thread UI; gracefully shows "activate Chat module" state when API 404s. Backend still missing (see C-001).</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ SECTION 6: Priority Matrix ══════ -->
+<div class="section">
+  <div class="section-title"><span class="dot" style="background:var(--accent)"></span>6. Recommended Fix Priority</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Priority</th><th>Issue IDs</th><th>Action Required</th><th>Estimated Effort</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong style="color:var(--red)">P0 — Immediate</strong></td>
+          <td class="id-cell">C-001, H-007, M-005/L-005, M-007</td>
+          <td>
+            <b>C-001</b>: Implement ChatController, chat_channels + chat_messages tables, and routes.<br>
+            <b>H-007</b>: Add PDF existence check before sending payslip email (guard + generate-on-demand).<br>
+            <b>M-005/L-005</b>: Move <code>GET /payroll/cycles/suggest-next</code> route ABOVE <code>GET /payroll/cycles/{id}</code> in api.php.<br>
+            <b>M-007</b>: Add 2FA toggle to SecuritySettingsCard.vue / Profile page calling <code>/2fa/*</code> endpoints.
+          </td>
+          <td>&lt;1 day for route fix; 3–5 days for Chat backend + 2FA UI</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--orange)">P1 — This Sprint</strong></td>
+          <td class="id-cell">H-005, H-006, H-008, M-001, M-004, M-006</td>
+          <td>
+            <b>H-005</b>: Implement Gmail OAuth send via Google API client.<br>
+            <b>H-006</b>: Fix job board fallback to surface error to UI instead of returning fake IDs.<br>
+            <b>H-008</b>: Implement report scheduling (cron job, ScheduledReport model, scheduler).<br>
+            <b>M-001</b>: Remove hardcoded demo data from Chat.vue once backend is live.<br>
+            <b>M-004</b>: Add proration mode selector to Leave Settings admin page.<br>
+            <b>M-006</b>: Fix performance tab to filter goals by <code>employee_id</code>.
+          </td>
+          <td>2–8 days per item</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--yellow)">P2 — Next Sprint</strong></td>
+          <td class="id-cell">H-001, H-002, H-003, H-004, M-002, M-003</td>
+          <td>
+            <b>H-001/H-002/H-003</b>: Implement real SMS, WhatsApp, and payment API calls using Twilio SDK, Meta API SDK, Stripe PHP SDK, and Razorpay SDK.<br>
+            <b>H-004</b>: Implement Google Calendar + Outlook Calendar OAuth event creation/update/deletion.<br>
+            <b>M-002</b>: Test integration with real OAuth token validation for each provider type.<br>
+            <b>M-003</b>: Queue bulk payslip emails via Laravel queue + limit concurrency.
+          </td>
+          <td>3–10 days per integration</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--green)">P3 — Backlog</strong></td>
+          <td class="id-cell">L-001, L-002, L-003, L-004</td>
+          <td>
+            <b>L-001</b>: Delete 4 <code>.vue-delete</code> files.<br>
+            <b>L-002</b>: Verify Setting model applies TenantScope; if not, add tenant_id column + scope.<br>
+            <b>L-003</b>: Make AI fallback tenant-aware (check active modules before suggesting features).<br>
+            <b>L-004</b>: Replace employee ID number input in Advance form with searchable employee selector.
+          </td>
+          <td>&lt;1 day each</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p style="color:var(--muted);font-size:11px;margin-top:24px;text-align:center;">OrbitHR Post-Fix Audit Report v2 · 2026-05-29 · 21 remaining issues (down from 47) · 17 issues resolved</p>
+
+</body>
+</html>

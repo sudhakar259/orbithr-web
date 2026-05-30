@@ -61,6 +61,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useModuleStore } from '@/stores/modules'
 
 interface Feature {
@@ -98,7 +99,22 @@ const emit = defineEmits<{
 }>()
 
 const loading = ref(false)
+const router = useRouter()
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const moduleStore = useModuleStore()
+
+// Map module slug → app route name for owned-module navigation
+const MODULE_ROUTE_MAP: Record<string, string> = {
+  payroll: 'payroll',
+  leave: 'leave',
+  performance: 'performance',
+  attendance: 'attendance',
+  employee: 'employees',
+  chat: 'chat',
+  lnd: 'lnd.dashboard',
+  expenses: 'expenses.dashboard',
+  recruitment: 'recruitment.dashboard',
+}
 
 const isOwned = computed(() => props.module.status === 'owned' || props.module.status === 'free')
 
@@ -150,8 +166,10 @@ const handleAction = async () => {
   loading.value = true
   try {
     if (isOwned.value) {
-      // Navigate to module management
-      // TODO: implement navigation
+      // Navigate to the owned module's route
+      const target = MODULE_ROUTE_MAP[props.module.slug]
+      const hasRoute = !!target && router.hasRoute(target)
+      router.push({ name: hasRoute ? target : 'marketplace' })
     } else if (props.module.is_free) {
       emit('enable', props.module.slug)
     } else {

@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
+defineOptions({ name: 'LoginPage' })
+
 const router = useRouter()
-const { user, requestOtp, login, hasPermission, setAuth } = useAuth()
+const { user, login, hasPermission, setAuth } = useAuth()
+
+function extractError(e: unknown, fallback: string): string {
+  const err = e as { response?: { data?: { message?: string } }; message?: string }
+  return err?.response?.data?.message || err?.message || fallback
+}
 
 const step      = ref<'choose' | 'otp'>('choose')
 const email     = ref('admin@orbithr.test')
@@ -18,7 +25,7 @@ const otpInputs = ref<(HTMLInputElement | null)[]>([])
 const otpValue  = computed(() => otpDigits.value.join(''))
 const canSubmitOtp = computed(() => otpValue.value.length === 6)
 
-function setOtpRef(el: any, idx: number) { otpInputs.value[idx] = el }
+function setOtpRef(el: unknown, idx: number) { otpInputs.value[idx] = el as HTMLInputElement | null }
 function focusIndex(i: number) { otpInputs.value[i]?.focus() }
 
 function handleOtpInput(e: Event, idx: number) {
@@ -59,8 +66,8 @@ async function authenticateUser() {
     if (!res) return
     setAuth(res.data.user, res.data.token)
     await router.replace({ name: 'dashboard' })
-  } catch (e: any) {
-    error.value = e?.response?.data?.message || e.message || 'Login failed'
+  } catch (e: unknown) {
+    error.value = extractError(e, 'Login failed')
   } finally {
     loading.value = false
   }
@@ -76,14 +83,14 @@ async function verifyOtp() {
     if (hasPermission('view_employees'))    return router.push({ name: 'employees' })
     if (hasPermission('view_own_profile'))  return router.push({ name: 'employee-profile', params: { id: user.value.id } })
     router.push({ name: 'dashboard' })
-  } catch (e: any) {
-    error.value = e?.response?.data?.message || e.message || 'Invalid or expired code'
+  } catch (e: unknown) {
+    error.value = extractError(e, 'Invalid or expired code')
   } finally {
     loading.value = false
   }
 }
 
-const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || 'http://localhost:8000'
+const BACKEND_URL = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_BACKEND_URL || 'http://localhost:8000'
 
 function loginWithGoogle() {
   const subdomain = window.location.hostname.split('.')[0]
@@ -141,7 +148,10 @@ const features = [
             <input v-model="email" type="email" placeholder="you@company.com" :class="{ error }" autocomplete="email" />
           </div>
           <div class="field">
-            <label>Password</label>
+            <div class="label-row">
+              <label>Password</label>
+              <RouterLink class="forgot-link" :to="{ name: 'forgot-password' }">Forgot password?</RouterLink>
+            </div>
             <div class="pw-wrap">
               <input
                 v-model="password"
@@ -265,6 +275,9 @@ const features = [
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 12px; color: var(--dim); font-weight: 500; }
+.label-row { display: flex; align-items: center; justify-content: space-between; }
+.forgot-link { font-size: 12px; color: var(--accent); text-decoration: none; transition: opacity .15s; }
+.forgot-link:hover { opacity: .8; text-decoration: underline; }
 .field input {
   background: var(--surface2);
   border: 1px solid var(--border);

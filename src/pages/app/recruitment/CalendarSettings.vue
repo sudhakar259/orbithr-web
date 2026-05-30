@@ -3,6 +3,7 @@ defineOptions({ name: 'RecruitmentCalendarSettings' })
 import { ref, onMounted } from 'vue'
 import { calendarService, type CalendarIntegration } from '@/services/recruitmentService'
 import { useConfirm } from '@/composables/useConfirm'
+import api from '@/services/api'
 
 const { confirm: dialog } = useConfirm()
 
@@ -11,12 +12,11 @@ const loading = ref(true)
 const error = ref('')
 const successMsg = ref('')
 
-// Connect form state
-const googleForm = ref({ access_token: '', refresh_token: '', calendar_id: 'primary' })
-const outlookForm = ref({ access_token: '', refresh_token: '', calendar_id: 'primary' })
+// Connect state
 const connectingGoogle = ref(false)
 const connectingOutlook = ref(false)
 const connectError = ref('')
+const oauthWindow = ref<Window | null>(null)
 
 const loadIntegrations = async () => {
   loading.value = true
@@ -54,54 +54,65 @@ const disconnectIntegration = async (integration: CalendarIntegration) => {
   }
 }
 
-const connectGoogle = async () => {
-  if (!googleForm.value.access_token) {
-    connectError.value = 'Access token is required'
-    return
-  }
+const openGoogleOAuth = async () => {
   connectingGoogle.value = true
   connectError.value = ''
   try {
-    const payload: { access_token: string; refresh_token?: string; calendar_id?: string } = {
-      access_token: googleForm.value.access_token,
-    }
-    if (googleForm.value.refresh_token) payload.refresh_token = googleForm.value.refresh_token
-    if (googleForm.value.calendar_id) payload.calendar_id = googleForm.value.calendar_id
-    await calendarService.connectGoogle(payload)
-    googleForm.value = { access_token: '', refresh_token: '', calendar_id: 'primary' }
-    successMsg.value = 'Google Calendar connected!'
-    setTimeout(() => (successMsg.value = ''), 3000)
-    await loadIntegrations()
+    const res = await api.get('/calendar/google/auth-url')
+    const url = res.data?.url
+    if (!url) throw new Error('No auth URL returned')
+
+    oauthWindow.value = window.open(url, 'google-oauth', 'width=550,height=650,left=200,top=100')
+
+    window.addEventListener('message', handleGoogleMessage)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } } }
-    connectError.value = err.response?.data?.message ?? 'Failed to connect Google Calendar'
-  } finally {
+    connectError.value = err.response?.data?.message ?? 'Failed to start Google OAuth'
     connectingGoogle.value = false
   }
 }
 
-const connectOutlook = async () => {
-  if (!outlookForm.value.access_token) {
-    connectError.value = 'Access token is required'
-    return
+const handleGoogleMessage = (event: MessageEvent) => {
+  if (event.data?.type === 'google-oauth-success') {
+    window.removeEventListener('message', handleGoogleMessage)
+    connectingGoogle.value = false
+    successMsg.value = 'Google Calendar connected!'
+    setTimeout(() => (successMsg.value = ''), 4000)
+    loadIntegrations()
+  } else if (event.data?.type === 'google-oauth-error') {
+    window.removeEventListener('message', handleGoogleMessage)
+    connectError.value = event.data.message ?? 'Google OAuth failed'
+    connectingGoogle.value = false
   }
+}
+
+const openMicrosoftOAuth = async () => {
   connectingOutlook.value = true
   connectError.value = ''
   try {
-    const payload: { access_token: string; refresh_token?: string; calendar_id?: string } = {
-      access_token: outlookForm.value.access_token,
-    }
-    if (outlookForm.value.refresh_token) payload.refresh_token = outlookForm.value.refresh_token
-    if (outlookForm.value.calendar_id) payload.calendar_id = outlookForm.value.calendar_id
-    await calendarService.connectOutlook(payload)
-    outlookForm.value = { access_token: '', refresh_token: '', calendar_id: 'primary' }
-    successMsg.value = 'Outlook Calendar connected!'
-    setTimeout(() => (successMsg.value = ''), 3000)
-    await loadIntegrations()
+    const res = await api.get('/calendar/microsoft/auth-url')
+    const url = res.data?.url
+    if (!url) throw new Error('No auth URL returned')
+
+    window.open(url, 'microsoft-oauth', 'width=550,height=650,left=200,top=100')
+    window.addEventListener('message', handleMicrosoftMessage)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } } }
-    connectError.value = err.response?.data?.message ?? 'Failed to connect Outlook Calendar'
-  } finally {
+    connectError.value = err.response?.data?.message ?? 'Failed to start Microsoft OAuth'
+    connectingOutlook.value = false
+  }
+}
+
+const handleMicrosoftMessage = (event: MessageEvent) => {
+  if (event.data?.type === 'microsoft-oauth-success') {
+    window.removeEventListener('message', handleMicrosoftMessage)
+    connectingOutlook.value = false
+    successMsg.value = 'Outlook Calendar connected!'
+    setTimeout(() => (successMsg.value = ''), 4000)
+    loadIntegrations()
+  } else if (event.data?.type === 'microsoft-oauth-error') {
+    window.removeEventListener('message', handleMicrosoftMessage)
+    connectError.value = event.data.message ?? 'Microsoft OAuth failed'
     connectingOutlook.value = false
   }
 }
@@ -222,44 +233,17 @@ onMounted(loadIntegrations)
                 <p class="connect-desc">Connect your Google account to sync interview events</p>
               </div>
             </div>
-            <div class="connect-fields">
-              <div class="field">
-                <label class="field-label">Access Token *</label>
-                <input
-                  v-model="googleForm.access_token"
-                  type="password"
-                  class="field-input"
-                  placeholder="Paste OAuth access token"
-                />
-              </div>
-              <div class="field">
-                <label class="field-label">Refresh Token</label>
-                <input
-                  v-model="googleForm.refresh_token"
-                  type="password"
-                  class="field-input"
-                  placeholder="Optional refresh token"
-                />
-              </div>
-              <div class="field">
-                <label class="field-label">Calendar ID</label>
-                <input
-                  v-model="googleForm.calendar_id"
-                  type="text"
-                  class="field-input"
-                  placeholder="primary"
-                />
-              </div>
-            </div>
-            <p class="connect-hint">
-              Get tokens from Google OAuth 2.0 Playground or your OAuth flow
+            <p class="connect-desc" style="margin-top:8px;margin-bottom:16px;">
+              Click below to sign in with your Google account and authorize calendar access.
+              Tokens are stored securely and refresh automatically.
             </p>
             <button
               class="connect-btn google-btn"
               :disabled="connectingGoogle"
-              @click="connectGoogle"
+              @click="openGoogleOAuth"
             >
-              {{ connectingGoogle ? 'Connecting...' : 'Connect Google Calendar' }}
+              <span style="font-size:16px;margin-right:8px;">G</span>
+              {{ connectingGoogle ? 'Opening Google Sign-in…' : 'Sign in with Google' }}
             </button>
           </div>
 
@@ -272,44 +256,16 @@ onMounted(loadIntegrations)
                 <p class="connect-desc">Connect your Microsoft Outlook to sync interviews</p>
               </div>
             </div>
-            <div class="connect-fields">
-              <div class="field">
-                <label class="field-label">Access Token *</label>
-                <input
-                  v-model="outlookForm.access_token"
-                  type="password"
-                  class="field-input"
-                  placeholder="Paste OAuth access token"
-                />
-              </div>
-              <div class="field">
-                <label class="field-label">Refresh Token</label>
-                <input
-                  v-model="outlookForm.refresh_token"
-                  type="password"
-                  class="field-input"
-                  placeholder="Optional refresh token"
-                />
-              </div>
-              <div class="field">
-                <label class="field-label">Calendar ID</label>
-                <input
-                  v-model="outlookForm.calendar_id"
-                  type="text"
-                  class="field-input"
-                  placeholder="primary"
-                />
-              </div>
-            </div>
-            <p class="connect-hint">
-              Get tokens from Microsoft Azure App Registration or your OAuth flow
+            <p class="connect-desc" style="margin-top:8px;margin-bottom:16px;">
+              Click below to sign in with your Microsoft account and authorize calendar access.
             </p>
             <button
               class="connect-btn outlook-btn"
               :disabled="connectingOutlook"
-              @click="connectOutlook"
+              @click="openMicrosoftOAuth"
             >
-              {{ connectingOutlook ? 'Connecting...' : 'Connect Outlook Calendar' }}
+              <span style="margin-right:8px;">⊞</span>
+              {{ connectingOutlook ? 'Opening Microsoft Sign-in…' : 'Sign in with Microsoft' }}
             </button>
           </div>
         </div>

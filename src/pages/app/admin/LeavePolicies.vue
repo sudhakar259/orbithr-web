@@ -55,6 +55,27 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Leave Accrual Proration -->
+    <div class="lp-card lp-settings-card">
+      <div class="lp-settings-head">
+        <h2 class="lp-settings-title">Leave Accrual Proration</h2>
+        <p class="lp-settings-sub">Controls how leave is credited for employees in their joining month.</p>
+      </div>
+      <div class="lp-settings-body">
+        <label class="lp-field">
+          <span class="lp-field-label">Proration Mode</span>
+          <select v-model="prorationMode" class="lp-select" :disabled="prorationLoading">
+            <option v-for="opt in prorationOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </label>
+        <div class="lp-settings-actions">
+          <button class="lp-btn-primary" :disabled="prorationSaving || prorationLoading" @click="saveProrationMode">
+            {{ prorationSaving ? 'Saving…' : 'Save' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -65,6 +86,7 @@ import { useRouter } from 'vue-router'
 import { leaveService, type LeavePolicy } from '@/services/leave'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToast } from '@/composables/useToast'
+import api from '@/services/api'
 
 const router = useRouter()
 const { confirm: dialog } = useConfirm()
@@ -73,7 +95,46 @@ const toast = useToast()
 const policies = ref<LeavePolicy[]>([])
 const loading  = ref(false)
 
-onMounted(loadPolicies)
+// ---- Leave accrual proration ----
+const prorationOptions = [
+  { value: 'day_15_rule', label: 'Day-15 Rule (≤15th = full, >15th = half)' },
+  { value: 'exact_days', label: 'Exact Days (pro-rated by days remaining)' },
+  { value: 'full_month', label: 'Full Month (always 100% of monthly accrual)' },
+  { value: 'no_accrual', label: 'No Accrual (no leave credited in joining month)' },
+]
+const prorationMode = ref('day_15_rule')
+const prorationLoading = ref(false)
+const prorationSaving = ref(false)
+
+onMounted(() => {
+  loadPolicies()
+  loadProrationMode()
+})
+
+async function loadProrationMode() {
+  prorationLoading.value = true
+  try {
+    const res = await api.get('/leave/proration-mode')
+    if (res.data?.mode) prorationMode.value = res.data.mode
+  } catch {
+    // keep default
+  } finally {
+    prorationLoading.value = false
+  }
+}
+
+async function saveProrationMode() {
+  prorationSaving.value = true
+  try {
+    await api.put('/leave/proration-mode', { mode: prorationMode.value })
+    toast.success('Proration mode saved')
+  } catch (e) {
+    const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+    toast.error(msg || 'Failed to save proration mode')
+  } finally {
+    prorationSaving.value = false
+  }
+}
 
 async function loadPolicies() {
   loading.value = true
@@ -148,4 +209,21 @@ async function remove(p: LeavePolicy) {
   border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; transition: background 0.12s;
 }
 .lp-btn-danger:hover { background: rgba(243,130,136,0.16); }
+
+/* Proration settings card */
+.lp-settings-card { padding: 0; }
+.lp-settings-head { padding: 16px 20px; border-bottom: 1px solid #232936; }
+.lp-settings-title { margin: 0; font-size: 15px; font-weight: 600; color: #EEF0F4; }
+.lp-settings-sub { margin: 4px 0 0; font-size: 12px; color: #7A8299; }
+.lp-settings-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.lp-field { display: flex; flex-direction: column; gap: 6px; max-width: 480px; }
+.lp-field-label { font-size: 12px; font-weight: 500; color: #B6BED0; }
+.lp-select {
+  background: #0D0F17; border: 1px solid #232936; border-radius: 7px;
+  color: #EEF0F4; font-size: 13px; padding: 9px 12px; outline: none;
+  transition: border-color 0.15s; width: 100%; box-sizing: border-box;
+}
+.lp-select:focus { border-color: #6B5BFF; }
+.lp-select:disabled { opacity: 0.5; }
+.lp-settings-actions { display: flex; justify-content: flex-start; }
 </style>

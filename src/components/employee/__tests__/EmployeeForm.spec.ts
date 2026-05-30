@@ -86,8 +86,8 @@ describe('EmployeeForm – rendering', () => {
 
   it('shows "Update Employee" submit button on last tab in edit mode', async () => {
     const wrapper = mountEdit()
-    const tabs = wrapper.findAll('.ef-tab')
-    await tabs[3].trigger('click')
+    const steps = wrapper.findAll('.ef-step')
+    await steps[3].trigger('click')
     expect(wrapper.text()).toContain('Update Employee')
   })
 
@@ -229,7 +229,7 @@ describe('EmployeeForm – form submission', () => {
     await fillRequiredFields(wrapper)
     await wrapper.find('form').trigger('submit')
     await wrapper.vm.$nextTick()
-    expect(wrapper.emitted('submit')).toBeTruthy()
+    expect(wrapper.emitted('success')).toBeTruthy()
   })
 
   it('emits cancel event when Cancel is clicked', async () => {

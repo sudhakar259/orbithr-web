@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
 import EmpAvatar from '@/components/employee/EmpAvatar.vue'
@@ -131,6 +131,190 @@ const lifecycleFillPct = computed(() => {
   const total = lifecycleItems.value.length
   const done  = lifecycleItems.value.filter(m => m.done).length
   return total > 1 ? `${(done / (total - 1)) * 100}%` : '0%'
+})
+
+// ── Tab data state ──
+const now = new Date()
+const attMonth = ref(now.getMonth() + 1) // 1-12
+const attYear = ref(now.getFullYear())
+const attRecords = ref<any[]>([])
+const attLoading = ref(false)
+const attLoaded = ref(false)
+
+const leaveRequests = ref<any[]>([])
+const leaveBalances = ref<any[]>([])
+const leaveLoading = ref(false)
+const leaveLoaded = ref(false)
+
+const goals = ref<any[]>([])
+const perfLoading = ref(false)
+const perfLoaded = ref(false)
+
+const assets = ref<any[]>([])
+const assetsLoading = ref(false)
+const assetsLoaded = ref(false)
+const assetsUnavailable = ref(false)
+
+const auditEntries = ref<any[]>([])
+const auditLoading = ref(false)
+const auditLoaded = ref(false)
+const auditUnavailable = ref(false)
+
+const attMonthLabel = computed(() =>
+  new Date(attYear.value, attMonth.value - 1, 1).toLocaleDateString('en-IN', {
+    month: 'long',
+    year: 'numeric',
+  }),
+)
+
+const attSummary = computed(() => {
+  const working = attRecords.value.filter((r) =>
+    ['present', 'late', 'half_day'].includes(String(r.status || '').toLowerCase()),
+  ).length
+  const absences = attRecords.value.filter(
+    (r) => String(r.status || '').toLowerCase() === 'absent',
+  ).length
+  return { working, absences }
+})
+
+function statusKey(s: string | null | undefined) {
+  return String(s || '').toLowerCase().replace(/\s+/g, '_')
+}
+
+function fmtTime(t: string | null | undefined) {
+  if (!t) return '—'
+  const d = new Date(t)
+  if (isNaN(d.getTime())) return String(t)
+  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+}
+
+function attBadgeClass(s: string | null | undefined) {
+  const k = statusKey(s)
+  if (k === 'present') return 'ep-tbadge--green'
+  if (k === 'absent') return 'ep-tbadge--red'
+  if (k === 'late') return 'ep-tbadge--yellow'
+  if (k === 'half_day') return 'ep-tbadge--orange'
+  return 'ep-tbadge--muted'
+}
+
+function leaveBadgeClass(s: string | null | undefined) {
+  const k = statusKey(s)
+  if (k === 'approved') return 'ep-tbadge--green'
+  if (k === 'rejected') return 'ep-tbadge--red'
+  if (k === 'pending') return 'ep-tbadge--yellow'
+  return 'ep-tbadge--muted'
+}
+
+async function fetchAttendance() {
+  if (!employee.id) return
+  attLoading.value = true
+  try {
+    const { data } = await api.get('/attendance', {
+      params: { employee_id: employee.id, year: attYear.value, month: attMonth.value },
+    })
+    attRecords.value = data?.data ?? data?.records ?? (Array.isArray(data) ? data : [])
+  } catch {
+    attRecords.value = []
+  } finally {
+    attLoading.value = false
+    attLoaded.value = true
+  }
+}
+
+function changeAttMonth(delta: number) {
+  let m = attMonth.value + delta
+  let y = attYear.value
+  if (m < 1) {
+    m = 12
+    y -= 1
+  } else if (m > 12) {
+    m = 1
+    y += 1
+  }
+  attMonth.value = m
+  attYear.value = y
+  fetchAttendance()
+}
+
+async function fetchLeave() {
+  if (!employee.id) return
+  leaveLoading.value = true
+  try {
+    const [reqRes, balRes] = await Promise.allSettled([
+      api.get('/leave-requests', { params: { employee_id: employee.id } }),
+      api.get('/leave-balances', { params: { employee_id: employee.id } }),
+    ])
+    if (reqRes.status === 'fulfilled') {
+      const d = reqRes.value.data
+      leaveRequests.value = d?.data ?? (Array.isArray(d) ? d : [])
+    }
+    if (balRes.status === 'fulfilled') {
+      const d = balRes.value.data
+      leaveBalances.value = d?.data ?? (Array.isArray(d) ? d : [])
+    }
+  } finally {
+    leaveLoading.value = false
+    leaveLoaded.value = true
+  }
+}
+
+async function fetchPerformance() {
+  if (!employee.id) return
+  perfLoading.value = true
+  try {
+    const { data } = await api.get('/performance/goals', {
+      params: { employee_id: employee.id },
+    })
+    const list = data?.data ?? (Array.isArray(data) ? data : [])
+    goals.value = list.filter(
+      (g: any) => !g.employee_id || String(g.employee_id) === String(employee.id),
+    )
+  } catch {
+    goals.value = []
+  } finally {
+    perfLoading.value = false
+    perfLoaded.value = true
+  }
+}
+
+async function fetchAssets() {
+  if (!employee.id) return
+  assetsLoading.value = true
+  assetsUnavailable.value = false
+  try {
+    const { data } = await api.get('/assets', { params: { employee_id: employee.id } })
+    assets.value = data?.data ?? (Array.isArray(data) ? data : [])
+  } catch (err: any) {
+    assets.value = []
+    if (err.response?.status === 404) assetsUnavailable.value = true
+  } finally {
+    assetsLoading.value = false
+    assetsLoaded.value = true
+  }
+}
+
+async function fetchAudit() {
+  if (!employee.id) return
+  auditLoading.value = true
+  auditUnavailable.value = false
+  try {
+    const { data } = await api.get(`/employees/${employee.id}/audit-log`)
+    auditEntries.value = data?.data ?? (Array.isArray(data) ? data : [])
+  } catch (err: any) {
+    auditEntries.value = []
+    if (err.response?.status === 404) auditUnavailable.value = true
+  } finally {
+    auditLoading.value = false
+    auditLoaded.value = true
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'attendance' && !attLoaded.value) fetchAttendance()
+  else if (tab === 'leave' && !leaveLoaded.value) fetchLeave()
+  else if (tab === 'perf' && !perfLoaded.value) fetchPerformance()
+  else if (tab === 'assets' && !assetsLoaded.value) fetchAssets()
+  else if (tab === 'audit' && !auditLoaded.value) fetchAudit()
 })
 
 onMounted(fetchEmployee)
@@ -368,13 +552,177 @@ onMounted(fetchEmployee)
           <DocumentsManager :employee-id="employee.id" @changed="fetchEmployee"/>
         </div>
 
-        <!-- ── Placeholder tabs ── -->
-        <div
-          v-show="!['overview', 'job', 'docs'].includes(activeTab)"
-          class="ep-placeholder"
-        >
-          <div class="ep-placeholder-label">
-            {{ tabs.find(t => t.key === activeTab)?.label }} — coming soon
+        <!-- ── Attendance tab ── -->
+        <div v-show="activeTab === 'attendance'" class="ep-tab-content">
+          <div class="ep-card ep-card--flush">
+            <div class="ep-tab-head">
+              <span class="ep-card-title">Attendance</span>
+              <div class="ep-month-nav">
+                <button class="ep-nav-btn" @click="changeAttMonth(-1)">‹</button>
+                <span class="ep-month-label">{{ attMonthLabel }}</span>
+                <button class="ep-nav-btn" @click="changeAttMonth(1)">›</button>
+              </div>
+            </div>
+            <div v-if="attLoading" class="ep-tab-state">Loading attendance…</div>
+            <template v-else>
+              <table class="ep-table">
+                <thead>
+                  <tr>
+                    <th>Date</th><th>Check In</th><th>Check Out</th>
+                    <th>Working Hours</th><th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="r in attRecords" :key="r.id">
+                    <td>{{ fmtDate(r.attendance_date) }}</td>
+                    <td class="ep-mono">{{ fmtTime(r.check_in) }}</td>
+                    <td class="ep-mono">{{ fmtTime(r.check_out) }}</td>
+                    <td>{{ r.working_hours ?? '—' }}</td>
+                    <td>
+                      <span :class="['ep-tbadge', attBadgeClass(r.status)]">{{ r.status || '—' }}</span>
+                    </td>
+                  </tr>
+                  <tr v-if="!attRecords.length">
+                    <td colspan="5" class="ep-tab-state">No attendance records for {{ attMonthLabel }}.</td>
+                  </tr>
+                </tbody>
+                <tfoot v-if="attRecords.length">
+                  <tr>
+                    <td colspan="5" class="ep-table-summary">
+                      Working days: <strong>{{ attSummary.working }}</strong>
+                      · Absences: <strong>{{ attSummary.absences }}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </template>
+          </div>
+        </div>
+
+        <!-- ── Leave tab ── -->
+        <div v-show="activeTab === 'leave'" class="ep-tab-content">
+          <div v-if="leaveLoading" class="ep-tab-state">Loading leave data…</div>
+          <template v-else>
+            <div class="ep-card ep-card--flush">
+              <div class="ep-tab-head"><span class="ep-card-title">Leave Balance</span></div>
+              <table class="ep-table">
+                <thead>
+                  <tr><th>Leave Type</th><th>Balance</th><th>Used</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="b in leaveBalances" :key="b.id">
+                    <td>{{ b.leave_type?.name || b.leave_type || '—' }}</td>
+                    <td>{{ b.current_balance ?? b.balance ?? '—' }}</td>
+                    <td>{{ b.used_this_year ?? b.used ?? '—' }}</td>
+                  </tr>
+                  <tr v-if="!leaveBalances.length">
+                    <td colspan="3" class="ep-tab-state">No leave balances found.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="ep-card ep-card--flush">
+              <div class="ep-tab-head"><span class="ep-card-title">Leave Requests</span></div>
+              <table class="ep-table">
+                <thead>
+                  <tr>
+                    <th>Leave Type</th><th>From</th><th>To</th>
+                    <th>Days</th><th>Status</th><th>Applied On</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="l in leaveRequests" :key="l.id">
+                    <td>{{ l.leave_type?.name || l.leave_type || '—' }}</td>
+                    <td>{{ fmtDate(l.start_date) }}</td>
+                    <td>{{ fmtDate(l.end_date) }}</td>
+                    <td>{{ l.days_requested ?? '—' }}</td>
+                    <td>
+                      <span :class="['ep-tbadge', leaveBadgeClass(l.status)]">{{ l.status || '—' }}</span>
+                    </td>
+                    <td>{{ fmtDate(l.created_at) }}</td>
+                  </tr>
+                  <tr v-if="!leaveRequests.length">
+                    <td colspan="6" class="ep-tab-state">No leave requests.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+
+        <!-- ── Performance tab ── -->
+        <div v-show="activeTab === 'perf'" class="ep-tab-content">
+          <div class="ep-card">
+            <div class="ep-card-head"><span class="ep-card-title">Performance Goals</span></div>
+            <div v-if="perfLoading" class="ep-tab-state">Loading goals…</div>
+            <div v-else-if="!goals.length" class="ep-tab-state">No performance goals assigned.</div>
+            <div v-else class="ep-goal-list">
+              <div v-for="g in goals" :key="g.id" class="ep-goal-item">
+                <div class="ep-goal-top">
+                  <span class="ep-goal-title">{{ g.title || g.name || 'Untitled goal' }}</span>
+                  <span class="ep-goal-meta">
+                    <span :class="['ep-tbadge', 'ep-tbadge--muted']">{{ g.status || '—' }}</span>
+                    <span class="ep-muted-sm">Due {{ fmtDate(g.due_date) }}</span>
+                  </span>
+                </div>
+                <div class="ep-goal-rail">
+                  <div
+                    class="ep-goal-fill"
+                    :style="{ width: Math.min(100, Math.max(0, Number(g.progress ?? 0))) + '%' }"
+                  />
+                </div>
+                <div class="ep-goal-pct">{{ Math.round(Number(g.progress ?? 0)) }}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Assets tab ── -->
+        <div v-show="activeTab === 'assets'" class="ep-tab-content">
+          <div class="ep-card ep-card--flush">
+            <div class="ep-tab-head"><span class="ep-card-title">Assigned Assets</span></div>
+            <div v-if="assetsLoading" class="ep-tab-state">Loading assets…</div>
+            <div v-else-if="assetsUnavailable || !assets.length" class="ep-tab-state">No assets assigned.</div>
+            <table v-else class="ep-table">
+              <thead>
+                <tr>
+                  <th>Asset Name</th><th>Category</th><th>Serial Number</th>
+                  <th>Assigned Date</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="a in assets" :key="a.id">
+                  <td>{{ a.name || a.asset_name || '—' }}</td>
+                  <td>{{ a.category || '—' }}</td>
+                  <td class="ep-mono">{{ a.serial_number || '—' }}</td>
+                  <td>{{ fmtDate(a.assigned_date) }}</td>
+                  <td><span class="ep-tbadge ep-tbadge--muted">{{ a.status || '—' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Audit tab ── -->
+        <div v-show="activeTab === 'audit'" class="ep-tab-content">
+          <div class="ep-card ep-card--flush">
+            <div class="ep-tab-head"><span class="ep-card-title">Audit Log</span></div>
+            <div v-if="auditLoading" class="ep-tab-state">Loading audit log…</div>
+            <div v-else-if="auditUnavailable || !auditEntries.length" class="ep-tab-state">No audit log entries.</div>
+            <table v-else class="ep-table">
+              <thead>
+                <tr><th>Action</th><th>Changed By</th><th>Changed At</th><th>Details</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="e in auditEntries" :key="e.id">
+                  <td>{{ e.action || '—' }}</td>
+                  <td>{{ e.user?.name || e.changed_by || e.user_id || '—' }}</td>
+                  <td>{{ fmtDate(e.created_at) }}</td>
+                  <td>{{ e.description || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -589,13 +937,61 @@ onMounted(fetchEmployee)
 
 /* Other tabs */
 .ep-tab-content { display: flex; flex-direction: column; gap: 16px; padding: 20px 0; }
-.ep-placeholder {
-  padding: 80px 0;
-  text-align: center;
-  color: #7A8299;
-  font-size: 14px;
+
+/* Tab card head with controls */
+.ep-tab-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px; border-bottom: 1px solid #232936;
 }
-.ep-placeholder-label { color: #7A8299; font-size: 13px; }
+.ep-month-nav { display: flex; align-items: center; gap: 10px; }
+.ep-month-label { font-size: 12.5px; color: #EEF0F4; min-width: 110px; text-align: center; }
+.ep-nav-btn {
+  width: 26px; height: 26px; border-radius: 6px; cursor: pointer;
+  background: #1C212C; border: 1px solid #2E3544; color: #EEF0F4;
+  font-size: 15px; line-height: 1; display: inline-flex;
+  align-items: center; justify-content: center;
+}
+.ep-nav-btn:hover { background: #232936; }
+
+/* Tables */
+.ep-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ep-table th {
+  text-align: left; padding: 10px 16px; color: #7A8299; font-weight: 600;
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid #232936; background: #0B0D12;
+}
+.ep-table td {
+  padding: 11px 16px; color: #EEF0F4; border-bottom: 1px solid #1B2029;
+}
+.ep-table tbody tr:hover td { background: #161A23; }
+.ep-table tfoot td, .ep-table-summary {
+  color: #A8AEC0; font-size: 11.5px; background: #0B0D12;
+}
+.ep-table-summary strong { color: #EEF0F4; }
+.ep-tab-state {
+  padding: 32px 16px; text-align: center; color: #7A8299; font-size: 13px;
+}
+
+/* Table badges */
+.ep-tbadge {
+  display: inline-flex; align-items: center; padding: 3px 9px;
+  border-radius: 9999px; font-size: 11px; font-weight: 500; text-transform: capitalize;
+}
+.ep-tbadge--green  { background: rgba(54,211,153,0.14);  color: #36D399; }
+.ep-tbadge--red    { background: rgba(255,107,107,0.14); color: #FF6B6B; }
+.ep-tbadge--yellow { background: rgba(249,168,37,0.16);  color: #F9A825; }
+.ep-tbadge--orange { background: rgba(255,138,101,0.16); color: #FF8A65; }
+.ep-tbadge--muted  { background: rgba(122,130,153,0.14); color: #7A8299; }
+
+/* Performance goals */
+.ep-goal-list { display: flex; flex-direction: column; gap: 16px; }
+.ep-goal-item { display: flex; flex-direction: column; gap: 7px; }
+.ep-goal-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ep-goal-title { font-size: 13px; color: #EEF0F4; font-weight: 500; }
+.ep-goal-meta { display: flex; align-items: center; gap: 10px; }
+.ep-goal-rail { height: 6px; background: #232936; border-radius: 3px; overflow: hidden; }
+.ep-goal-fill { height: 100%; background: #4F7EFF; border-radius: 3px; transition: width 0.4s ease; }
+.ep-goal-pct { font-size: 10.5px; color: #7A8299; font-family: 'JetBrains Mono', monospace; }
 
 @media (max-width: 1024px) {
   .ep-grid { grid-template-columns: 1fr; }

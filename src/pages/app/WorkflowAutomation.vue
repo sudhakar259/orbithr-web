@@ -7,6 +7,7 @@ import Modal from '@/components/ui/Modal.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { useToast } from '@/composables/useToast'
 import { useConfirm } from '@/composables/useConfirm'
+import { workflowService, type WorkflowLog } from '@/services/workflow'
 
 const toast = useToast()
 const { confirm: dialog } = useConfirm()
@@ -368,6 +369,25 @@ async function deleteWorkflow(wf: Workflow) {
   }
 }
 
+/* ── Execution logs viewer ─────────────────────────── */
+const showLogsModal = ref(false)
+const logs = ref<WorkflowLog[]>([])
+const logsLoading = ref(false)
+
+async function loadLogs() {
+  showLogsModal.value = true
+  logsLoading.value = true
+  try {
+    const result = await workflowService.getLogs()
+    logs.value = result.data
+  } catch {
+    toast.error('Failed to load execution logs')
+    logs.value = []
+  } finally {
+    logsLoading.value = false
+  }
+}
+
 onMounted(fetchWorkflows)
 </script>
 
@@ -383,6 +403,7 @@ onMounted(fetchWorkflows)
         <p class="page-subtitle">No-code workflows that connect HR events to actions across the stack.</p>
       </div>
       <div class="page-header-actions">
+        <button class="btn-ghost" @click="loadLogs">View Logs</button>
         <button class="btn-primary" @click="openCreateModal">
           <span class="plus-icon">+</span>
           New automation
@@ -798,6 +819,34 @@ onMounted(fetchWorkflows)
             {{ saving ? 'Saving…' : (editingWorkflow ? 'Update workflow' : 'Create workflow') }}
           </button>
         </template>
+      </Modal>
+
+      <!-- Execution logs viewer -->
+      <Modal
+        v-model="showLogsModal"
+        title="Execution logs"
+        subtitle="Recent automation runs and their outcomes"
+        max-width="720px"
+      >
+        <div v-if="logsLoading" class="logs-loading">
+          <div class="spinner spinner-lg" />
+        </div>
+        <div v-else-if="!logs.length" class="logs-empty">
+          No executions recorded yet.
+        </div>
+        <div v-else class="logs-list">
+          <div v-for="log in logs" :key="log.id" class="log-row">
+            <div class="log-main">
+              <span class="log-status" :class="`log-status-${log.status}`">{{ log.status }}</span>
+              <span class="log-name">{{ log.rule?.name ?? 'Deleted rule' }}</span>
+              <span class="log-trigger">{{ getTriggerLabel(log.trigger_event as TriggerType) }}</span>
+            </div>
+            <div class="log-meta">
+              <span class="log-time">{{ timeAgo(log.executed_at) }}</span>
+              <span v-if="log.error_message" class="log-error">{{ log.error_message }}</span>
+            </div>
+          </div>
+        </div>
       </Modal>
     </Teleport>
   </div>
@@ -1338,6 +1387,47 @@ onMounted(fetchWorkflows)
 }
 .btn-primary:hover:not(:disabled) { background: #5849EF; }
 .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-ghost {
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.btn-ghost:hover { background: var(--surface2); }
+
+/* Execution logs viewer */
+.logs-loading { display: flex; justify-content: center; padding: 32px 0; }
+.logs-empty { padding: 28px 0; text-align: center; color: var(--muted); font-size: 13px; }
+.logs-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.log-row {
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  background: var(--surface2);
+  padding: 10px 12px;
+}
+.log-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.log-status {
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+.log-status-success { background: rgba(54,211,153,.15); color: #36D399; }
+.log-status-failed { background: rgba(255,107,107,.15); color: #FF6B6B; }
+.log-status-partial { background: rgba(249,168,37,.15); color: #F9A825; }
+.log-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.log-trigger { font-size: 12px; color: var(--muted); }
+.log-meta { display: flex; gap: 10px; margin-top: 4px; font-size: 11px; }
+.log-time { color: var(--muted); }
+.log-error { color: #FF6B6B; }
 .btn-secondary {
   padding: 8px 14px;
   background: var(--surface2);
